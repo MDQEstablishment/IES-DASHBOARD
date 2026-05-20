@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IES — Programme Control Platform</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #F8FAFC; color: #0F172A; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 48px 24px; }
+  .brand { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+  .mark { width: 44px; height: 44px; border-radius: 8px; background: #0F172A; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; letter-spacing: -0.02em; position: relative; }
+  .mark::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: #F59E0B; }
+  .brand-name { font-weight: 700; font-size: 18px; }
+  .brand-sub { font-size: 11px; color: #64748B; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+  h1 { font-size: 36px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.02em; }
+  .sub { font-size: 16px; color: #64748B; margin-bottom: 40px; max-width: 700px; }
+  .cap { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #64748B; margin-bottom: 16px; font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 40px; }
+  a.tile { display: block; text-decoration: none; background: white; border: 1px solid #E2E8F0; border-radius: 8px; padding: 18px 20px; color: #0F172A; transition: all 0.15s; }
+  a.tile:hover { border-color: #2563EB; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.08); }
+  a.tile .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748B; font-weight: 600; letter-spacing: 0.05em; }
+  a.tile .name { font-size: 16px; font-weight: 600; margin-top: 4px; }
+  a.tile .desc { font-size: 12px; color: #64748B; margin-top: 4px; }
+  a.tile.primary { background: #0F172A; color: white; border-color: #0F172A; }
+  a.tile.primary .name { color: white; }
+  a.tile.primary .num, a.tile.primary .desc { color: #94A3B8; }
+  a.tile.primary:hover { background: #1E293B; }
+  .stats { display: flex; gap: 32px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #E2E8F0; font-size: 12px; color: #64748B; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em; }
+  .stats b { color: #0F172A; font-weight: 600; }
+  .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid #E2E8F0; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #94A3B8; letter-spacing: 0.06em; text-transform: uppercase; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="mark">IES</div>
+    <div>
+      <div class="brand-name">IES</div>
+      <div class="brand-sub">Integrated Energy Solutions</div>
+    </div>
+  </div>
+
+  <div class="cap">Interactive prototype · Programme Control Platform · Retrofit Division</div>
+  <h1>Welcome to the IES platform demo.</h1>
+  <p class="sub">Open any page below to explore. Pages are fully interactive — click rows, switch projects, change roles. No backend required.</p>
+
+  <div class="cap">Start here</div>
+  <div class="grid">
+    <a class="tile primary" href="Login.html">
+      <div class="num">00 · Entry</div>
+      <div class="name">Sign in</div>
+      <div class="desc">Pick a role to enter the platform</div>
+    </a>
+    <a class="tile" href="Dashboard.html">
+      <div class="num">01 · Home</div>
+      <div class="name">Dashboard</div>
+      <div class="desc">Portfolio KPIs · 2-week look-ahead</div>
+    </a>
+  </div>
+
+  <div class="cap">Programme & Buildings</div>
+  <div class="grid">
+    <a class="tile" href="Projects.html">
+      <div class="num">02</div>
+      <div class="name">Projects</div>
+      <div class="desc">Cross-portfolio project list</div>
+    </a>
+    <a class="tile" href="Project-Detail.html">
+      <div class="num">02.1</div>
+      <div class="name">Project Detail</div>
+      <div class="desc">Single project view (MOI-Asir)</div>
+    </a>
+    <a class="tile" href="Building-Detail.html">
+      <div class="num">02.2</div>
+      <div class="name">Building Detail</div>
+      <div class="desc">12-stage tracker · rooms · photos</div>
+    </a>
+  </div>
+
+  <div class="cap">My queues</div>
+  <div class="grid">
+    <a class="tile" href="My-Tasks.html">
+      <div class="num">03</div>
+      <div class="name">My Tasks</div>
+      <div class="desc">Approval chains · bottleneck detection</div>
+    </a>
+    <a class="tile" href="My-Escalation.html">
+      <div class="num">04</div>
+      <div class="name">My Escalation</div>
+      <div class="desc">5-step chain · cost impact</div>
+    </a>
+  </div>
+
+  <div class="cap">Inventory · Reporting · Admin</div>
+  <div class="grid">
+    <a class="tile" href="Materials.html">
+      <div class="num">05</div>
+      <div class="name">Materials</div>
+      <div class="desc">7-step cycle · auto-deduct</div>
+    </a>
+    <a class="tile" href="Reports.html">
+      <div class="num">06</div>
+      <div class="name">Reports</div>
+      <div class="desc">Filter builders · quick exports</div>
+    </a>
+    <a class="tile" href="Settings.html">
+      <div class="num">07</div>
+      <div class="name">Settings</div>
+      <div class="desc">12-category admin self-service</div>
+    </a>
+  </div>
+
+  <div class="stats">
+    <div><b>10</b> pages</div>
+    <div><b>9</b> roles</div>
+    <div><b>12</b>-stage retrofit cycle</div>
+    <div><b>5,292</b> AC units in scope</div>
+    <div><b>SAR 12.4M</b> contract</div>
+  </div>
+
+  <div class="footer">
+    <span>INTERNAL USE ONLY · CONFIDENTIAL</span>
+    <span>IES BUILD 1.0 · MOI–ASIR</span>
+  </div>
+</div>
+</body>
+</html>
