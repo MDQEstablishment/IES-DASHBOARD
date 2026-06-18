@@ -612,7 +612,7 @@ function ProjectSwitcher() {
           flexShrink: 0,
         }} />
         <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{active.name}</span>
-        <span className="mono" style={{ fontSize: 10, color: "var(--nav-text-3)" }}>{active.buildings}</span>
+        <span className="mono" style={{ fontSize: 10, color: "var(--nav-text-3)" }}>{Array.isArray(active.buildings) ? active.buildings.length : active.buildings}</span>
         <IconChevD size={12} style={{ color: "var(--nav-text-3)" }} />
       </button>
       {open && (
