@@ -1,61 +1,102 @@
 import { useState } from 'react'
-import { PageHead, Card, Pill, Loading, Empty, Avatar, Btn, Modal, Field } from '../components/ui'
 import Icon from '../components/Icon'
-import { useAuth, can, Can } from '../rbac'
+import { Avatar, Chip, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
+import { useAuth, Can } from '../rbac'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
-import { MANAGERS, pillClass } from '../lib/constants'
+import { MANAGERS, roleColor } from '../lib/constants'
 import { ago } from '../lib/format'
 
+// Hierarchy chain shown on every escalation card (Engineer -> CEO).
 const CHAIN = ['Engineer', 'PM', 'Programme', 'PMO', 'CEO']
 
 export default function Escalations() {
-  const { user, role } = useAuth()
+  const { user } = useAuth()
   const [showNew, setShowNew] = useState(false)
-  const isManager = can(role, MANAGERS)
-  const { rows, loading } = useLiveQuery('escalations',
-    (q) => q.select('*,raised_by:profiles!escalations_raised_by_id_fkey(full_name),raised_to:profiles!escalations_raised_to_id_fkey(full_name),building:buildings(code,name)')
+
+  const { rows, loading } = useLiveQuery('escalations', (q) =>
+    q.select('*,raised_by:profiles!escalations_raised_by_id_fkey(full_name,role),raised_to:profiles!escalations_raised_to_id_fkey(full_name,role),building:buildings(code,name)')
       .order('created_at', { ascending: false }).limit(100))
 
   const open = rows.filter((e) => e.status !== 'resolved' && e.status !== 'closed')
-  const resolve = (e) => bgUpdate('escalations', e.id,
-    { status: 'resolved', resolved_by_id: user.id, resolved_at: new Date().toISOString(), resolution_note: 'Resolved via dashboard' }, { okMsg: 'Escalation resolved' })
+  const resolved = rows.filter((e) => e.status === 'resolved' || e.status === 'closed')
+
+  const resolve = (e) =>
+    bgUpdate('escalations', e.id, {
+      status: 'resolved', resolved_by_id: user.id, resolved_at: new Date().toISOString(),
+      resolution_note: 'Resolved via console',
+    }, { okMsg: 'Escalation resolved' })
 
   return (
     <>
-      <PageHead kicker="My queues · escalations" title="Escalations"
-        sub={`${open.length} open · ${rows.filter((e) => e.severity === 'critical' && e.status !== 'resolved').length} critical`}
-        actions={<Btn variant="primary" icon="Flag" onClick={() => setShowNew(true)}>Raise escalation</Btn>} />
+      <PageTitle kicker="HIERARCHY CHAIN" title="My Escalations"
+        right={<Btn variant="primary" icon="plus" onClick={() => setShowNew(true)}>Raise escalation</Btn>} />
 
-      {loading ? <Loading /> : rows.length === 0 ? <Card><Empty icon="Flag">No escalations.</Empty></Card> : (
-        <div className="col gap-3">
+      {/* KPI strip — TOTAL RAISED / AWAITING ACTION / RESOLVED */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
+        <Kpi label="TOTAL RAISED" value={rows.length} />
+        <Kpi label="AWAITING ACTION" value={open.length} color="#F59E0B" />
+        <Kpi label="RESOLVED" value={resolved.length} color="#10B981" />
+      </div>
+
+      {loading ? <Loading /> : rows.length === 0 ? <Empty icon="escalation">No escalations.</Empty> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {rows.map((e) => {
+            const done = e.status === 'resolved' || e.status === 'closed'
             const cur = Math.min(e.level || 1, CHAIN.length - 1)
-            const resolved = e.status === 'resolved' || e.status === 'closed'
             return (
-              <div key={e.id} className="card" style={{ padding: 16 }}>
-                <div className="flex center between mb-2 wrap gap-2">
-                  <div className="flex center gap-2"><Pill status={e.severity} /><span className={`pill ${pillClass(e.status)}`}>{e.status}</span><span className="muted num" style={{ fontSize: 11 }}>raised {ago(e.created_at)}</span></div>
-                  {!resolved && <Can allow={MANAGERS}><Btn className="btn-sm" icon="Check" onClick={() => resolve(e)}>Resolve</Btn></Can>}
+              <div key={e.id} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+                {/* head: severity + status pills, ago, resolve action */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Chip status={e.severity} />
+                    <Chip status={e.status} />
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{ago(e.created_at)}</span>
+                  </div>
+                  {!done && (
+                    <Can allow={MANAGERS}>
+                      <button onClick={() => resolve(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>Resolve</button>
+                    </Can>
+                  )}
                 </div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{e.title}</div>
-                <div className="muted mb-3" style={{ fontSize: 12.5 }}>{e.description}</div>
-                <div className="flex between wrap gap-4">
-                  <div className="flex center gap-2 wrap" style={{ fontSize: 11.5 }}>
-                    <span className="muted">Building:</span> <strong>{e.building?.code || '—'}</strong>
-                    <span className="muted" style={{ marginLeft: 8 }}>From:</span> <Avatar name={e.raised_by?.full_name} size={18} /> {e.raised_by?.full_name}
-                    <Icon name="ChevronRight" size={11} color="var(--text-4)" />
-                    <span className="muted">To:</span> <Avatar name={e.raised_to?.full_name} size={18} /> {e.raised_to?.full_name || '—'}
-                  </div>
-                  <div className="flex center gap-1">
-                    {CHAIN.map((c, i) => (
-                      <div key={i} className="flex center gap-1">
-                        <span title={c} className={`chain-node ${i < cur && !resolved ? 'done' : ''} ${i === cur && !resolved ? 'cur' : ''} ${resolved ? 'done' : ''}`} style={{ width: 16, height: 16 }}>
-                          {(i < cur || resolved) && <Icon name="Check" size={9} color="#fff" />}
-                        </span>
-                        {i < CHAIN.length - 1 && <span style={{ width: 14, height: 2, background: 'var(--border)' }} />}
+
+                {/* title + description */}
+                <div style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</div>
+                {e.description && <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 3 }}>{e.description}</div>}
+
+                {/* meta: building + raised_by -> raised_to */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '12px 0', fontSize: 12.5 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: 'var(--text-3)', background: '#F1F5F9' }}>{e.building?.code || '—'}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <Avatar name={e.raised_by?.full_name} color={roleColor(e.raised_by?.role)} size={22} />
+                    <span style={{ whiteSpace: 'nowrap' }}>{e.raised_by?.full_name || '—'}</span>
+                  </span>
+                  <Icon name="chevronr" size={13} style={{ color: 'var(--text-3)' }} />
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <Avatar name={e.raised_to?.full_name} color={roleColor(e.raised_to?.role)} size={22} />
+                    <span style={{ whiteSpace: 'nowrap' }}>{e.raised_to?.full_name || '—'}</span>
+                  </span>
+                </div>
+
+                {/* escalation chain: Engineer -> PM -> Programme -> PMO -> CEO */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+                  {CHAIN.map((c, i) => {
+                    const isDone = done || i < cur
+                    const isCur = !done && i === cur
+                    const bg = isDone ? '#10B981' : isCur ? '#EF4444' : '#fff'
+                    const border = isDone ? '#10B981' : isCur ? '#EF4444' : 'var(--line)'
+                    const labelCol = isDone ? '#059669' : isCur ? '#DC2626' : 'var(--text-3)'
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: bg, border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flex: 'none' }}>
+                            {isDone && <Icon name="check" size={12} style={{ color: '#fff' }} />}
+                          </span>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, color: labelCol, whiteSpace: 'nowrap' }}>{c}</span>
+                        </div>
+                        {i < CHAIN.length - 1 && <span style={{ width: 26, height: 2, background: i < cur || done ? '#A7F3D0' : 'var(--line)', margin: '0 8px' }} />}
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </div>
               </div>
             )
@@ -68,30 +109,65 @@ export default function Escalations() {
   )
 }
 
+function Kpi({ label, value, color }) {
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 14 }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>{label}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6, ...(color ? { color } : {}) }}>{value}</div>
+    </div>
+  )
+}
+
 function NewEscalation({ onClose, user }) {
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id').order('code'))
-  const [title, setTitle] = useState(''); const [desc, setDesc] = useState('')
-  const [sev, setSev] = useState('medium'); const [bid, setBid] = useState(''); const [busy, setBusy] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [severity, setSeverity] = useState('medium')
+  const [bid, setBid] = useState('')
+  const [busy, setBusy] = useState(false)
 
+  const valid = title.trim().length > 0 && description.trim().length >= 10
   const save = async () => {
-    if (!title.trim() || desc.trim().length < 10) return
+    if (!valid) return
     setBusy(true)
     const b = buildings.find((x) => x.id === bid)
+    // raised_to + level are auto-derived by a DB trigger — do not set them.
     const { error } = await bgInsert('escalations', {
-      title: title.trim(), description: desc.trim(), severity: sev,
+      title: title.trim(), description: description.trim(), severity,
       raised_by_id: user.id, building_id: bid || null, project_id: b?.project_id || null, status: 'open',
-    }, { okMsg: 'Escalation raised ✓' })
-    setBusy(false); if (!error) onClose()
+    }, { okMsg: 'Escalation raised' })
+    setBusy(false)
+    if (!error) onClose()
   }
 
   return (
     <Modal open title="Raise an escalation" onClose={onClose}
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !title.trim() || desc.trim().length < 10}>{busy ? 'Saving…' : 'Raise'}</Btn></>}>
-      <Field label="Title"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short summary" /></Field>
-      <Field label="Description (min 10 chars — auto-routes to your manager)"><textarea className="textarea" rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} /></Field>
-      <div className="flex gap-3">
-        <div className="grow"><Field label="Severity"><select className="select" value={sev} onChange={(e) => setSev(e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></Field></div>
-        <div className="grow"><Field label="Building"><select className="select" value={bid} onChange={(e) => setBid(e.target.value)}><option value="">None</option>{buildings.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}</select></Field></div>
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !valid}>{busy ? 'Saving…' : 'Raise'}</Btn></>}>
+      <Field label="Title">
+        <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short summary" />
+      </Field>
+      <Field label="Description (min 10 chars — auto-routes to your manager)">
+        <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} value={description} onChange={(e) => setDescription(e.target.value)} />
+      </Field>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <Field label="Severity">
+            <select style={inputStyle} value={severity} onChange={(e) => setSeverity(e.target.value)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </Field>
+        </div>
+        <div style={{ flex: 1 }}>
+          <Field label="Building">
+            <select style={inputStyle} value={bid} onChange={(e) => setBid(e.target.value)}>
+              <option value="">None</option>
+              {buildings.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+            </select>
+          </Field>
+        </div>
       </div>
     </Modal>
   )

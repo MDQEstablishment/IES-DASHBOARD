@@ -1,121 +1,237 @@
 import { useState } from 'react'
-import { PageHead, Card, Bar, Pill, Loading, Empty, Avatar, Modal } from '../components/ui'
 import Icon from '../components/Icon'
+import { Avatar, Chip, ProgressBar, PageTitle, Loading, Empty, Modal } from '../components/ui'
 import { useLiveQuery } from '../lib/db'
 import { useProject } from '../project'
-import { num, pct, fmtDate } from '../lib/format'
-import { STAGES, DOC_KIND, pillClass } from '../lib/constants'
+import { pct } from '../lib/format'
+import { STAGES, DOC_KIND_FULL } from '../lib/constants'
 
 export default function Buildings() {
   const { projectId, current } = useProject()
   const [sel, setSel] = useState(null)
+
   const { rows: buildings, loading } = useLiveQuery('buildings',
     (q) => { let b = q.select('*,project:projects(code,name)').order('code'); if (projectId !== 'ALL') b = b.eq('project_id', projectId); return b },
     [projectId])
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
 
-  const insByScope = {}; install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
+  // approved-installed qty per scope (capped per scope) -> per-building planned/installed
+  const insByScope = {}
+  install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
   const perB = {}
-  scopes.forEach((s) => { const ins = Math.min(s.planned_qty, insByScope[s.id] || 0); perB[s.building_id] = perB[s.building_id] || { p: 0, i: 0 }; perB[s.building_id].p += s.planned_qty; perB[s.building_id].i += ins })
+  scopes.forEach((s) => {
+    const ins = Math.min(s.planned_qty || 0, insByScope[s.id] || 0)
+    perB[s.building_id] = perB[s.building_id] || { planned: 0, installed: 0 }
+    perB[s.building_id].planned += s.planned_qty || 0
+    perB[s.building_id].installed += ins
+  })
 
   return (
-    <>
-      <PageHead kicker="Programme · buildings" title="Buildings"
-        sub={`${current ? current.name : 'All projects'} · ${buildings.length} buildings`} />
+    <div data-screen-label="Buildings">
+      <PageTitle kicker="PROGRAMME · BUILDINGS"
+        title="Buildings"
+        right={<span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{current ? current.name : 'All projects'} · {buildings.length} buildings</span>} />
 
-      <Card pad={false}>
-        {loading ? <Loading /> : buildings.length === 0 ? <Empty icon="Building2">No buildings for this project.</Empty> : (
-          <table className="tbl">
-            <thead><tr><th>Building</th><th>Project</th><th>Contractor</th><th>Engineer</th><th style={{ width: 200 }}>Progress</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {buildings.map((b) => {
-                const d = perB[b.id] || { p: 0, i: 0 }; const pp = d.p ? (d.i / d.p) * 100 : 0
-                return (
-                  <tr key={b.id} className="clickable" onClick={() => setSel(b)}>
-                    <td><div style={{ fontWeight: 600 }}>{b.name}</div><div className="muted" style={{ fontSize: 11 }}>{b.code} · {b.region}</div></td>
-                    <td className="muted">{b.project?.code}</td>
-                    <td className="muted">{b.contractor || '—'}</td>
-                    <td><div className="flex center gap-2"><Avatar name={b.engineer_name} size={20} />{b.engineer_name || '—'}</div></td>
-                    <td><div className="flex center gap-2"><span className="num" style={{ width: 38 }}>{pct(pp)}</span><div className="grow"><Bar value={d.i} max={d.p || 1} /></div></div></td>
-                    <td><Pill status={b.status_override || 'pending'} /></td>
-                    <td><Icon name="ChevronRight" size={15} color="var(--text-4)" /></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+        {loading ? <Loading /> : buildings.length === 0 ? <Empty icon="buildings">No buildings for this project.</Empty> : (
+          <div className="ies-table-wrap">
+            <table className="ies-tbl" style={{ minWidth: 720 }}>
+              <thead>
+                <tr>
+                  <th>Building</th>
+                  <th>Project</th>
+                  <th>Contractor</th>
+                  <th>Engineer</th>
+                  <th style={{ width: 210 }}>Progress</th>
+                  <th>Status</th>
+                  <th style={{ width: 28 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {buildings.map((b) => {
+                  const d = perB[b.id] || { planned: 0, installed: 0 }
+                  const pp = d.planned ? (d.installed / d.planned) * 100 : 0
+                  return (
+                    <tr key={b.id} className="ies-trow" style={{ cursor: 'pointer' }} onClick={() => setSel(b)}>
+                      <td>
+                        <div style={{ fontWeight: 700 }}>{b.name}</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code} · {b.region}</div>
+                      </td>
+                      <td style={{ color: 'var(--text-3)' }}>{b.project?.code || '—'}</td>
+                      <td style={{ color: 'var(--text-3)' }}>{b.contractor || '—'}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Avatar name={b.engineer_name} size={24} />
+                          <span>{b.engineer_name || '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                          <div style={{ flex: 1 }}><ProgressBar value={d.installed} max={d.planned || 1} /></div>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, width: 38, textAlign: 'right' }}>{pct(pp)}</span>
+                        </div>
+                      </td>
+                      <td><Chip status={b.status_override || 'pending'} /></td>
+                      <td><span style={{ color: '#CBD5E1' }}><Icon name="chevronr" size={16} /></span></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
-      </Card>
+      </div>
 
-      <Modal open={!!sel} title={sel ? `${sel.code} · ${sel.name}` : ''} onClose={() => setSel(null)} width={780}>
-        {sel && <BuildingDetail b={sel} progress={perB[sel.id] || { p: 0, i: 0 }} />}
+      <Modal open={!!sel} width={820}
+        title={sel ? `${sel.code} · ${sel.name}` : ''}
+        onClose={() => setSel(null)}>
+        {sel && <BuildingDetail b={sel} progress={perB[sel.id] || { planned: 0, installed: 0 }} />}
       </Modal>
-    </>
+    </div>
   )
 }
 
 function BuildingDetail({ b, progress }) {
-  const pp = progress.p ? (progress.i / progress.p) * 100 : 0
-  const cur = b.status_override === 'signed' ? 12 : b.status_override === 'pending' ? 1 : Math.min(12, Math.max(1, Math.round((pp / 100) * 12)))
-  const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,sub_type,material_code,planned_qty,project_esm:project_esms(esm:esms(code))').eq('building_id', b.id).order('sub_type'), [b.id])
+  const pp = progress.planned ? (progress.installed / progress.planned) * 100 : 0
+  // current stage index from progress: signed -> 12, pending -> 1, else round(pct/100*12)
+  const cur = b.status_override === 'signed' ? 12
+    : b.status_override === 'pending' ? 1
+      : Math.min(12, Math.max(1, Math.round((pp / 100) * 12)))
+
+  const { rows: scopes } = useLiveQuery('building_item_scope',
+    (q) => q.select('id,sub_type,material_code,planned_qty,project_esm:project_esms(esm:esms(code,name))').eq('building_id', b.id).order('sub_type'), [b.id])
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status').eq('building_id', b.id), [b.id])
   const { rows: rooms } = useLiveQuery('rooms', (q) => q.select('*').eq('building_id', b.id).order('name'), [b.id])
   const { rows: docs } = useLiveQuery('documents', (q) => q.select('*').eq('building_id', b.id).order('kind'), [b.id])
 
-  const insByScope = {}; install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
+  const insByScope = {}
+  install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
 
   return (
-    <div className="col gap-4">
-      <div className="flex center between">
-        <div className="flex center gap-2"><Pill status={b.status_override || 'pending'} /><span className="muted" style={{ fontSize: 12 }}>{b.region} · {b.contractor}</span></div>
-        <span className="num" style={{ fontWeight: 600 }}>{pct(pp)} complete</span>
-      </div>
-
-      <div>
-        <div className="card-meta mb-2">12-stage tracker · current: {STAGES[cur - 1]}</div>
-        <div className="stages">
-          {STAGES.map((s, i) => (
-            <div key={i} className={`stage ${i + 1 === cur ? 'cur' : ''}`}>
-              <div className="n">{String(i + 1).padStart(2, '0')}</div>
-              <div className="flex center" style={{ justifyContent: 'center', margin: '3px 0' }}>
-                <span className={`dot dot-${i + 1 < cur ? 'green' : i + 1 === cur ? 'blue' : 'gray'}`} />
-              </div>
-              <div className="nm">{s}</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* Header card — code/name/meta + weighted progress (mockup lines 420-426) */}
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</div>
+            <h1 style={{ fontSize: 20, fontWeight: 800, margin: '5px 0 3px' }}>{b.name}</h1>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px 14px', fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+              <span>📍 {b.region || '—'}</span>
+              <span>Eng: {b.engineer_name || '—'}</span>
+              <span>Contractor: {b.contractor || '—'}</span>
+              <Chip status={b.status_override || 'pending'} />
             </div>
-          ))}
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 30, fontWeight: 700, lineHeight: 1 }}>{pct(pp)}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>weighted progress</div>
+          </div>
+        </div>
+        <div style={{ height: 7, borderRadius: 5, background: '#EFF2F6', marginTop: 12, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: Math.min(100, pp) + '%', background: 'linear-gradient(90deg,#2563EB,#3B82F6)' }} />
         </div>
       </div>
 
+      {/* 12-stage retrofit tracker */}
       <div>
-        <div className="card-meta mb-2">Scope & install</div>
-        <table className="tbl" style={{ border: '1px solid var(--border)', borderRadius: 8 }}>
-          <thead><tr><th>ESM</th><th>Item</th><th className="right">Planned</th><th className="right">Installed</th><th style={{ width: 120 }}>Progress</th></tr></thead>
-          <tbody>
-            {scopes.map((s) => { const ins = Math.min(s.planned_qty, insByScope[s.id] || 0); return (
-              <tr key={s.id}><td>{s.project_esm?.esm?.code}</td><td>{s.sub_type}</td><td className="right num">{s.planned_qty}</td><td className="right num">{ins}</td>
-                <td><Bar value={ins} max={s.planned_qty || 1} /></td></tr>
-            )})}
-            {scopes.length === 0 && <tr><td colSpan={5} className="muted" style={{ textAlign: 'center' }}>No scope defined.</td></tr>}
-          </tbody>
-        </table>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 10 }}>
+          12-STAGE RETROFIT TRACKER · {STAGES[cur - 1]}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(118px,1fr))', gap: 8 }}>
+          {STAGES.map((s, i) => {
+            const n = i + 1
+            const done = n < cur
+            const isCur = n === cur
+            const bg = done ? '#ECFDF5' : isCur ? '#EFF6FF' : '#fff'
+            const border = done ? '#A7F3D0' : isCur ? '#2563EB' : 'var(--line)'
+            const numBg = done ? '#10B981' : isCur ? '#2563EB' : '#EFF2F6'
+            const numCol = done || isCur ? '#fff' : 'var(--text-3)'
+            const nameCol = done ? '#065F46' : isCur ? '#1E40AF' : 'var(--text-3)'
+            return (
+              <div key={i} style={{ background: bg, border: '1px solid ' + border, borderRadius: 10, padding: '9px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 22, height: 22, flex: 'none', borderRadius: '50%', background: numBg, color: numCol, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700 }}>
+                  {done ? <Icon name="check" size={12} /> : String(n).padStart(2, '0')}
+                </span>
+                <span style={{ fontSize: 11.5, fontWeight: isCur ? 700 : 600, color: nameCol, lineHeight: 1.15 }}>{s}</span>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      <div className="flex gap-4 wrap">
-        <div className="grow" style={{ minWidth: 240 }}>
-          <div className="card-meta mb-2">Rooms ({rooms.length})</div>
-          <div className="col gap-1">
-            {rooms.map((r) => <div key={r.id} className="flex center between" style={{ fontSize: 12.5, padding: '4px 0', borderBottom: '1px solid var(--border-soft)' }}><span>{r.name}</span><span className="muted">{r.floor}</span></div>)}
-            {rooms.length === 0 && <span className="muted" style={{ fontSize: 12 }}>No rooms.</span>}
+      {/* Scope & install table */}
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Scope · Installed vs Planned</div>
+        <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>Approved installs counted against each sub-type's planned quantity.</div>
+        {scopes.length === 0 ? <Empty icon="box">No scope defined for this building.</Empty> : (
+          <div className="ies-table-wrap">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 480 }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)' }}>
+                  <th style={{ padding: '9px 8px', fontWeight: 600 }}>ESM</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600 }}>SUB-TYPE</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right', width: 80 }}>PLANNED</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right', width: 80 }}>INSTALLED</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, width: 150 }}>PROGRESS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scopes.map((s) => {
+                  const ins = Math.min(s.planned_qty || 0, insByScope[s.id] || 0)
+                  const sp = s.planned_qty ? (ins / s.planned_qty) * 100 : 0
+                  return (
+                    <tr key={s.id} style={{ borderTop: '1px solid var(--line)' }}>
+                      <td style={{ padding: '10px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{s.project_esm?.esm?.code || '—'}</td>
+                      <td style={{ padding: '10px 8px', fontWeight: 600 }}>{s.sub_type || s.material_code}</td>
+                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{s.planned_qty || 0}</td>
+                      <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--ok)', fontWeight: 700 }}>{ins}</td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ flex: 1 }}><ProgressBar value={ins} max={s.planned_qty || 1} height={6} /></div>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, width: 34, textAlign: 'right' }}>{pct(sp)}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
+        )}
+      </div>
+
+      {/* Rooms + Documents */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Rooms &amp; locations</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>Defined rooms feed Daily Progress locations.</div>
+          {rooms.length === 0 ? <Empty icon="pin">No rooms defined.</Empty> : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {rooms.map((r) => (
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 4px', borderTop: '1px solid var(--line)' }}>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{r.name}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{r.floor || '—'}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="grow" style={{ minWidth: 240 }}>
-          <div className="card-meta mb-2">Documents ({docs.length})</div>
-          <div className="col gap-1">
-            {docs.map((d) => <div key={d.id} className="flex center between" style={{ fontSize: 12.5, padding: '4px 0', borderBottom: '1px solid var(--border-soft)' }}>
-              <span><span className="pill pill-gray">{DOC_KIND[d.kind]}</span> Rev {d.revision}</span><span className={`pill ${pillClass(d.status)}`}>{d.status}</span></div>)}
-            {docs.length === 0 && <span className="muted" style={{ fontSize: 12 }}>No documents.</span>}
-          </div>
+
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Documents</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>Submittals, inspections &amp; certificates.</div>
+          {docs.length === 0 ? <Empty icon="doc">No documents uploaded.</Empty> : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {docs.map((d) => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 4px', borderTop: '1px solid var(--line)' }}>
+                  <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{d.title || DOC_KIND_FULL[d.kind] || d.kind}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>rev {d.revision ?? '—'}</span>
+                  <Chip status={d.status} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
