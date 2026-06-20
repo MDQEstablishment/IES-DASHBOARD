@@ -1,157 +1,148 @@
 import { useState } from 'react'
+import Icon from '../components/Icon'
 import { Avatar, Chip, Card, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
-import { useAuth, can, Can } from '../rbac'
-import { useLiveQuery, bgInsert } from '../lib/db'
+import { useAuth, can } from '../rbac'
+import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { CAN_MOVE_MATERIAL } from '../lib/constants'
 import { num, fmtShort } from '../lib/format'
 
-// Stock-status pill logic (received vs threshold)
-function stockStatus(received, threshold) {
-  const inStock = received || 0
+// Materials (dc r_materials, 883-916). Stock grouped per-ESM; in-stock = received
+// − consumed and shortage = max(0, planned − received) are computed at read (no
+// stored columns). Movements ledger kept below as the Request/Receipt feature.
+function statusOf(inStock, threshold) {
   const t = threshold || 0
-  if (inStock < t) return { label: 'Reorder Needed', color: '#EF4444', bg: '#FEF2F2' }
+  if (inStock < t) return { label: 'Reorder', color: '#EF4444', bg: '#FEF2F2' }
   if (inStock < t * 1.5) return { label: 'Low', color: '#F59E0B', bg: '#FFFBEB' }
   return { label: 'Healthy', color: '#10B981', bg: '#ECFDF5' }
 }
 
 export default function ManageEsms() {
   const { user, role } = useAuth()
-  const [mv, setMv] = useState(null) // material to record a movement for
+  const [mv, setMv] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
   const canMove = can(role, CAN_MOVE_MATERIAL)
 
   const { rows: esms } = useLiveQuery('esms', (q) => q.select('*').order('code'))
-  const { rows: materials, loading } = useLiveQuery('materials', (q) =>
-    q.select('*,esm:esms(code,name)').order('code'))
+  const { rows: materials, loading } = useLiveQuery('materials', (q) => q.select('*,esm:esms(code,name)').order('code'))
+  const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,material_code'))
+  const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty'))
   const { rows: moves } = useLiveQuery('material_movements', (q) =>
     q.select('*,material:materials(code),by:profiles!material_movements_moved_by_id_fkey(full_name)')
       .order('occurred_at', { ascending: false }).limit(20))
 
+  // consumed per material code = Σ installed qty over scopes that consume that code
+  const scopeMat = {}; scopes.forEach((s) => { scopeMat[s.id] = s.material_code })
+  const consumedByCode = {}; install.forEach((r) => { const c = scopeMat[r.scope_id]; if (c) consumedByCode[c] = (consumedByCode[c] || 0) + (r.qty || 0) })
+
+  const decorate = (m) => {
+    const requested = m.requested || 0, received = m.received || 0, planned = m.planned || 0, threshold = m.threshold || 0
+    const shortage = Math.max(0, planned - received)
+    const consumed = consumedByCode[m.code] || 0
+    const inStock = received - consumed
+    return { ...m, requested, received, shortage, consumed, inStock, threshold, st: statusOf(inStock, threshold) }
+  }
+
+  const decorated = materials.map(decorate)
+  const lowCount = decorated.filter((m) => m.inStock < m.threshold).length
+  const groups = esms.map((e) => ({ no: e.code, name: e.name, items: decorated.filter((m) => m.esm_id === e.id) }))
+
+  const onThresh = (m, val) => {
+    const n = parseInt(val, 10)
+    if (Number.isNaN(n) || n === m.threshold) return
+    bgUpdate('materials', m.id, { threshold: Math.max(0, n) }, { okMsg: 'Threshold updated' })
+  }
+
   return (
-    <div>
-      <PageTitle
-        kicker="INVENTORY · ESM CATALOGUE"
-        title="Materials"
-        right={
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>
-            {esms.length} ESMs · {materials.length} materials
-          </div>
-        }
-      />
-
-      {/* ESM catalogue cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 16 }}>
-        {esms.map((e) => (
-          <Card key={e.id}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{e.code}</span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: 'var(--text-3)', background: 'var(--bg)' }}>{e.unit}</span>
-            </div>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>{e.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
-              {materials.filter((m) => m.esm_id === e.id).length} materials
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Materials inventory table */}
-      <Card pad={0} style={{ overflow: 'hidden', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Materials inventory</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', letterSpacing: '.5px' }}>PLANNED · REQUESTED · RECEIVED</div>
-        </div>
-        {loading ? (
-          <Loading />
-        ) : materials.length === 0 ? (
-          <Empty icon="box">No materials.</Empty>
-        ) : (
-          <div className="ies-table-wrap">
-            <table className="ies-tbl" style={{ minWidth: 880 }}>
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Material</th>
-                  <th>ESM</th>
-                  <th style={{ textAlign: 'right' }}>Planned</th>
-                  <th style={{ textAlign: 'right' }}>Requested</th>
-                  <th style={{ textAlign: 'right' }}>Received</th>
-                  <th style={{ textAlign: 'right' }}>Reorder at</th>
-                  <th>Stock</th>
-                  {canMove && <th>Action</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {materials.map((m) => {
-                  const s = stockStatus(m.received, m.threshold)
-                  return (
-                    <tr key={m.id} className="ies-trow">
-                      <td style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>{m.code}</td>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{m.name}</div>
-                        {m.brand_spec && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.brand_spec}</div>}
-                      </td>
-                      <td style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{m.esm?.code || '—'}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(m.planned)}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(m.requested)}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(m.received)}</td>
-                      <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.threshold)}</td>
-                      <td>
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: s.color, background: s.bg, whiteSpace: 'nowrap' }}>{s.label}</span>
-                      </td>
-                      {canMove && (
-                        <td>
-                          <Btn icon="box" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => setMv(m)}>Move</Btn>
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+    <div data-screen-label="Materials">
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
+        <PageTitle kicker="STOCK · ALL PROJECTS" title="Materials" />
+        {canMove && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13 }}><Icon name="upload" size={15} />Import Excel</button>
+            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13 }}><Icon name="plus" size={15} />Add Material</button>
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* Recent movements feed */}
-      <Card pad={0} style={{ overflow: 'hidden' }}>
+      {lowCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>
+          <Icon name="alert" size={15} /><span><strong>{lowCount}</strong> material(s) below threshold — reorder action required. Surfaced on the PMO dashboard.</span>
+        </div>
+      )}
+
+      {loading ? <Loading /> : groups.length === 0 ? <Empty icon="box">No ESMs.</Empty> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {groups.map((g) => (
+            <div key={g.no} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{g.no}</span>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{g.name}</span>
+              </div>
+              <div className="ies-table-wrap">
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
+                      <th style={{ padding: 8, fontWeight: 600 }}>MATERIAL</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>REQUESTED</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>RECEIVED</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>SHORTAGE</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>CONSUMED</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>IN STOCK</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'center' }}>THRESHOLD</th>
+                      <th style={{ padding: 8, fontWeight: 600 }}>STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.items.length === 0 ? (
+                      <tr><td colSpan={8} style={{ padding: '14px 8px', color: 'var(--text-3)' }}>No materials in this ESM.</td></tr>
+                    ) : g.items.map((m) => (
+                      <tr key={m.id} style={{ borderTop: '1px solid var(--line)' }}>
+                        <td style={{ padding: '10px 8px' }}>
+                          <div style={{ fontWeight: 600 }}>{m.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{[m.brand_spec, m.unit].filter(Boolean).join(' · ') || '—'}</div>
+                        </td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(m.requested)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(m.received)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, color: m.shortage > 0 ? '#EF4444' : 'var(--text-3)' }}>{num(m.shortage)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.consumed)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(m.inStock)}</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                          {canMove
+                            ? <input defaultValue={m.threshold} onBlur={(e) => onThresh(m, e.target.value)} style={{ width: 60, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'center' }} />
+                            : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.threshold)}</span>}
+                        </td>
+                        <td style={{ padding: '10px 8px' }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: m.st.color, background: m.st.bg }}>{m.st.label}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Movements ledger (Request / Receipt — README Materials feature) */}
+      <Card pad={0} style={{ overflow: 'hidden', marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Recent movements</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', letterSpacing: '.5px' }}>REQUEST / RECEIPT LEDGER</div>
+          {canMove && <button onClick={() => setMv(materials[0] || null)} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>Record movement</button>}
         </div>
-        {moves.length === 0 ? (
-          <Empty icon="box">No movements recorded.</Empty>
-        ) : (
+        {moves.length === 0 ? <Empty icon="box">No movements recorded.</Empty> : (
           <div className="ies-table-wrap">
             <table className="ies-tbl" style={{ minWidth: 720 }}>
-              <thead>
-                <tr>
-                  <th>When</th>
-                  <th>SKU</th>
-                  <th>Kind</th>
-                  <th style={{ textAlign: 'right' }}>Qty</th>
-                  <th>By</th>
-                  <th>Note</th>
-                </tr>
-              </thead>
+              <thead><tr><th>When</th><th>SKU</th><th>Kind</th><th style={{ textAlign: 'right' }}>Qty</th><th>By</th><th>Note</th></tr></thead>
               <tbody>
                 {moves.map((m) => (
                   <tr key={m.id} className="ies-trow">
                     <td style={{ fontFamily: 'var(--mono)', whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtShort(m.occurred_at)}</td>
                     <td style={{ fontFamily: 'var(--mono)' }}>{m.material?.code || '—'}</td>
-                    <td>
-                      <Chip
-                        label={m.kind === 'receipt' ? 'Receipt' : 'Request'}
-                        color={m.kind === 'receipt' ? '#10B981' : '#2563EB'}
-                        bg={m.kind === 'receipt' ? '#ECFDF5' : '#EFF6FF'}
-                      />
-                    </td>
+                    <td><Chip label={m.kind === 'receipt' ? 'Receipt' : 'Request'} color={m.kind === 'receipt' ? '#10B981' : '#2563EB'} bg={m.kind === 'receipt' ? '#ECFDF5' : '#EFF6FF'} /></td>
                     <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(m.qty)}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Avatar name={m.by?.full_name || 'system'} size={22} />
-                        <span>{m.by?.full_name || 'system'}</span>
-                      </div>
-                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={m.by?.full_name || 'system'} size={22} /><span>{m.by?.full_name || 'system'}</span></div></td>
                     <td style={{ color: 'var(--text-3)', fontSize: 11.5, maxWidth: 260 }}>{(m.note || '').replace(/^\[seed\]\s*/, '') || '—'}</td>
                   </tr>
                 ))}
@@ -161,56 +152,65 @@ export default function ManageEsms() {
         )}
       </Card>
 
-      {mv && <MoveModal material={mv} user={user} onClose={() => setMv(null)} />}
+      {mv && <MoveModal material={mv} materials={materials} user={user} onClose={() => setMv(null)} />}
+      {addOpen && <AddMaterialModal esms={esms} onClose={() => setAddOpen(false)} />}
     </div>
   )
 }
 
-function MoveModal({ material, user, onClose }) {
+function MoveModal({ material, materials, user, onClose }) {
+  const [mid, setMid] = useState(material?.id || '')
   const [kind, setKind] = useState('receipt')
   const [qty, setQty] = useState('')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
-
   const save = async () => {
-    if (!qty || Number(qty) < 1) return
+    if (!mid || !qty || Number(qty) < 1) return
     setBusy(true)
-    const { error } = await bgInsert('material_movements', {
-      material_id: material.id,
-      kind,
-      qty: Number(qty),
-      note: note || null,
-      moved_by_id: user.id,
-    }, { okMsg: `${kind === 'receipt' ? 'Receipt' : 'Request'} recorded` })
+    const { error } = await bgInsert('material_movements', { material_id: mid, kind, qty: Number(qty), note: note || null, moved_by_id: user.id },
+      { okMsg: `${kind === 'receipt' ? 'Receipt' : 'Request'} recorded` })
     setBusy(false)
     if (!error) onClose()
   }
-
   return (
-    <Modal
-      open
-      title={`Record movement · ${material.code}`}
-      onClose={onClose}
-      footer={
-        <>
-          <Btn onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" onClick={save} disabled={busy || !qty}>{busy ? 'Saving…' : 'Record'}</Btn>
-        </>
-      }
-    >
-      <Field label="Kind">
-        <select style={inputStyle} value={kind} onChange={(e) => setKind(e.target.value)}>
-          <option value="receipt">Receipt (received)</option>
-          <option value="request">Request (ordered)</option>
-        </select>
-      </Field>
-      <Field label="Quantity">
-        <input style={inputStyle} type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" />
-      </Field>
-      <Field label="Note">
-        <input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="PO / DN reference…" />
-      </Field>
+    <Modal open title="Record movement" onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !qty || !mid}>{busy ? 'Saving…' : 'Record'}</Btn></>}>
+      <Field label="Material"><select style={inputStyle} value={mid} onChange={(e) => setMid(e.target.value)}><option value="">Select…</option>{materials.map((m) => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select></Field>
+      <Field label="Kind"><select style={inputStyle} value={kind} onChange={(e) => setKind(e.target.value)}><option value="receipt">Receipt (received)</option><option value="request">Request (ordered)</option></select></Field>
+      <Field label="Quantity"><input style={inputStyle} type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" /></Field>
+      <Field label="Note"><input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="PO / DN reference…" /></Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Updates the material's running counters via the ledger trigger.</div>
+    </Modal>
+  )
+}
+
+function AddMaterialModal({ esms, onClose }) {
+  const [code, setCode] = useState('')
+  const [name, setName] = useState('')
+  const [esmId, setEsmId] = useState(esms[0]?.id || '')
+  const [planned, setPlanned] = useState('')
+  const [threshold, setThreshold] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    if (!code.trim() || !name.trim() || !esmId) return
+    setBusy(true)
+    const { error } = await bgInsert('materials', { code: code.trim(), name: name.trim(), esm_id: esmId, planned: parseInt(planned, 10) || 0, threshold: parseInt(threshold, 10) || 0 },
+      { okMsg: 'Material added' })
+    setBusy(false)
+    if (!error) onClose()
+  }
+  return (
+    <Modal open title="Add material" onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !code.trim() || !name.trim()}>{busy ? 'Saving…' : 'Add'}</Btn></>}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1 }}><Field label="SKU"><input style={inputStyle} value={code} onChange={(e) => setCode(e.target.value)} placeholder="M-L01" /></Field></div>
+        <div style={{ flex: 2 }}><Field label="Name"><input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="LED Panel 40W" /></Field></div>
+      </div>
+      <Field label="ESM"><select style={inputStyle} value={esmId} onChange={(e) => setEsmId(e.target.value)}>{esms.map((e) => <option key={e.id} value={e.id}>{e.code} · {e.name}</option>)}</select></Field>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1 }}><Field label="Planned"><input style={inputStyle} type="number" min="0" value={planned} onChange={(e) => setPlanned(e.target.value)} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Threshold"><input style={inputStyle} type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} /></Field></div>
+      </div>
     </Modal>
   )
 }
