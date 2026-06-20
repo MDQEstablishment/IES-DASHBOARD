@@ -121,6 +121,33 @@ export function Modal({ open, title, onClose, children, footer, width = 520 }) {
   )
 }
 
+// Right-side slide-over drawer/panel (dc panelOpen / esmPanelOpen).
+export function Drawer({ open, title, subtitle, onClose, children, footer, width = 400 }) {
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => { if (e.key === 'Escape') onClose?.() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [open, onClose])
+  if (!open) return null
+  return (
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(15,23,42,.5)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ width: '100%', maxWidth: width, height: '100%', background: '#fff', boxShadow: '-16px 0 40px rgba(15,23,42,.25)', display: 'flex', flexDirection: 'column', animation: 'iesSlideR .2s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
+            {subtitle && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</div>}
+          </div>
+          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
+        </div>
+        <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>{children}</div>
+        {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
+      </div>
+    </div>
+  )
+}
+
 export function Field({ label, children }) {
   return <label style={{ display: 'block', marginBottom: 14 }}><span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>{label}</span>{children}</label>
 }
