@@ -1,7 +1,21 @@
+import { useState } from 'react'
 import Icon from '../components/Icon'
-import { RingChart, Loading, Empty } from '../components/ui'
+import { RingChart, Loading, Empty, Drawer } from '../components/ui'
 import { useLiveQuery } from '../lib/db'
 import { ago } from '../lib/format'
+
+// Card documentation (also exported to docs/Dashboard-Cards-Reference.md)
+const CARD_DOCS = [
+  ['Total Projects', 'Count of non-deleted projects.', 'projects table', 'Add Project / Delete Project actions'],
+  ['Portfolio Progress', 'Weighted average installed ÷ planned across active projects.', 'install_log ÷ building_item_scope', 'Engineer install entries'],
+  ['S-Curve', 'Planned vs actual progress over time.', 'install_log aggregated by week', 'Daily Report submissions'],
+  ['COCs Signed', 'Buildings with a signed completion certificate.', 'buildings.status_override = signed', 'COC approval flow'],
+  ['Progress by Project', 'Per-project weighted %.', 'install_log + building_item_scope', 'Engineer log entries'],
+  ['Progress by ESM', 'Per-ESM aggregated % across the portfolio.', 'install_log grouped by ESM', 'Engineer log entries'],
+  ['Attention List', 'Open escalations + blocked tasks.', 'escalations + tasks', 'Auto-detected blockers + manual escalations'],
+  ['Recent Activity', 'Last writes across the programme.', 'audit_log', 'Any write action'],
+  ['Critical Materials', 'Materials at or below their reorder threshold.', 'materials (received vs threshold)', 'Material receipts + install activity'],
+]
 
 // ESM bucket inference from material_code prefix (fallback when no scope→esm join)
 function esmOf(code) {
@@ -18,6 +32,7 @@ const ESM_META = {
 }
 
 export default function Dashboard() {
+  const [help, setHelp] = useState(false)
   const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code,name,status,client,region'))
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,project_id,status_override'))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
@@ -153,7 +168,10 @@ export default function Dashboard() {
           <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '2px', color: 'var(--text-3)' }}>EXECUTIVE SNAPSHOT</div>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 0' }}>{dashTitle}</h1>
         </div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>Scope: {scopeLabel}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>Scope: {scopeLabel}</div>
+          <button onClick={() => setHelp(true)} className="ies-card-hover" title="What does each card mean?" style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--line)', background: '#fff', fontWeight: 800, fontSize: 14, color: 'var(--accent)' }}>?</button>
+        </div>
       </div>
 
       <div className="ies-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 14 }}>
@@ -327,6 +345,19 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      <Drawer open={help} title="Understanding the Dashboard" subtitle="What each card shows, where the data comes from, and what changes it." onClose={() => setHelp(false)} width={440}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {CARD_DOCS.map(([name, def, source, controls]) => (
+            <div key={name} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{name}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4 }}>{def}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}><span style={{ fontFamily: 'var(--mono)' }}>Source:</span> {source}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}><span style={{ fontFamily: 'var(--mono)' }}>Changed by:</span> {controls}</div>
+            </div>
+          ))}
+        </div>
+      </Drawer>
     </div>
   )
 }
