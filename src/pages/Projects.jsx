@@ -1,78 +1,146 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PageHead, Stat, Card, Bar, Pill, Loading, Empty } from '../components/ui'
 import Icon from '../components/Icon'
+import { PageTitle, Loading, Empty } from '../components/ui'
+import { useAuth, can } from '../rbac'
 import { useLiveQuery } from '../lib/db'
-import { num, pct, fmtDate } from '../lib/format'
+import { num } from '../lib/format'
+import { statusMeta, MANAGERS } from '../lib/constants'
+
+const FILTERS = [
+  ['all', 'All'],
+  ['active', 'Active'],
+  ['draft', 'Draft'],
+  ['on_hold', 'On-Hold'],
+  ['closed', 'Closed'],
+]
 
 export default function Projects() {
-  const nav = useNavigate()
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const { rows: projects, loading } = useLiveQuery('projects', (q) => q.select('*').order('code'))
+  const navigate = useNavigate()
+  const { role } = useAuth()
+  const [filter, setFilter] = useState('all')
+
+  const { rows: projects, loading } = useLiveQuery('projects', (q) =>
+    q.select('*, pm:profiles!projects_pm_id_fkey(full_name)').order('code'))
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,project_id'))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
+  const { rows: projectEsms } = useLiveQuery('project_esms', (q) => q.select('id,project_id'))
 
-  const insByScope = {}; install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
-  const bP = {}; buildings.forEach((b) => { bP[b.id] = b.project_id })
-  const per = {}
+  const canAddProject = can(role, MANAGERS)
+  const projectsReadOnly = !canAddProject
+
+  // approved-installed qty per scope
+  const insByScope = {}
+  install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
+
+  // building -> project map
+  const bProj = {}
+  buildings.forEach((b) => { bProj[b.id] = b.project_id })
+
+  // weighted progress (Σ approved-installed capped per scope ÷ Σ planned) per project
+  const prog = {}
   scopes.forEach((s) => {
-    const pid = bP[s.building_id]; if (!pid) return
-    const ins = Math.min(s.planned_qty, insByScope[s.id] || 0)
-    per[pid] = per[pid] || { planned: 0, installed: 0 }; per[pid].planned += s.planned_qty; per[pid].installed += ins
+    const pid = bProj[s.building_id]; if (!pid) return
+    const ins = Math.min(s.planned_qty || 0, insByScope[s.id] || 0)
+    prog[pid] = prog[pid] || { planned: 0, installed: 0 }
+    prog[pid].planned += s.planned_qty || 0
+    prog[pid].installed += ins
   })
 
-  const filtered = projects.filter((p) => {
-    if (status !== 'all' && p.status !== status) return false
-    if (search && !(`${p.name} ${p.client} ${p.region}`.toLowerCase().includes(search.toLowerCase()))) return false
-    return true
-  })
+  const bldgCount = {}
+  buildings.forEach((b) => { bldgCount[b.project_id] = (bldgCount[b.project_id] || 0) + 1 })
+  const esmCount = {}
+  projectEsms.forEach((e) => { esmCount[e.project_id] = (esmCount[e.project_id] || 0) + 1 })
+
+  const filtered = projects.filter((p) => filter === 'all' || p.status === filter)
+
+  const iconUpload = <Icon name="upload" size={15} />
+  const iconPlus = <Icon name="plus" size={15} />
 
   return (
-    <>
-      <PageHead kicker="Company-wide · all divisions" title="Projects"
-        sub={`${projects.length} projects · ${projects.filter((p) => p.status === 'active').length} active · ${buildings.length} buildings`} />
-
-      <div className="grid mb-4" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
-        <Stat label="Total projects" value={num(projects.length)} />
-        <Stat label="Active" value={num(projects.filter((p) => p.status === 'active').length)} accent="var(--green)" />
-        <Stat label="Buildings" value={num(buildings.length)} />
-        <Stat label="Draft / on-hold" value={num(projects.filter((p) => p.status === 'draft' || p.status === 'on_hold').length)} accent="var(--gold)" />
+    <div data-screen-label="Projects">
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
+        <PageTitle kicker="COMPANY-WIDE · ALL DIVISIONS" title="Projects" />
+        {canAddProject && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>{iconPlus}Add Project</button>
+          </div>
+        )}
       </div>
 
-      <Card pad={false}
-        title={<input className="input" style={{ width: 260 }} placeholder="Search project, client, region…" value={search} onChange={(e) => setSearch(e.target.value)} />}
-        actions={
-          <select className="select" style={{ width: 150 }} value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="all">All status</option><option value="active">Active</option>
-            <option value="draft">Draft</option><option value="on_hold">On hold</option><option value="closed">Closed</option>
-          </select>}>
-        {loading ? <Loading /> : filtered.length === 0 ? <Empty>No projects match.</Empty> : (
-          <table className="tbl">
-            <thead><tr><th>Project</th><th>Client</th><th>Region</th><th>Buildings</th><th style={{ width: 200 }}>Progress</th><th>Ends</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {filtered.map((p) => {
-                const d = per[p.id] || { planned: 0, installed: 0 }
-                const pp = d.planned ? (d.installed / d.planned) * 100 : 0
-                const bc = buildings.filter((b) => b.project_id === p.id).length
-                return (
-                  <tr key={p.id} className="clickable" onClick={() => nav(`/projects/${p.id}`)}>
-                    <td><div style={{ fontWeight: 600 }}>{p.name}</div><div className="muted" style={{ fontSize: 11 }}>{p.code}</div></td>
-                    <td className="muted">{p.client}</td>
-                    <td className="muted">{p.region}</td>
-                    <td className="num">{bc}</td>
-                    <td><div className="flex center gap-2"><span className="num" style={{ width: 38 }}>{pct(pp)}</span><div className="grow"><Bar value={d.installed} max={d.planned || 1} /></div></div></td>
-                    <td className="num muted">{p.start_date ? fmtDate(p.start_date) : '—'}</td>
-                    <td><Pill status={p.status} /></td>
-                    <td><Icon name="ChevronRight" size={15} color="var(--text-4)" /></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </Card>
-    </>
+      {projectsReadOnly && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', borderRadius: 9, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+          <Icon name="alert" size={15} />Read-only access — your role can view projects but not edit them.
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 7, marginBottom: 16, flexWrap: 'wrap' }}>
+        {FILTERS.map(([key, label]) => {
+          const active = filter === key
+          const [col, bg] = key === 'all' ? ['#2563EB', '#EFF6FF'] : statusMeta(key)
+          return (
+            <button key={key} onClick={() => setFilter(key)}
+              style={{ padding: '6px 13px', borderRadius: 20, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid ' + (active ? col : 'var(--line)'), background: active ? bg : '#fff' }}>
+              <span style={{ color: active ? col : 'var(--text-3)' }}>{label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {loading ? <Loading /> : filtered.length === 0 ? <Empty icon="projects">No projects match this filter.</Empty> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {filtered.map((p) => {
+            const d = prog[p.id] || { planned: 0, installed: 0 }
+            const pp = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
+            const remaining = Math.max(0, d.planned - d.installed)
+            const [pillColor, pillBg, pillLabel] = statusMeta(p.status)
+            const barCol = pp >= 100 ? '#10B981' : 'var(--accent)'
+            const r = 22, circ = 2 * Math.PI * r
+            const ringDash = `${((pp / 100) * circ).toFixed(1)} ${circ.toFixed(1)}`
+            return (
+              <button key={p.id} className="ies-hover" onClick={() => navigate(`/projects/${p.id}`)}
+                style={{ textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 0, display: 'flex', alignItems: 'stretch', overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)', cursor: 'pointer' }}>
+                <div style={{ width: 4, background: pillColor, flex: 'none' }} />
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 18, padding: '15px 18px', flexWrap: 'wrap' }}>
+                  <div style={{ position: 'relative', width: 50, height: 50, flex: 'none' }}>
+                    <svg viewBox="0 0 50 50" style={{ width: 50, height: 50 }}>
+                      <circle cx="25" cy="25" r="22" fill="none" stroke="#EFF2F6" strokeWidth="5" />
+                      <circle cx="25" cy="25" r="22" fill="none" stroke={barCol} strokeWidth="5" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 25 25)" />
+                    </svg>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700 }}>{pp}%</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>{p.code}</span>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: pillColor, background: pillBg }}>{pillLabel}</span>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 15.5, marginTop: 3, letterSpacing: '-.2px' }}>{p.name}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>🏛 {p.client || '—'} · 📍 {p.region || '—'} · 👷 {p.pm?.full_name || '—'}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 18, alignItems: 'center', flex: 'none' }}>
+                    <div style={{ textAlign: 'center', minWidth: 58 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 700, color: 'var(--warn)' }}>{num(remaining)}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.5px', color: 'var(--text-3)', marginTop: 2 }}>REMAINING</div>
+                    </div>
+                    <div style={{ textAlign: 'center', minWidth: 44 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 700 }}>{bldgCount[p.id] || 0}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.5px', color: 'var(--text-3)', marginTop: 2 }}>BLDGS</div>
+                    </div>
+                    <div style={{ textAlign: 'center', minWidth: 44 }}>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 700 }}>{esmCount[p.id] || 0}</div>
+                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.5px', color: 'var(--text-3)', marginTop: 2 }}>ESMs</div>
+                    </div>
+                    <span style={{ color: '#CBD5E1' }}><Icon name="chevronr" size={18} /></span>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
