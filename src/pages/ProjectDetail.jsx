@@ -8,6 +8,7 @@ import { num, fmtDate } from '../lib/format'
 import { statusMeta, MANAGERS } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal } from '../components/ProjectModals'
+import BuildingsMap from '../components/BuildingsMap'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -324,17 +325,14 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {/* MAP tab — placeholder (no geo data) */}
+      {/* MAP tab — real OpenStreetMap markers */}
       {tab === 'map' && (
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Buildings Map — {project.region || '—'}</div>
-          <div style={{ position: 'relative', height: 360, borderRadius: 12, background: 'linear-gradient(135deg,#EFF4FB,#F8FAFC)', border: '1px solid var(--line)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg viewBox="0 0 400 300" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: .35 }}>
-              <path d="M60 80 L200 50 L320 100 L300 220 L160 250 L80 200 Z" fill="none" stroke="#94A3B8" strokeWidth="1.5" />
-              <path d="M0 150 L400 150 M0 230 L400 230 M120 0 L120 300 M260 0 L260 300" stroke="#CBD5E1" strokeWidth=".5" />
-            </svg>
-            <span style={{ position: 'relative', color: 'var(--text-3)', fontSize: 13 }}>Map view — no geo data available</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Buildings Map — {project.region || '—'}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>CLICK A MARKER FOR CONTRACTOR INFO</div>
           </div>
+          <BuildingsMap buildings={buildings} />
         </div>
       )}
 
