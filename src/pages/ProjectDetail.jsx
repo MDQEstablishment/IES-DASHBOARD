@@ -7,6 +7,7 @@ import { useAuth, can } from '../rbac'
 import { num, fmtDate } from '../lib/format'
 import { statusMeta, MANAGERS } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
+import { ProjectFormModal, StatusChangeModal } from '../components/ProjectModals'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -31,6 +32,8 @@ export default function ProjectDetail() {
   const { role } = useAuth()
   const [tab, setTab] = useState('buildings')
   const [esmPanel, setEsmPanel] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [statusOpen, setStatusOpen] = useState(false)
   const canManage = can(role, MANAGERS)
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
@@ -78,6 +81,8 @@ export default function ProjectDetail() {
   const weeksElapsed = project.start_date
     ? Math.max(0, Math.floor((Date.now() - new Date(project.start_date).getTime()) / (7 * 86400000)))
     : 0
+  // Time-linked remaining: days until end_date (red when <= 14). Falls back to weeks.
+  const daysToEnd = project.end_date ? Math.ceil((new Date(project.end_date).getTime() - Date.now()) / 86400000) : null
   const weeksRemaining = Math.max(0, totalWeeks - weeksElapsed)
 
   const [pillColor, pillBg, pillLabel] = statusMeta(project.status)
@@ -113,10 +118,18 @@ export default function ProjectDetail() {
 
   return (
     <div data-screen-label="Project Detail">
-      {/* back link */}
-      <Link to="/projects" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>
-        <Icon name="chevronl" size={14} />All projects
-      </Link>
+      {/* back link + project actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+        <Link to="/projects" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontSize: 12.5, fontWeight: 600 }}>
+          <Icon name="chevronl" size={14} />All projects
+        </Link>
+        {canManage && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Btn icon="edit" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setEditOpen(true)}>Edit project</Btn>
+            <Btn icon="settings" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setStatusOpen(true)}>Change status</Btn>
+          </div>
+        )}
+      </div>
 
       {/* header card */}
       <div style={{ border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, overflow: 'hidden', boxShadow: '0 1px 3px rgba(15,23,42,.06)' }}>
@@ -137,7 +150,7 @@ export default function ProjectDetail() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18, flex: 'none' }}>
-              <div style={{ position: 'relative', width: 84, height: 84, flex: 'none' }}>
+              <div style={{ position: 'relative', width: 84, height: 84, flex: 'none', cursor: 'help' }} title="Progress = installed ÷ planned across all building scopes, weighted by scope size. Engineer install entries move this number.">
                 <svg viewBox="0 0 64 64" style={{ width: 84, height: 84 }}>
                   <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="7" />
                   <circle cx="32" cy="32" r="26" fill="none" stroke="#60A5FA" strokeWidth="7" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 32 32)" />
@@ -155,9 +168,11 @@ export default function ProjectDetail() {
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>TIMELINE</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{totalWeeks || '—'} wks</div>
           </div>
-          <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }}>
+          <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }} title={project.end_date ? `Ends ${fmtDate(project.end_date)}` : 'No end date set'}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>REMAINING</div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3, color: 'var(--warn)' }}>{weeksRemaining} wks</div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3, color: (daysToEnd != null && daysToEnd <= 14) ? 'var(--bad)' : 'var(--warn)' }}>
+              {daysToEnd != null ? `${Math.max(0, daysToEnd)} days` : `${weeksRemaining} wks`}
+            </div>
           </div>
           <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>BUILDINGS</div>
@@ -204,8 +219,8 @@ export default function ProjectDetail() {
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>CONTRACTOR</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>ENGINEER</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>PROGRESS</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>MATERIAL DELIVERY</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>APPROVAL</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Scheduled vs actual material delivery for the building">MATERIAL DELIVERY</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Approval status of formal COCs and material submittals for this building">APPROVAL</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
               </tr></thead>
               <tbody>
@@ -214,7 +229,7 @@ export default function ProjectDetail() {
                   const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
                   const color = prog >= 100 ? '#10B981' : 'var(--accent)'
                   return (
-                    <tr key={b.id} onClick={() => navigate(`/projects/${id}/buildings/${b.id}`)} className="ies-hover" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
+                    <tr key={b.id} onClick={() => navigate(`/projects/${id}/buildings/${b.id}`)} className="ies-trow" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
                       <td style={{ padding: '11px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</td>
                       <td style={{ padding: '11px 8px' }}><div style={{ fontWeight: 600 }}>{b.name}</div><div style={{ fontSize: 11, color: 'var(--text-3)' }}>{b.region || '—'}</div></td>
                       <td style={{ padding: '11px 8px', color: 'var(--text-3)' }}>{b.contractor || '—'}</td>
@@ -343,6 +358,9 @@ export default function ProjectDetail() {
           </div>
         )}
       </Drawer>
+
+      {editOpen && <ProjectFormModal mode="edit" project={project} onClose={() => setEditOpen(false)} />}
+      {statusOpen && <StatusChangeModal project={project} onClose={() => setStatusOpen(false)} />}
     </div>
   )
 }
