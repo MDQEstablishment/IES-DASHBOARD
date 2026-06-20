@@ -2,10 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { PageTitle, Loading, Empty } from '../components/ui'
-import { useAuth, can } from '../rbac'
+import { useAuth } from '../rbac'
 import { useLiveQuery } from '../lib/db'
 import { num } from '../lib/format'
-import { statusMeta, MANAGERS } from '../lib/constants'
+import { statusMeta } from '../lib/constants'
+import { ProjectFormModal, ProjectImportModal, DeleteProjectModal } from '../components/ProjectModals'
+
+const STATUS_RANK = { active: 0, draft: 1, on_hold: 2, closed: 3, deleted: 4 }
+const SORTS = [['recent', 'Status + Recent'], ['name', 'Name A→Z'], ['progress', 'Progress %'], ['start', 'Start date']]
 
 const FILTERS = [
   ['all', 'All'],
@@ -19,6 +23,11 @@ export default function Projects() {
   const navigate = useNavigate()
   const { role } = useAuth()
   const [filter, setFilter] = useState('all')
+  const [sort, setSort] = useState('recent')
+  const [addOpen, setAddOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [editProj, setEditProj] = useState(null)
+  const [delProj, setDelProj] = useState(null)
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
     q.select('*, pm:profiles!projects_pm_id_fkey(full_name)').order('code'))
@@ -27,8 +36,10 @@ export default function Projects() {
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) => q.select('id,project_id'))
 
-  const canAddProject = can(role, MANAGERS)
-  const projectsReadOnly = !canAddProject
+  const canAdd = ['admin', 'ceo', 'pmo'].includes(role)
+  const canEdit = ['admin', 'pmo', 'projm', 'progm'].includes(role)
+  const canDelete = role === 'admin'
+  const projectsReadOnly = !canEdit
 
   // approved-installed qty per scope
   const insByScope = {}
@@ -53,7 +64,16 @@ export default function Projects() {
   const esmCount = {}
   projectEsms.forEach((e) => { esmCount[e.project_id] = (esmCount[e.project_id] || 0) + 1 })
 
-  const filtered = projects.filter((p) => filter === 'all' || p.status === filter)
+  const progOf = (p) => { const d = prog[p.id] || { planned: 0, installed: 0 }; return d.planned ? d.installed / d.planned : 0 }
+  const filtered = projects
+    .filter((p) => (filter === 'all' ? p.status !== 'deleted' : p.status === filter))
+    .sort((a, b) => {
+      if (sort === 'name') return (a.name || '').localeCompare(b.name || '')
+      if (sort === 'progress') return progOf(b) - progOf(a)
+      if (sort === 'start') return new Date(b.start_date || 0) - new Date(a.start_date || 0)
+      const r = (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9)
+      return r !== 0 ? r : new Date(b.start_date || 0) - new Date(a.start_date || 0)
+    })
 
   const iconUpload = <Icon name="upload" size={15} />
   const iconPlus = <Icon name="plus" size={15} />
@@ -62,10 +82,10 @@ export default function Projects() {
     <div data-screen-label="Projects">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
         <PageTitle kicker="RETROFIT PROGRAMME" title="Projects" />
-        {canAddProject && (
+        {canAdd && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>{iconPlus}Add Project</button>
+            <button onClick={() => setImportOpen(true)} className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
+            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>{iconPlus}Add Project</button>
           </div>
         )}
       </div>
@@ -76,18 +96,26 @@ export default function Projects() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 7, marginBottom: 16, flexWrap: 'wrap' }}>
-        {FILTERS.map(([key, label]) => {
-          const active = filter === key
-          const [col, bg] = key === 'all' ? ['#2563EB', '#EFF6FF'] : statusMeta(key)
-          return (
-            <button key={key} onClick={() => setFilter(key)}
-              style={{ padding: '6px 13px', borderRadius: 20, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-                border: '1px solid ' + (active ? col : 'var(--line)'), background: active ? bg : '#fff' }}>
-              <span style={{ color: active ? col : 'var(--text-3)' }}>{label}</span>
-            </button>
-          )
-        })}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {FILTERS.map(([key, label]) => {
+            const active = filter === key
+            const [col, bg] = key === 'all' ? ['#2563EB', '#EFF6FF'] : statusMeta(key)
+            return (
+              <button key={key} onClick={() => setFilter(key)}
+                style={{ padding: '6px 13px', borderRadius: 20, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid ' + (active ? col : 'var(--line)'), background: active ? bg : '#fff' }}>
+                <span style={{ color: active ? col : 'var(--text-3)' }}>{label}</span>
+              </button>
+            )
+          })}
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-3)' }}>
+          Sort
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12.5, background: '#fff', fontWeight: 600 }}>
+            {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
       </div>
 
       {loading ? <Loading /> : filtered.length === 0 ? <Empty icon="projects">No projects match this filter.</Empty> : (
@@ -101,7 +129,7 @@ export default function Projects() {
             const r = 22, circ = 2 * Math.PI * r
             const ringDash = `${((pp / 100) * circ).toFixed(1)} ${circ.toFixed(1)}`
             return (
-              <button key={p.id} className="ies-hover" onClick={() => navigate(`/projects/${p.id}`)}
+              <div key={p.id} className="ies-hover" role="button" tabIndex={0} onClick={() => navigate(`/projects/${p.id}`)}
                 style={{ textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 0, display: 'flex', alignItems: 'stretch', overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)', cursor: 'pointer' }}>
                 <div style={{ width: 4, background: pillColor, flex: 'none' }} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 18, padding: '15px 18px', flexWrap: 'wrap' }}>
@@ -133,14 +161,25 @@ export default function Projects() {
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 700 }}>{esmCount[p.id] || 0}</div>
                       <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.5px', color: 'var(--text-3)', marginTop: 2 }}>ESMs</div>
                     </div>
+                    {(canEdit || canDelete) && (
+                      <span style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                        {canEdit && <button title="Edit project" onClick={() => setEditProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="edit" size={14} /></button>}
+                        {canDelete && <button title="Delete project" onClick={() => setDelProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={14} /></button>}
+                      </span>
+                    )}
                     <span style={{ color: '#CBD5E1' }}><Icon name="chevronr" size={18} /></span>
                   </div>
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
       )}
+
+      {addOpen && <ProjectFormModal mode="add" onClose={() => setAddOpen(false)} />}
+      {importOpen && <ProjectImportModal onClose={() => setImportOpen(false)} />}
+      {editProj && <ProjectFormModal mode="edit" project={editProj} onClose={() => setEditProj(null)} />}
+      {delProj && <DeleteProjectModal project={delProj} onClose={() => setDelProj(null)} />}
     </div>
   )
 }
