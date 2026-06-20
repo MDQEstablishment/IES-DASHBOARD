@@ -95,6 +95,8 @@ export const STATUS = {
   open: ['#64748B', '#F1F5F9', 'Open'], blocked: ['#EF4444', '#FEF2F2', 'Blocked'],
   done: ['#10B981', '#ECFDF5', 'Done'], cancelled: ['#475569', '#F1F5F9', 'Cancelled'],
   acknowledged: ['#2563EB', '#EFF6FF', 'Acknowledged'], resolved: ['#10B981', '#ECFDF5', 'Resolved'],
+  delivered: ['#10B981', '#ECFDF5', 'Delivered'], scheduled: ['#F59E0B', '#FFFBEB', 'Scheduled'],
+  awaiting: ['#F59E0B', '#FFFBEB', 'Awaiting'], in_progress_b: ['#2563EB', '#EFF6FF', 'In Progress'],
   low: ['#64748B', '#F1F5F9', 'Low'], medium: ['#2563EB', '#EFF6FF', 'Medium'],
   high: ['#F59E0B', '#FFFBEB', 'High'], critical: ['#EF4444', '#FEF2F2', 'Critical'],
   Approved: ['#10B981', '#ECFDF5', 'Approved'], 'In Review': ['#F59E0B', '#FFFBEB', 'In Review'],

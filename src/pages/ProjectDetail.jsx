@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Avatar, Chip, Loading, Empty } from '../components/ui'
 import { useLiveQuery } from '../lib/db'
-import { num } from '../lib/format'
+import { num, fmtDate } from '../lib/format'
 import { statusMeta } from '../lib/constants'
+import { useBreadcrumb } from '../breadcrumbs'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -25,11 +26,13 @@ const TABS = [
 export default function ProjectDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { setLabel } = useBreadcrumb()
   const [tab, setTab] = useState('buildings')
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
     q.select('*,pm:profiles!projects_pm_id_fkey(full_name)').eq('id', id), [id])
   const project = projects[0]
+  useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
@@ -197,7 +200,8 @@ export default function ProjectDetail() {
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>CONTRACTOR</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>ENGINEER</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>PROGRESS</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>DOCS</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>MATERIAL DELIVERY</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>APPROVAL</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
               </tr></thead>
               <tbody>
@@ -206,7 +210,7 @@ export default function ProjectDetail() {
                   const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
                   const color = prog >= 100 ? '#10B981' : 'var(--accent)'
                   return (
-                    <tr key={b.id} onClick={() => navigate(`/buildings/${b.id}`)} className="ies-hover" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
+                    <tr key={b.id} onClick={() => navigate(`/projects/${id}/buildings/${b.id}`)} className="ies-hover" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
                       <td style={{ padding: '11px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</td>
                       <td style={{ padding: '11px 8px' }}><div style={{ fontWeight: 600 }}>{b.name}</div><div style={{ fontSize: 11, color: 'var(--text-3)' }}>{b.region || '—'}</div></td>
                       <td style={{ padding: '11px 8px', color: 'var(--text-3)' }}>{b.contractor || '—'}</td>
@@ -216,8 +220,12 @@ export default function ProjectDetail() {
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, width: 34, textAlign: 'right' }}>{prog}%</span>
                       </div></td>
                       <td style={{ padding: '11px 8px' }}>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.delivery_status || '—'}</div>
-                        <Chip status={b.approval_status || 'pending'} />
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.delivery_date ? fmtDate(b.delivery_date) : '—'}</div>
+                        <Chip status={b.delivery_status || 'pending'} />
+                      </td>
+                      <td style={{ padding: '11px 8px' }}>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.approval_date ? fmtDate(b.approval_date) : '—'}</div>
+                        <Chip status={b.approval_status || 'awaiting'} />
                       </td>
                       <td style={{ padding: '11px 8px' }}><Chip status={b.status_override || 'pending'} /></td>
                     </tr>
