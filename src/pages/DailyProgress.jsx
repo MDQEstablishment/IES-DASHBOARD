@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Loading, Empty, Chip } from '../components/ui'
 import { Can } from '../rbac'
@@ -7,6 +8,7 @@ import { useLiveQuery, bgInsert, uploadPhoto } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { CAN_INSTALL } from '../lib/constants'
 import { fmtShort } from '../lib/format'
+import { useBreadcrumb } from '../breadcrumbs'
 
 const DRAFT_KEY = 'ies.draft.daily'
 const today = () => new Date().toISOString().slice(0, 10)
@@ -16,9 +18,11 @@ const dayKey = (d) => new Date(d).toISOString().slice(0, 10)
 
 export default function DailyProgress() {
   const { user, profile } = useAuth()
+  const { id: routeProject, bid: routeBid } = useParams()
+  const { setLabel } = useBreadcrumb()
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id').order('code'))
 
-  const [tab, setTab] = useState('quick')         // 'quick' | 'batch'
+  const [tab, setTab] = useState('quick')         // 'quick' | 'batch' | 'import'
   const [bid, setBid] = useState('')
   const [scopeId, setScopeId] = useState('')
   const [esmCode, setEsmCode] = useState('')      // selected ESM chip filter
@@ -48,6 +52,14 @@ export default function DailyProgress() {
       if (d) { setBid(d.bid || ''); setScopeId(d.scopeId || ''); setQty(d.qty || ''); setNote(d.note || '') }
     } catch { /* ignore */ }
   }, [])
+
+  // when reached via the nested building route, pre-select that building + label crumb
+  useEffect(() => { if (routeBid) setBid(routeBid) }, [routeBid])
+  useEffect(() => {
+    if (!routeBid || !buildings.length) return
+    const b = buildings.find((x) => x.id === routeBid)
+    if (b) setLabel('building:' + routeBid, b.code)
+  }, [routeBid, buildings, setLabel])
 
   // load scopes for the selected building (planned counts live here)
   useEffect(() => {
@@ -150,6 +162,11 @@ export default function DailyProgress() {
 
   return (
     <div data-screen-label="Project Daily Progress">
+      {routeBid && (
+        <Link to={`/projects/${routeProject}/buildings/${routeBid}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>
+          <Icon name="chevronl" size={14} />Back to building
+        </Link>
+      )}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ flex: 1 }}>
@@ -219,7 +236,7 @@ export default function DailyProgress() {
 
       {/* Tab toggle: Quick entry / Batch grid */}
       <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 10, padding: 3, background: '#fff', width: 'max-content', marginBottom: 14 }}>
-        {[['quick', 'Quick entry'], ['batch', 'Batch grid']].map(([k, l]) => (
+        {[['quick', 'Quick entry'], ['batch', 'Batch grid'], ['import', 'Excel import']].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={{
             padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 7, cursor: 'pointer',
             color: tab === k ? '#fff' : 'var(--text-3)', background: tab === k ? 'var(--accent)' : 'transparent',
@@ -326,6 +343,16 @@ export default function DailyProgress() {
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
             Use Quick entry to log individual installs. End-of-day batch grid is recorded one row per install via the same log.
           </div>
+        </div>
+      )}
+
+      {tab === 'import' && (
+        <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 14, padding: 16, maxWidth: 560 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Excel import</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4, marginBottom: 12 }}>
+            Bulk-load a day's installs from the site Excel sheet. Each row maps to building · sub-type · qty and is appended to the same install log.
+          </div>
+          <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13 }}><Icon name="upload" size={15} />Choose Excel file…</button>
         </div>
       )}
 
