@@ -14,19 +14,23 @@ const DSTAT = {
 const WRITE_ROLES = ['admin', 'pmo', 'projm', 'progm', 'proje']
 const HARD_CAP = 25 * 1024 * 1024
 
-export default function ProjectDocuments({ projectId }) {
+export default function ProjectDocuments({ projectId, buildingId = null, title = 'Project Documents' }) {
   const { role } = useAuth()
   const canWrite = WRITE_ROLES.includes(role)
   const [up, setUp] = useState(false)
   const { rows } = useLiveQuery('project_documents',
-    (q) => q.select('*').eq('project_id', projectId).order('submitted_at', { ascending: false }), [projectId])
+    (q) => {
+      let b = q.select('*').eq('project_id', projectId)
+      b = buildingId ? b.eq('building_id', buildingId) : b.is('building_id', null)
+      return b.order('submitted_at', { ascending: false })
+    }, [projectId, buildingId])
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name'))
   const nameById = Object.fromEntries(people.map((p) => [p.id, p.full_name]))
 
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>Project Documents</div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
         {canWrite && <Btn icon="upload" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setUp(true)}>Upload document</Btn>}
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Formal documents with version, review state and submission/review dates. Sorted by latest activity.</div>
@@ -58,12 +62,12 @@ export default function ProjectDocuments({ projectId }) {
           </table>
         </div>
       )}
-      {up && <UploadModal projectId={projectId} onClose={() => setUp(false)} />}
+      {up && <UploadModal projectId={projectId} buildingId={buildingId} onClose={() => setUp(false)} />}
     </div>
   )
 }
 
-function UploadModal({ projectId, onClose }) {
+function UploadModal({ projectId, buildingId, onClose }) {
   const { user } = useAuth()
   const [name, setName] = useState('')
   const [type, setType] = useState('COC')
@@ -91,7 +95,7 @@ function UploadModal({ projectId, onClose }) {
       storage_path = path; file_size_bytes = toUp.size; mime_type = toUp.type
     }
     const { error } = await bgInsert('project_documents', {
-      project_id: projectId, doc_type: type, custom_type_label: type === 'other' ? (custom || null) : null,
+      project_id: projectId, building_id: buildingId || null, doc_type: type, custom_type_label: type === 'other' ? (custom || null) : null,
       name: name.trim(), version, status: 'submitted', submitted_by: user.id, storage_path, file_size_bytes, mime_type,
     }, { okMsg: 'Document uploaded' })
     setBusy(false); if (!error) onClose()
