@@ -10,8 +10,9 @@ import { ago } from '../lib/format'
 const CHAIN = ['Engineer', 'PM', 'Programme', 'PMO', 'CEO']
 
 export default function Escalations() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [showNew, setShowNew] = useState(false)
+  const [tab, setTab] = useState('open')
 
   const { rows, loading } = useLiveQuery('escalations', (q) =>
     q.select('*,raised_by:profiles!escalations_raised_by_id_fkey(full_name,role),raised_to:profiles!escalations_raised_to_id_fkey(full_name,role),building:buildings(code,name)')
@@ -19,6 +20,8 @@ export default function Escalations() {
 
   const open = rows.filter((e) => e.status !== 'resolved' && e.status !== 'closed')
   const resolved = rows.filter((e) => e.status === 'resolved' || e.status === 'closed')
+  const list = tab === 'open' ? open : resolved
+  const noManager = profile && !profile.manager_id // CEO / Admin sit at the top of the chain
 
   const resolve = (e) =>
     bgUpdate('escalations', e.id, {
@@ -26,21 +29,45 @@ export default function Escalations() {
       resolution_note: 'Resolved via console',
     }, { okMsg: 'Escalation resolved' })
 
+  // Forward / re-escalate one level up — a new row (trigger derives raised_to = my manager). No reopen.
+  const forward = (e) =>
+    bgInsert('escalations', {
+      title: 'Re-escalation: ' + e.title,
+      description: e.description,
+      raised_by_id: user.id,
+      level: (e.level || 1) + 1,
+      parent_escalation_id: e.id,
+      project_id: e.project_id, building_id: e.building_id, related_task_id: e.related_task_id,
+      severity: e.severity, status: 'open',
+    }, { okMsg: 'Forwarded one level up' })
+
   return (
     <>
       <PageTitle kicker="HIERARCHY CHAIN" title="My Escalations"
         right={<Btn variant="primary" icon="plus" onClick={() => setShowNew(true)}>Raise escalation</Btn>} />
 
-      {/* KPI strip — TOTAL RAISED / AWAITING ACTION / RESOLVED */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
-        <Kpi label="TOTAL RAISED" value={rows.length} />
-        <Kpi label="AWAITING ACTION" value={open.length} color="#F59E0B" />
-        <Kpi label="RESOLVED" value={resolved.length} color="#10B981" />
+      {noManager && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF', borderRadius: 9, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+          <Icon name="alert" size={15} />You sit at the top of the chain — escalations route up to you; you don't raise them.
+        </div>
+      )}
+
+      {/* Open / Resolved tabs (dc escTabs) */}
+      <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 9, padding: 3, background: '#fff', marginBottom: 16, width: 'fit-content' }}>
+        {[['open', `Open (${open.length})`], ['resolved', `Resolved (${resolved.length})`]].map(([k, l]) => {
+          const active = tab === k
+          return (
+            <button key={k} onClick={() => setTab(k)} style={{
+              padding: '6px 16px', fontSize: 12.5, fontWeight: 600, borderRadius: 7,
+              color: active ? 'var(--accent)' : 'var(--text-3)', background: active ? 'rgba(37,99,235,.10)' : 'transparent', cursor: 'pointer',
+            }}>{l}</button>
+          )
+        })}
       </div>
 
-      {loading ? <Loading /> : rows.length === 0 ? <Empty icon="escalation">No escalations.</Empty> : (
+      {loading ? <Loading /> : list.length === 0 ? <Empty icon="escalation">{tab === 'open' ? 'No open escalations — all clear.' : 'No resolved escalations yet.'}</Empty> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {rows.map((e) => {
+          {list.map((e) => {
             const done = e.status === 'resolved' || e.status === 'closed'
             const cur = Math.min(e.level || 1, CHAIN.length - 1)
             return (
@@ -54,7 +81,15 @@ export default function Escalations() {
                   </div>
                   {!done && (
                     <Can allow={MANAGERS}>
-                      <button onClick={() => resolve(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>Resolve</button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A' }}>Forward ↑</button>
+                        <button onClick={() => resolve(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>Resolve</button>
+                      </div>
+                    </Can>
+                  )}
+                  {done && e.status === 'resolved' && (
+                    <Can allow={MANAGERS}>
+                      <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }}>Re-escalate ↑</button>
                     </Can>
                   )}
                 </div>
