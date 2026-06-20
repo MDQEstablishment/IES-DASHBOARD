@@ -26,6 +26,8 @@ export default function Dashboard() {
     q.select('id,title,severity,status,created_at,building:buildings(code,name),raised_to:profiles!escalations_raised_to_id_fkey(full_name)')
       .neq('status', 'resolved').neq('status', 'closed').order('severity', { ascending: false }))
   const { rows: tasks } = useLiveQuery('tasks', (q) => q.select('id,title,status,priority,created_at'))
+  const { rows: materials } = useLiveQuery('materials', (q) => q.select('code,name,received,threshold,esm:esms(code)'))
+  const { rows: activity } = useLiveQuery('audit_log', (q) => q.select('id,actor_name,action,entity_type,summary,created_at').order('created_at', { ascending: false }).limit(6))
 
   // approved-installed per scope, capped at planned_qty
   const installedByScope = {}
@@ -111,6 +113,33 @@ export default function Dashboard() {
       age: ago(t.created_at), ageColor: t.priority === 'critical' ? '#EF4444' : 'var(--text-3)',
     })),
   ]
+
+  // Critical Materials — running low (in-stock = received, low vs threshold). dc 251-263
+  const criticalMaterials = materials
+    .map((m) => {
+      const stock = m.received || 0, t = m.threshold || 0
+      const ratio = t ? stock / t : 9
+      const color = stock < t ? '#EF4444' : stock < t * 1.5 ? '#F59E0B' : '#10B981'
+      const status = stock < t ? 'CRITICAL' : stock < t * 1.5 ? 'LOW' : 'OK'
+      return { esm: m.esm?.code || '—', name: m.name, stock, threshold: t, color, status, ratio, w: Math.min(100, Math.round((stock / (t * 2 || 1)) * 100)) + '%' }
+    })
+    .filter((m) => m.status !== 'OK')
+    .sort((a, b) => a.ratio - b.ratio)
+    .slice(0, 3)
+
+  // Recent Activity — real audit_log feed. dc 241-248
+  const actDot = (a) => {
+    const e = (a.entity_type || '').toLowerCase()
+    if (e.includes('install')) return '#2563EB'
+    if (e.includes('document') || e.includes('doc')) return '#10B981'
+    if (e.includes('material')) return '#F59E0B'
+    if (e.includes('escalation')) return '#EF4444'
+    return '#64748B'
+  }
+  const recentActivity = activity.map((a) => ({
+    dot: actDot(a), actor: a.actor_name || 'System', what: a.summary || a.action,
+    where: a.entity_type || '—', when: ago(a.created_at),
+  }))
 
   const scopeLabel = 'All projects'
   const dashTitle = 'Dashboard'
@@ -261,17 +290,42 @@ export default function Dashboard() {
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>LAST 24H</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {attentionList.length === 0 ? <Empty icon="bell">No recent activity.</Empty> : attentionList.slice(0, 6).map((a, i) => (
+            {recentActivity.length === 0 ? <Empty icon="bell">No recent activity.</Empty> : recentActivity.map((a, i) => (
               <div key={i} style={{ display: 'flex', gap: 10, padding: '9px 0', borderTop: '1px solid var(--line)' }}>
-                <span style={{ flex: 'none', width: 8, height: 8, borderRadius: '50%', background: a.tagColor, marginTop: 5 }} />
+                <span style={{ flex: 'none', width: 8, height: 8, borderRadius: '50%', background: a.dot, marginTop: 5 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5 }}><span style={{ fontWeight: 600 }}>{a.type === 'ESC' ? 'Escalation' : 'Task'}</span> <span style={{ color: 'var(--text-3)' }}>{a.item}</span></div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{a.project} · {a.age}</div>
+                  <div style={{ fontSize: 12.5 }}><span style={{ fontWeight: 600 }}>{a.actor}</span> <span style={{ color: 'var(--text-3)' }}>{a.what}</span></div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{a.where} · {a.when}</div>
                 </div>
               </div>
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Critical Materials (dc 251-263) */}
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginTop: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Critical Materials</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>RUNNING LOW · ALL PROJECTS</div>
+        </div>
+        {criticalMaterials.length === 0 ? <Empty icon="check">All materials above threshold.</Empty> : (
+          <div className="ies-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+            {criticalMaterials.map((m, i) => (
+              <div key={i} style={{ border: '1px solid var(--line)', borderLeft: `3px solid ${m.color}`, borderRadius: 10, padding: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)' }}>{m.esm}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: m.color }}>{m.status}</span>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 13, margin: '6px 0 8px' }}>{m.name}</div>
+                <div style={{ height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: m.w, background: m.color }} /></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 6 }}>
+                  <span>{m.stock} in stock</span><span>min {m.threshold}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
