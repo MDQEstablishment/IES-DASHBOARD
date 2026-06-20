@@ -9,6 +9,8 @@ import { statusMeta, MANAGERS } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal } from '../components/ProjectModals'
 import BuildingsMap from '../components/BuildingsMap'
+import MaterialDeliveries from '../components/MaterialDeliveries'
+import ProjectDocuments from '../components/ProjectDocuments'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -22,6 +24,7 @@ const DOC_COLS = [
 const TABS = [
   ['buildings', 'Buildings'],
   ['rollup', 'ESM Rollup'],
+  ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
   ['map', 'Map'],
 ]
@@ -297,9 +300,13 @@ export default function ProjectDetail() {
         </div>
       )}
 
+      {/* DELIVERIES tab */}
+      {tab === 'deliveries' && <MaterialDeliveries projectId={id} buildings={buildings} />}
+
       {/* DOC TRACKER tab */}
       {tab === 'docs' && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>ESM Documentation Tracker</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Submittal readiness per ESM across document kinds.</div>
           {docRows.length === 0 ? (
@@ -323,6 +330,8 @@ export default function ProjectDetail() {
             </table></div>
           )}
         </div>
+        <ProjectDocuments projectId={id} />
+        </>
       )}
 
       {/* MAP tab — real OpenStreetMap markers */}
