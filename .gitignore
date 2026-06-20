@@ -14,3 +14,6 @@ npm-debug.log*
 .design-contract.md
 test-results
 screenshots
+
+# local dev (machine-specific)
+.claude/
