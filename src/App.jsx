@@ -1,20 +1,21 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './rbac'
 import { ProjectProvider } from './project'
+import { BreadcrumbProvider } from './breadcrumbs'
 import Shell from './components/Shell'
 import Login from './components/Login'
 import { Loading, Toaster } from './components/ui'
 
-import DailyProgress from './pages/DailyProgress'
+import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
-import Buildings from './pages/Buildings'
-import InstallLog from './pages/InstallLog'
+import BuildingDetail from './pages/BuildingDetail'
+import DailyProgress from './pages/DailyProgress'
 import Tasks from './pages/Tasks'
 import Escalations from './pages/Escalations'
-import Documents from './pages/Documents'
 import ManageEsms from './pages/ManageEsms'
+import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 
 function FullScreen({ children }) {
@@ -30,22 +31,32 @@ export default function App() {
 
   return (
     <ProjectProvider>
-      <Routes>
-        <Route element={<Shell />}>
-          <Route path="/" element={<DailyProgress />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:id" element={<ProjectDetail />} />
-          <Route path="/buildings" element={<Buildings />} />
-          <Route path="/install-log" element={<InstallLog />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/escalations" element={<Escalations />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/esms" element={<ManageEsms />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+      <BreadcrumbProvider>
+        <Routes>
+          <Route element={<Shell />}>
+            {/* dashboard is the landing route; index grid lives at /home (logo) */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/home" element={<Home />} />
+
+            {/* projects → project → building → install-item : the nested drill-down */}
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/projects/:id/buildings/:bid/daily" element={<DailyProgress />} />
+            <Route path="/projects/:id/buildings/:bid/*" element={<BuildingDetail />} />
+
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/escalations" element={<Escalations />} />
+            <Route path="/materials" element={<ManageEsms />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+
+            {/* legacy flat paths → nearest nested equivalent (deep links keep working) */}
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
+            <Route path="/esms" element={<Navigate to="/materials" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BreadcrumbProvider>
       <Toaster />
     </ProjectProvider>
   )

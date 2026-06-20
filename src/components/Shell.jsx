@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { Outlet, NavLink, useLocation, matchPath } from 'react-router-dom'
+import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
 import Icon from './Icon'
 import { Avatar } from './ui'
-import { NAV, ROLE_ORDER, ROSTER, roleColor, roleTitle } from '../lib/constants'
+import { ROLE_ORDER, ROSTER, roleColor, roleTitle } from '../lib/constants'
+import { navForRole, crumbsFor } from '../lib/nav'
 import { useAuth } from '../rbac'
-import { initials } from '../lib/format'
+import { useBreadcrumb } from '../breadcrumbs'
 
 function Clock() {
   const [now, setNow] = useState(new Date())
@@ -19,6 +20,7 @@ function Clock() {
 export default function Shell() {
   const { profile, role, signInWithRole, signOut } = useAuth()
   const loc = useLocation()
+  const { labels } = useBreadcrumb()
   const [roleMenu, setRoleMenu] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const menuRef = useRef(null)
@@ -30,13 +32,12 @@ export default function Shell() {
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  const pageLabel = matchPath('/projects/:id', loc.pathname) ? 'Project Detail'
-    : (NAV.find((n) => (n.to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(n.to)))?.label || 'Dashboard')
-  const crumbs = ['IES', 'Retrofit', pageLabel]
+  const nav = navForRole(role)
+  const crumbs = crumbsFor(loc.pathname, labels)
 
   const navBtn = (n, big = false) => (
-    <NavLink key={n.to} to={n.to} end={n.to === '/'}
-      className="ies-nav-btn"
+    <NavLink key={n.id} to={n.to} end={!!n.end}
+      className="ies-nav-btn ies-hover"
       style={({ isActive }) => ({
         display: 'flex', alignItems: 'center', gap: big ? 11 : 7, padding: big ? '11px 12px' : '8px 12px',
         borderRadius: 8, fontSize: big ? 14 : 13, whiteSpace: 'nowrap', position: 'relative',
@@ -49,24 +50,22 @@ export default function Shell() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* preview strip */}
-      <div style={{ background: '#0F172A', borderBottom: '1px solid #1E293B', color: '#FCD34D', fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '2px', textAlign: 'center', padding: '4px 12px' }}>
-        PREVIEW · DEMO DATA ONLY · NOT FOR PRODUCTION
-      </div>
-
-      {/* top header */}
+      {/* top header (dc lines 102-142) */}
       <header style={{ height: 58, background: 'var(--nav-bg)', display: 'flex', alignItems: 'center', gap: 18, padding: '0 18px', position: 'sticky', top: 0, zIndex: 120 }}>
         <button className="ies-hamburger ies-hover" onClick={() => setDrawer((d) => !d)} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid #334155', color: '#E2E8F0', alignItems: 'center', justifyContent: 'center' }}><Icon name="menu" size={18} /></button>
-        <NavLink to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+        <Link to="/home" style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: '#1E293B', border: '1px solid #334155', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontWeight: 700, color: '#fff', fontSize: 11 }}>IES<span style={{ position: 'absolute', top: 4, right: 4, width: 5, height: 5, borderRadius: '50%', background: '#F59E0B' }} /></div>
           <div style={{ lineHeight: 1.1 }}><div style={{ color: '#fff', fontWeight: 700, fontSize: 13.5 }}>IES Control</div><div style={{ color: '#64748B', fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '1.5px' }}>RETROFIT · v2</div></div>
-        </NavLink>
+        </Link>
         <nav className="ies-topnav-items" style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 8 }}>
-          {NAV.map((n) => navBtn(n))}
+          {nav.map((n) => navBtn(n))}
         </nav>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="ies-topmeta" style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ok)' }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)', animation: 'iesBlink 1.6s infinite' }} />LIVE</div>
           <Clock />
+          <NavLink to="/" className="ies-hover" style={{ position: 'relative', width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+            <Icon name="bell" size={17} />
+          </NavLink>
           <div ref={menuRef} style={{ position: 'relative' }}>
             <button className="ies-hover" onClick={() => setRoleMenu((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 8px 4px 4px', borderRadius: 9, border: '1px solid #334155' }}>
               <Avatar name={profile?.full_name} color={roleColor(role)} size={28} />
@@ -94,18 +93,20 @@ export default function Shell() {
         </div>
       </header>
 
-      {/* mobile drawer */}
+      {/* mobile drawer (dc lines 144-148) */}
       {drawer && (
         <div className="ies-drawer open" style={{ flexDirection: 'column', gap: 2, background: 'var(--nav-bg)', padding: '10px 12px 16px', position: 'sticky', top: 58, zIndex: 110, animation: 'iesDrawer .2s ease' }}>
-          {NAV.map((n) => navBtn(n, true))}
+          {nav.map((n) => navBtn(n, true))}
         </div>
       )}
 
-      {/* breadcrumb */}
-      <div style={{ background: '#fff', borderBottom: '1px solid var(--line)', padding: '9px 18px', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text-3)', position: 'sticky', top: 58, zIndex: 90 }}>
+      {/* nested breadcrumb (dc lines 150-155) — each non-terminal crumb is a deep link */}
+      <div style={{ background: '#fff', borderBottom: '1px solid var(--line)', padding: '9px 18px', display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text-3)', position: 'sticky', top: 58, zIndex: 90, flexWrap: 'wrap' }}>
         {crumbs.map((c, i) => (
           <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ whiteSpace: 'nowrap', color: i === crumbs.length - 1 ? '#0F172A' : '#64748B', fontWeight: i === crumbs.length - 1 ? 700 : 500 }}>{c}</span>
+            {c.to && !c.active
+              ? <Link to={c.to} className="ies-crumb" style={{ whiteSpace: 'nowrap', color: '#64748B', fontWeight: 500 }}>{c.label}</Link>
+              : <span style={{ whiteSpace: 'nowrap', color: c.active ? '#0F172A' : '#64748B', fontWeight: c.active ? 700 : 500 }}>{c.label}</span>}
             {i < crumbs.length - 1 && <span style={{ color: '#CBD5E1' }}>›</span>}
           </span>
         ))}
