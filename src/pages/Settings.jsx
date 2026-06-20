@@ -4,21 +4,14 @@ import { Avatar, PageTitle, Loading, Empty } from '../components/ui'
 import { useAuth } from '../rbac'
 import { useLiveQuery } from '../lib/db'
 import { ROLE_ORDER, ROSTER, roleTitle, roleColor } from '../lib/constants'
+import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
 import { fmtDateTime } from '../lib/format'
+import { toast } from '../lib/toast'
 
-// Illustrative nav-area access per role (read-only display; not persisted).
-const NAV_AREAS = ['Daily', 'Dashboard', 'Projects', 'Buildings', 'Install', 'Tasks', 'Escalations', 'Docs', 'Materials', 'Settings']
-const ROLE_ACCESS = {
-  ceo:   ['Daily', 'Dashboard', 'Projects', 'Buildings', 'Install', 'Tasks', 'Escalations', 'Docs', 'Materials'],
-  pmo:   NAV_AREAS,
-  procm: ['Daily', 'Dashboard', 'Projects', 'Buildings', 'Tasks', 'Docs', 'Materials'],
-  proco: ['Daily', 'Dashboard', 'Tasks', 'Materials'],
-  progm: ['Daily', 'Dashboard', 'Projects', 'Buildings', 'Install', 'Tasks', 'Escalations', 'Docs', 'Materials'],
-  projm: ['Daily', 'Dashboard', 'Projects', 'Buildings', 'Install', 'Tasks', 'Escalations', 'Docs', 'Materials'],
-  proje: ['Daily', 'Dashboard', 'Buildings', 'Install', 'Tasks', 'Escalations', 'Docs'],
-  plane: ['Daily', 'Dashboard', 'Projects', 'Buildings', 'Tasks', 'Docs'],
-  admin: ['Settings'],
-}
+// Permission matrix reflects the REAL RBAC nav map (lib/nav roleNav), read-only.
+const NAV_IDS = ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings']
+const areaLabel = (id) => NAV_CATALOG[id]?.label || id
+const ROLE_ACCESS = Object.fromEntries(ROLE_ORDER.map((r) => [r, ROLE_NAV[r] || []]))
 const ROLE_DESC = {
   ceo: 'Portfolio-wide read access · no settings or write actions',
   pmo: 'Full control across the whole programme · admin & audit',
@@ -40,12 +33,17 @@ const CATS = [
 export default function Settings() {
   const { profile, role, user } = useAuth()
   const [cat, setCat] = useState('users')
+  const [auditAction, setAuditAction] = useState('all')
 
+  // Plain select — the self-referential manager embed returns empty under RLS, so
+  // resolve the manager's name client-side from the same roster.
   const { rows: people, loading: peopleLoading } = useLiveQuery('profiles',
-    (q) => q.select('*,manager:profiles!profiles_manager_id_fkey(full_name)').order('full_name'))
+    (q) => q.select('*').order('full_name'))
+  const nameById = Object.fromEntries(people.map((p) => [p.id, p.full_name]))
 
   const { rows: audit, loading: auditLoading } = useLiveQuery('audit_log',
     (q) => q.select('*').order('created_at', { ascending: false }).limit(50))
+  const filteredAudit = audit.filter((a) => auditAction === 'all' || a.action === auditAction)
 
   return (
     <div data-screen-label="Settings">
@@ -61,20 +59,20 @@ export default function Settings() {
         <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#2563EB', background: '#EFF6FF' }}>Your account</span>
       </div>
 
-      <div className="ies-set2" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16, alignItems: 'start' }}>
-        {/* Category rail */}
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {CATS.map((c) => {
-            const active = cat === c.key
-            return (
-              <button key={c.key} onClick={() => setCat(c.key)}
-                style={{ textAlign: 'left', padding: '9px 12px', borderRadius: 8, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? 'var(--accent)' : 'var(--text)', background: active ? '#EFF6FF' : 'transparent' }}>
-                {c.label}
-              </button>
-            )
-          })}
-        </div>
+      {/* Horizontal category tabs (dc setCats) */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--line)', marginBottom: 16, flexWrap: 'wrap' }}>
+        {CATS.map((c) => {
+          const active = cat === c.key
+          return (
+            <button key={c.key} onClick={() => setCat(c.key)}
+              style={{ padding: '10px 16px', fontSize: 13, fontWeight: active ? 700 : 500, color: active ? 'var(--accent)' : 'var(--text-3)', borderBottom: '2px solid ' + (active ? 'var(--accent)' : 'transparent'), marginBottom: -1, background: 'none' }}>
+              {c.label}
+            </button>
+          )
+        })}
+      </div>
 
+      <div>
         {/* Panel */}
         <div>
           {cat === 'users' && (
@@ -105,7 +103,7 @@ export default function Settings() {
                         </td>
                         <td style={{ padding: '10px 8px', color: 'var(--text-3)' }}>{roleTitle(u.role)}</td>
                         <td style={{ padding: '10px 8px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{u.email}</td>
-                        <td style={{ padding: '10px 8px', color: 'var(--text-3)' }}>{u.manager?.full_name || '—'}</td>
+                        <td style={{ padding: '10px 8px', color: 'var(--text-3)' }}>{nameById[u.manager_id] || '—'}</td>
                         <td style={{ padding: '10px 8px' }}>
                           {u.archived
                             ? <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#94A3B8', background: '#F1F5F9' }}>archived</span>
@@ -138,14 +136,14 @@ export default function Settings() {
                         </span>
                       </span>
                       <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', flex: 1 }}>
-                        {NAV_AREAS.map((area) => {
+                        {NAV_IDS.map((area) => {
                           const ok = access.includes(area)
                           return (
-                            <span key={area} title={area}
+                            <span key={area} title={areaLabel(area)}
                               style={{ fontSize: 11, padding: '3px 9px', borderRadius: 6, fontWeight: 600,
                                 background: ok ? '#EFF6FF' : 'var(--bg)', color: ok ? '#2563EB' : '#CBD5E1',
                                 border: '1px solid ' + (ok ? '#DBEAFE' : 'var(--line)'), display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              {ok && <Icon name="check" size={11} />}{area}
+                              {ok && <Icon name="check" size={11} />}{areaLabel(area)}
                             </span>
                           )
                         })}
@@ -161,13 +159,27 @@ export default function Settings() {
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>Audit Log</div>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>last {audit?.length || 0} events</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>last {audit?.length || 0} events</span>
+                  <button onClick={() => exportAuditCsv(filteredAudit)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, padding: '6px 11px', borderRadius: 7, border: '1px solid var(--line)', background: '#fff', color: 'var(--text)' }}><Icon name="upload" size={13} />Export CSV</button>
+                </div>
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
-                Append-only record of write actions across the programme.
+              {/* action filter chips (dc auditFilters) */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                {['all', 'insert', 'update', 'delete', 'login', 'logout', 'export'].map((a) => {
+                  const active = auditAction === a
+                  return (
+                    <button key={a} onClick={() => setAuditAction(a)} style={{
+                      padding: '4px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, textTransform: 'capitalize',
+                      border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'), background: active ? '#EFF6FF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
+                    }}>{a}</button>
+                  )
+                })}
               </div>
               {auditLoading ? <Loading /> : (!audit || audit.length === 0) ? (
                 <Empty icon="settings">Audit log is visible to PMO and CEO only.</Empty>
+              ) : filteredAudit.length === 0 ? (
+                <Empty icon="settings">No events match this filter.</Empty>
               ) : (
                 <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 680 }}>
                   <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
@@ -178,7 +190,7 @@ export default function Settings() {
                     <th style={{ padding: 8, fontWeight: 600 }}>SUMMARY</th>
                   </tr></thead>
                   <tbody>
-                    {audit.map((a) => (
+                    {filteredAudit.map((a) => (
                       <tr key={a.id} style={{ borderTop: '1px solid var(--line)' }}>
                         <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDateTime(a.created_at)}</td>
                         <td style={{ padding: '9px 8px' }}>
@@ -207,4 +219,18 @@ export default function Settings() {
       </div>
     </div>
   )
+}
+
+// CSV export of the (filtered) audit log — client-side, no server round-trip.
+function exportAuditCsv(rows) {
+  if (!rows || rows.length === 0) { toast('Nothing to export', 'err'); return }
+  const cols = ['created_at', 'actor_name', 'actor_role', 'action', 'entity_type', 'record_id', 'summary']
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+  const csv = [cols.join(','), ...rows.map((r) => cols.map((c) => esc(r[c])).join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `ies-audit-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+  toast('Audit log exported')
 }
