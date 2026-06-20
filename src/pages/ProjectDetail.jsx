@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Icon from '../components/Icon'
-import { Avatar, Chip, Loading, Empty } from '../components/ui'
-import { useLiveQuery } from '../lib/db'
-import { num } from '../lib/format'
-import { statusMeta } from '../lib/constants'
+import { Avatar, Chip, Loading, Empty, Drawer, Btn } from '../components/ui'
+import { useLiveQuery, bgUpdate } from '../lib/db'
+import { useAuth, can } from '../rbac'
+import { num, fmtDate } from '../lib/format'
+import { statusMeta, MANAGERS } from '../lib/constants'
+import { useBreadcrumb } from '../breadcrumbs'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -25,11 +27,16 @@ const TABS = [
 export default function ProjectDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { setLabel } = useBreadcrumb()
+  const { role } = useAuth()
   const [tab, setTab] = useState('buildings')
+  const [esmPanel, setEsmPanel] = useState(false)
+  const canManage = can(role, MANAGERS)
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
     q.select('*,pm:profiles!projects_pm_id_fkey(full_name)').eq('id', id), [id])
   const project = projects[0]
+  useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
@@ -197,7 +204,8 @@ export default function ProjectDetail() {
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>CONTRACTOR</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>ENGINEER</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>PROGRESS</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>DOCS</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>MATERIAL DELIVERY</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>APPROVAL</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
               </tr></thead>
               <tbody>
@@ -206,7 +214,7 @@ export default function ProjectDetail() {
                   const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
                   const color = prog >= 100 ? '#10B981' : 'var(--accent)'
                   return (
-                    <tr key={b.id} onClick={() => navigate(`/buildings/${b.id}`)} className="ies-hover" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
+                    <tr key={b.id} onClick={() => navigate(`/projects/${id}/buildings/${b.id}`)} className="ies-hover" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
                       <td style={{ padding: '11px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</td>
                       <td style={{ padding: '11px 8px' }}><div style={{ fontWeight: 600 }}>{b.name}</div><div style={{ fontSize: 11, color: 'var(--text-3)' }}>{b.region || '—'}</div></td>
                       <td style={{ padding: '11px 8px', color: 'var(--text-3)' }}>{b.contractor || '—'}</td>
@@ -216,8 +224,12 @@ export default function ProjectDetail() {
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, width: 34, textAlign: 'right' }}>{prog}%</span>
                       </div></td>
                       <td style={{ padding: '11px 8px' }}>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.delivery_status || '—'}</div>
-                        <Chip status={b.approval_status || 'pending'} />
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.delivery_date ? fmtDate(b.delivery_date) : '—'}</div>
+                        <Chip status={b.delivery_status || 'pending'} />
+                      </td>
+                      <td style={{ padding: '11px 8px' }}>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.approval_date ? fmtDate(b.approval_date) : '—'}</div>
+                        <Chip status={b.approval_status || 'awaiting'} />
                       </td>
                       <td style={{ padding: '11px 8px' }}><Chip status={b.status_override || 'pending'} /></td>
                     </tr>
@@ -232,7 +244,10 @@ export default function ProjectDetail() {
       {/* ESM ROLLUP tab */}
       {tab === 'rollup' && (
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>ESM Rollup</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>ESM Rollup</div>
+            {canManage && <Btn icon="settings" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setEsmPanel(true)}>Manage ESMs</Btn>}
+          </div>
           {esmRows.length === 0 ? (
             <Empty icon="materials">No ESMs configured for this project.</Empty>
           ) : (
@@ -307,6 +322,27 @@ export default function ProjectDetail() {
           </div>
         </div>
       )}
+
+      {/* Manage ESMs panel (dc esmPanelOpen / panelOpen) */}
+      <Drawer open={esmPanel} title="Manage ESMs" subtitle={`${project.code} · rename, reorder & archive`} onClose={() => setEsmPanel(false)}
+        footer={<Btn variant="primary" onClick={() => setEsmPanel(false)}>Done</Btn>}>
+        {projectEsms.length === 0 ? <Empty icon="materials">No ESMs on this project.</Empty> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Inline-rename an ESM for this project. The label propagates to the rollup, doc tracker, materials and reports; every change is audit-logged.</div>
+            {projectEsms.map((pe) => (
+              <div key={pe.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)', width: 44 }}>{pe.esm?.code}</span>
+                <input defaultValue={pe.custom_name || pe.esm?.name || ''}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim()
+                    if (v && v !== (pe.custom_name || pe.esm?.name)) bgUpdate('project_esms', pe.id, { custom_name: v }, { okMsg: 'ESM renamed' })
+                  }}
+                  style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 13 }} />
+              </div>
+            ))}
+          </div>
+        )}
+      </Drawer>
     </div>
   )
 }

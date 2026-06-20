@@ -8,16 +8,16 @@ import { roleColor, statusMeta, MANAGERS, CAN_RAISE_TASK } from '../lib/constant
 
 const TABS = [
   { key: 'mine', label: 'Mine' },
+  { key: 'delegated', label: 'Delegated' },
   { key: 'team', label: 'Team' },
-  { key: 'all', label: 'All' },
 ]
 const STATUS_FILTERS = [
-  { v: 'active', l: 'Active (open)' },
+  { v: 'active', l: 'Active' },
   { v: 'open', l: 'Open' },
   { v: 'in_progress', l: 'In Progress' },
   { v: 'blocked', l: 'Blocked' },
   { v: 'done', l: 'Done' },
-  { v: 'all', l: 'All statuses' },
+  { v: 'all', l: 'All' },
 ]
 const STATUS_OPTS = [
   ['open', 'Open'], ['in_progress', 'In Progress'], ['blocked', 'Blocked'], ['done', 'Done'],
@@ -40,7 +40,8 @@ export default function Tasks() {
   // to "all" (no manager subtree in client). All = everything.
   const scoped = rows.filter((t) => {
     if (tab === 'mine') return t.assigned_to_id === user?.id
-    return true // team + all both show everything (team labelled accordingly)
+    if (tab === 'delegated') return t.created_by_id === user?.id && t.assigned_to_id !== user?.id
+    return true // team shows everything (down-only assignment scope)
   })
 
   const filtered = scoped.filter((t) => {
@@ -60,8 +61,16 @@ export default function Tasks() {
   const kCompleted = rows.filter((t) => t.status === 'done').length
 
   const scopeLabel = tab === 'mine' ? 'Tasks assigned to you'
-    : tab === 'team' ? (isManager ? 'All team tasks across the programme' : 'Team tasks (shared view)')
-      : 'Every task in scope'
+    : tab === 'delegated' ? 'Tasks you raised and assigned to others'
+      : (isManager ? 'All team tasks across the programme' : 'Team tasks (shared view)')
+
+  // Team Performance (dc teamPerf) — avg age of open, avg cycle of done, top-3 oldest
+  const dayAge = (d) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 86400000)) : 0)
+  const openTasks = rows.filter((t) => t.status !== 'done' && t.status !== 'cancelled')
+  const doneTasks = rows.filter((t) => t.status === 'done')
+  const avgAge = openTasks.length ? Math.round(openTasks.reduce((s, t) => s + dayAge(t.created_at), 0) / openTasks.length) : 0
+  const avgCycle = doneTasks.length ? Math.round(doneTasks.reduce((s, t) => s + Math.max(0, (new Date(t.updated_at) - new Date(t.created_at)) / 86400000), 0) / doneTasks.length) : 0
+  const topOldest = [...openTasks].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(0, 3)
 
   const onStatusChange = (t, next) => {
     if (next === t.status) return
@@ -76,15 +85,30 @@ export default function Tasks() {
         )} />
       <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: -12, marginBottom: 16 }}>{scopeLabel}</div>
 
-      {/* KPI strip */}
-      <div className="ies-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
-        <Kpi label="ASSIGNED TO ME" value={kAssigned} />
-        <Kpi label="MY OVERDUE" value={kOverdue} color="#EF4444" />
-        <Kpi label="TEAM TASKS" value={kTeam} />
-        <Kpi label="COMPLETED" value={kCompleted} color="#10B981" />
-      </div>
+      {/* Team Performance widget (dc showPerf 653-678) — managers only */}
+      {isManager && (
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Team Performance</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>OPEN QUEUE HEALTH</div>
+          </div>
+          <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: '120px 120px 1fr', gap: 18, alignItems: 'start' }}>
+            <Perf label="AVG AGE" value={`${avgAge}d`} />
+            <Perf label="AVG CYCLE" value={`${avgCycle}d`} color="#10B981" />
+            <div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>TOP 3 OLDEST OPEN</div>
+              {topOldest.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>None open.</div> : topOldest.map((t) => (
+                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderTop: '1px solid var(--line)' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#F59E0B', flex: 'none' }}>{dayAge(t.created_at)}d</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Tabs + status filter */}
+      {/* Tabs + status filter pills */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 9, padding: 3, background: '#fff' }}>
           {TABS.map((t) => {
@@ -99,10 +123,18 @@ export default function Tasks() {
             )
           })}
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: '8px 11px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12.5, background: '#fff', fontWeight: 600, cursor: 'pointer' }}>
-          {STATUS_FILTERS.map((s) => <option key={s.v} value={s.v}>{s.l}</option>)}
-        </select>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {STATUS_FILTERS.map((s) => {
+            const active = statusFilter === s.v
+            return (
+              <button key={s.v} onClick={() => setStatusFilter(s.v)} style={{
+                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'),
+                background: active ? '#EFF6FF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
+              }}>{s.l}</button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Task table */}
@@ -174,11 +206,11 @@ export default function Tasks() {
   )
 }
 
-function Kpi({ label, value, color }) {
+function Perf({ label, value, color }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+    <div>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 30, fontWeight: 700, marginTop: 8, color: color || 'var(--text)' }}>{value}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6, color: color || 'var(--text)' }}>{value}</div>
     </div>
   )
 }

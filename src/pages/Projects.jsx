@@ -61,7 +61,7 @@ export default function Projects() {
   return (
     <div data-screen-label="Projects">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <PageTitle kicker="COMPANY-WIDE · ALL DIVISIONS" title="Projects" />
+        <PageTitle kicker="RETROFIT PROGRAMME" title="Projects" />
         {canAddProject && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
