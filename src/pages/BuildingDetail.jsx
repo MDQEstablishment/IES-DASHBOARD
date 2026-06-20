@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useBreadcrumb } from '../breadcrumbs'
 import Icon from '../components/Icon'
-import { Avatar, Chip, Loading, Empty, Btn } from '../components/ui'
+import { Avatar, Chip, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import { useAuth, can } from '../rbac'
-import { useLiveQuery, bgUpdate } from '../lib/db'
-import { CAN_QA, labelize } from '../lib/constants'
+import { useLiveQuery, bgUpdate, bgInsert } from '../lib/db'
+import { CAN_QA, CAN_INSTALL, labelize } from '../lib/constants'
 import { num, fmtShort } from '../lib/format'
 
 // Building Detail (dc r_building, 415-638). Level-3 drill-in: nested sub-tab menu
@@ -27,7 +27,9 @@ export default function BuildingDetail() {
   const { setLabel } = useBreadcrumb()
   const { user, role } = useAuth()
   const isQA = can(role, CAN_QA)
+  const canInstall = can(role, CAN_INSTALL)
   const [expanded, setExpanded] = useState({})
+  const [addOpen, setAddOpen] = useState(false)
 
   const base = `/projects/${id}/buildings/${bid}`
   const tail = loc.pathname.slice(loc.pathname.indexOf(base) + base.length).replace(/^\//, '')
@@ -144,7 +146,10 @@ export default function BuildingDetail() {
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Assets · Daily Install Log</div>
-            <Link to={`${base}/daily`} style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>+ Add today's install</Link>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Link to={`${base}/daily`} style={{ display: 'inline-flex', alignItems: 'center', fontSize: 12.5, fontWeight: 600, color: 'var(--text-3)' }}>Batch (Daily)</Link>
+              {canInstall && <button onClick={() => setAddOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}><Icon name="plus" size={14} />Add today's install</button>}
+            </div>
           </div>
           {scopes.length === 0 ? <Empty icon="tasks">No install scope defined for this building.</Empty> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -284,7 +289,39 @@ export default function BuildingDetail() {
           })()}
         </div>
       )}
+      {addOpen && <InstallModal bid={bid} scopes={scopes} user={user} onClose={() => setAddOpen(false)} />}
     </div>
+  )
+}
+
+function InstallModal({ bid, scopes, user, onClose }) {
+  const [scopeId, setScopeId] = useState(scopes[0]?.id || '')
+  const [qty, setQty] = useState('')
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    if (!scopeId || !qty || Number(qty) < 1) return
+    setBusy(true)
+    const { error } = await bgInsert('install_log', {
+      entry_date: new Date().toISOString().slice(0, 10), building_id: bid, scope_id: scopeId,
+      qty: Number(qty), source: 'manual', installed_by_id: user.id, note: note || null, photos: [],
+    }, { okMsg: 'Install logged ✓' })
+    setBusy(false)
+    if (!error) onClose()
+  }
+  return (
+    <Modal open title="Add today's install" onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !scopeId || !qty}>{busy ? 'Saving…' : 'Log install'}</Btn></>}>
+      <Field label="Sub-type">
+        <select style={inputStyle} value={scopeId} onChange={(e) => setScopeId(e.target.value)}>
+          <option value="">Select sub-type…</option>
+          {scopes.map((s) => <option key={s.id} value={s.id}>{s.project_esm?.esm?.code} · {s.sub_type} ({s.planned_qty} planned)</option>)}
+        </select>
+      </Field>
+      <Field label="Quantity installed"><input style={inputStyle} type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="e.g. 12" /></Field>
+      <Field label="Room / location note"><input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Floor 2 east" /></Field>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Appends a row to the install log (pending QA), decrements stock and bumps every percentage.</div>
+    </Modal>
   )
 }
 
