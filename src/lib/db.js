@@ -111,3 +111,28 @@ export async function signedUrl(path, expires = 3600) {
   if (error) return null
   return data?.signedUrl || null
 }
+
+// ---------------------------------------------------------------------------
+// Generic bucket helpers (Phase 4 — project-docs / building-photos /
+// project-templates). uploadToBucket enforces an optional client-side size cap
+// (mirror of the bucket policy) and namespaces objects by user + date.
+// ---------------------------------------------------------------------------
+export async function uploadToBucket(bucket, file, { userId = 'anon', maxBytes, prefix = '' } = {}) {
+  if (maxBytes && file.size > maxBytes) {
+    toast(`File exceeds the ${Math.round(maxBytes / 1024)} KB limit`, 'err')
+    return { error: 'size' }
+  }
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const date = new Date().toISOString().slice(0, 10)
+  const path = `${prefix ? prefix + '/' : ''}${userId}/${date}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const { error } = await supabase.storage.from(bucket).upload(path, file, { contentType: file.type || undefined, upsert: false })
+  if (error) { toast('Upload failed — ' + error.message, 'err'); return { error } }
+  return { path, size: file.size, mime: file.type }
+}
+
+export async function signedUrlFor(bucket, path, expires = 3600) {
+  if (!path) return null
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expires)
+  if (error) return null
+  return data?.signedUrl || null
+}

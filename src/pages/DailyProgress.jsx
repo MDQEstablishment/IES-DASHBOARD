@@ -4,10 +4,11 @@ import Icon from '../components/Icon'
 import { Loading, Empty, Chip } from '../components/ui'
 import { Can } from '../rbac'
 import { useAuth } from '../rbac'
-import { useLiveQuery, bgInsert, uploadPhoto } from '../lib/db'
+import { useLiveQuery, bgInsert, uploadToBucket } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { CAN_INSTALL } from '../lib/constants'
 import { fmtShort } from '../lib/format'
+import { compressImage } from '../lib/image'
 import { useBreadcrumb } from '../breadcrumbs'
 
 const DRAFT_KEY = 'ies.draft.daily'
@@ -80,27 +81,38 @@ export default function DailyProgress() {
     return () => clearTimeout(t)
   }, [bid, scopeId, qty, note])
 
+  const [photoMeta, setPhotoMeta] = useState(null)
   const onPhoto = async (e) => {
     const f = e.target.files?.[0]
     if (!f) return
     setUploading(true)
-    const { path } = await uploadPhoto(f, user.id)
+    const small = await compressImage(f, { maxBytes: 200000 })
+    const { path } = await uploadToBucket('building-photos', small, { userId: user.id, prefix: bid || 'unscoped' })
     setUploading(false)
-    if (path) setPhotoPath(path)
+    if (path) { setPhotoPath(path); setPhotoMeta({ size: small.size, mime: small.type }) }
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const submit = async () => {
     if (!bid || !scopeId || !qty || Number(qty) < 1) return
     setSubmitting(true)
+    const sc = scopes.find((s) => s.id === scopeId)
     const { error } = await bgInsert('install_log', {
       entry_date: today(), building_id: bid, scope_id: scopeId, qty: Number(qty),
       source: 'quick_entry', installed_by_id: user.id, note: note || null,
       photos: photoPath ? [photoPath] : [],
     }, { okMsg: 'Logged ✓' })
+    // Daily-report photo → building_photos, tagged source=daily_report + ESM + date (B.4)
+    if (!error && photoPath) {
+      await bgInsert('building_photos', {
+        building_id: bid, storage_path: photoPath, source: 'daily_report',
+        esm: sc?.project_esm?.esm?.code || null, taken_at: today() + 'T12:00:00',
+        file_size_bytes: photoMeta?.size || null, mime_type: photoMeta?.mime || null, uploaded_by: user.id,
+      })
+    }
     setSubmitting(false)
     if (!error) {
-      setScopeId(''); setEsmCode(''); setQty(''); setNote(''); setPhotoPath(null)
+      setScopeId(''); setEsmCode(''); setQty(''); setNote(''); setPhotoPath(null); setPhotoMeta(null)
       localStorage.removeItem(DRAFT_KEY); setSaved(false)
     }
   }
