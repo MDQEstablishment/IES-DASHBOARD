@@ -8,6 +8,13 @@ const DSTATUS = {
   pending: ['Pending', '#64748B', '#F1F5F9'], in_transit: ['In Transit', '#2563EB', '#EFF6FF'],
   delivered: ['Delivered', '#10B981', '#ECFDF5'], rejected: ['Rejected', '#EF4444', '#FEF2F2'],
 }
+// Plain-English lifecycle help shown as a tooltip on each status pill (1.5)
+const DDESC = {
+  pending: 'Supplier confirmed the order but it has not shipped yet.',
+  in_transit: 'Shipped — on its way, awaiting on-site receipt.',
+  delivered: 'Received on site and checked in against the submittal.',
+  rejected: 'Delivery refused — wrong, damaged, or failed inspection.',
+}
 const WRITE_ROLES = ['admin', 'pmo', 'projm', 'progm', 'procm', 'proco']
 const inp = { padding: '7px 9px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, background: '#fff' }
 
@@ -35,6 +42,12 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Materials Delivery</div>
         {canWrite && <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={startAdd}>Add delivery</Btn>}
+      </div>
+      <div style={{ background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5, marginBottom: 10 }}>
+        Track material shipments tied to this project. Each row is one delivery: the <strong>scheduled</strong> date (when the supplier promised),
+        the <strong>actual</strong> delivery date (when it arrived), a <strong>status</strong> (pending → in transit → delivered → rejected), and notes.
+        As deliveries are recorded, the <strong>Critical Materials</strong> card on the Dashboard updates from the received-vs-consumed balance.
+        <span style={{ display: 'block', marginTop: 4, fontStyle: 'italic' }}>Tip: hover a status pill to see what it means.</span>
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         Next upcoming scheduled delivery: <strong>{nextUpcoming ? fmtDate(nextUpcoming) : '—'}</strong>
@@ -73,8 +86,8 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                     </td>
                     <td style={{ padding: '9px 8px' }}>
                       {canWrite
-                        ? <select value={r.status} onChange={(e) => bgUpdate('material_deliveries', r.id, { status: e.target.value }, { okMsg: 'Status updated' })} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, color: col, background: bg, border: `1px solid ${col}33` }}>{Object.keys(DSTATUS).map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select>
-                        : <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg }}>{lbl}</span>}
+                        ? <select title={DDESC[r.status] || ''} value={r.status} onChange={(e) => bgUpdate('material_deliveries', r.id, { status: e.target.value }, { okMsg: 'Status updated' })} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, color: col, background: bg, border: `1px solid ${col}33` }}>{Object.keys(DSTATUS).map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select>
+                        : <span title={DDESC[r.status] || ''} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span>}
                     </td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)', fontSize: 11.5, maxWidth: 200 }}>{r.notes || '—'}</td>
                     {canWrite && <td style={{ padding: '9px 8px' }}><button onClick={() => bgDelete('material_deliveries', r.id, { okMsg: 'Deleted' })} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button></td>}
