@@ -12,7 +12,8 @@ import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../com
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import MaterialDeliveries from '../components/MaterialDeliveries'
-import ProjectDocuments from '../components/ProjectDocuments'
+import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL } from '../components/ProjectDocuments'
+import CocMatrix from '../components/CocMatrix'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -23,17 +24,12 @@ const DOC_COLS = [
   ['coc', 'COC'],
 ]
 
-// project_documents.status -> [label, color, bg] for the tracker matrix pills
-const DOC_PILL = {
-  submitted: ['Submitted', '#2563EB', '#EFF6FF'], under_review: ['In Review', '#F59E0B', '#FFFBEB'],
-  approved: ['Approved', '#10B981', '#ECFDF5'], rejected: ['Rejected', '#EF4444', '#FEF2F2'], superseded: ['Superseded', '#64748B', '#F1F5F9'],
-}
-
 const TABS = [
   ['buildings', 'Buildings'],
   ['rollup', 'ESM Rollup'],
   ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
+  ['coc', 'COC Matrix'],
   ['map', 'Map'],
 ]
 
@@ -66,17 +62,25 @@ export default function ProjectDetail() {
   // Single source of truth for the ESM Documentation Tracker + the COC click-through:
   // all project_documents for this project (matrix uses project-level esm-tagged rows).
   const { rows: pdocs, refetch: refetchPdocs } = useLiveQuery('project_documents', (q) =>
-    q.select('id,esm_id,building_id,doc_type,status,name,storage_path,version,submitted_at').eq('project_id', id), [id])
+    q.select('id,esm_id,building_id,doc_type,status,name,revision,storage_path,version,submitted_at,client_reviewer_name,client_response_date').eq('project_id', id), [id])
+  // Smart-matrix counts by cardinality (see migration 0040 view).
+  const { rows: docProg, refetch: refetchProg } = useLiveQuery('v_project_doc_progress', (q) => q.select('*').eq('project_id', id), [id])
+  const refetchDocs = () => { refetchPdocs(); refetchProg() }
   const [uploadReq, setUploadReq] = useState(null)
+  const [drill, setDrill] = useState(null) // { esmId, esmCode, docType } for multi-kind drilldown
   const cocByB = {}
   pdocs.forEach((d) => { if (d.doc_type === 'coc' && d.building_id && !cocByB[d.building_id]) cocByB[d.building_id] = d })
 
+  const openFile = async (d) => {
+    if (!d?.storage_path) { toast('No file attached to this document', 'err'); return }
+    const url = await signedUrlFor('project-docs', d.storage_path)
+    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the document", 'err')
+  }
   const openCoc = async (b) => {
     const doc = cocByB[b.id]
     if (!doc) { setTab('docs'); toast('No COC document recorded yet — upload it in Doc Tracker'); return }
     if (!doc.storage_path) { setTab('docs'); toast('COC recorded but no file attached — see Doc Tracker'); return }
-    const url = await signedUrlFor('project-docs', doc.storage_path)
-    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the document", 'err')
+    openFile(doc)
   }
 
   if (loading && !project) return <Loading />
@@ -141,16 +145,25 @@ export default function ProjectDetail() {
   // --- doc tracker matrix (computed LIVE from project_documents) ---------------
   // One row per project ESM; each cell = the latest project-level document for
   // (esm, doc_kind), mapped to a review-state pill (or "Missing" if none).
+  // Single-per-ESM cells (material_submittal / method_statement): latest doc.
   const cellByKey = {} // `${esm_id}|${doc_type}` -> latest doc
-  pdocs.filter((d) => d.building_id == null && d.esm_id).forEach((d) => {
+  pdocs.filter((d) => d.esm_id && !MULTI_KINDS.has(d.doc_type)).forEach((d) => {
     const k = `${d.esm_id}|${d.doc_type}`
     const cur = cellByKey[k]
     if (!cur || new Date(d.submitted_at || 0) >= new Date(cur.submitted_at || 0)) cellByKey[k] = d
   })
-  const docRows = projectEsms.filter((pe) => pe.esm).map((pe) => ({
-    esmId: pe.esm.id, code: pe.esm.code, name: pe.custom_name || pe.esm.name,
-    cells: Object.fromEntries(DOC_COLS.map(([kind]) => [kind, cellByKey[`${pe.esm.id}|${kind}`] || null])),
-  }))
+  // Multi-per-ESM cells (mir / wir / coc): counts from the progress view.
+  const progByKey = {} // `${esm_code}|${doc_type}` -> { expected, submitted, approved, rejected }
+  docProg.forEach((p) => { progByKey[`${p.esm_code}|${p.doc_type}`] = p })
+  const docRows = projectEsms.filter((pe) => pe.esm).map((pe) => ({ esmId: pe.esm.id, code: pe.esm.code, name: pe.custom_name || pe.esm.name }))
+  // docs for the active drilldown (esm, doc_type)
+  const drillDocs = drill ? pdocs.filter((d) => d.esm_id === drill.esmId && d.doc_type === drill.docType)
+    .sort((a, b) => (a.building_id || '').localeCompare(b.building_id || '') || (a.revision || '').localeCompare(b.revision || '')) : []
+  // Avg days in client court = client_response_date - submitted_at over responded docs.
+  const responded = pdocs.filter((d) => d.client_response_date && d.submitted_at)
+  const avgDaysCourt = responded.length
+    ? Math.round((responded.reduce((s, d) => s + Math.max(0, (new Date(d.client_response_date) - new Date(d.submitted_at)) / 86400000), 0) / responded.length) * 10) / 10
+    : null
 
   return (
     <div data-screen-label="Project Detail">
@@ -364,8 +377,11 @@ export default function ProjectDetail() {
       {tab === 'docs' && (
         <>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>ESM Documentation Tracker</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Submittal readiness per ESM, computed live from uploaded documents.{canManage && ' Click a “Missing” cell to upload that document.'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>ESM Documentation Tracker</div>
+            {avgDaysCourt != null && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>Avg Days in Client Court: <strong style={{ color: avgDaysCourt > 14 ? 'var(--bad)' : 'var(--text)' }}>{avgDaysCourt}d</strong></div>}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', margin: '4px 0 12px' }}>Contractor submittals tracked through the client’s review. Single-doc kinds show a status pill; per-building/per-delivery kinds (MIR, WIR, COC) show submitted/expected.{canManage && ' Click a cell to upload or drill in.'}</div>
           {docRows.length === 0 ? (
             <Empty icon="doc">No ESMs configured for this project.</Empty>
           ) : (
@@ -379,8 +395,24 @@ export default function ProjectDetail() {
                   <tr key={row.code} style={{ borderTop: '1px solid var(--line)' }}>
                     <td style={{ padding: '10px 8px', fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{row.code}</td>
                     {DOC_COLS.map(([k]) => {
-                      const doc = row.cells[k]
-                      if (doc) { const [lbl, c, bg] = DOC_PILL[doc.status] || DOC_PILL.submitted; return <td key={k} style={{ padding: 8 }}><Chip label={lbl} color={c} bg={bg} /></td> }
+                      if (MULTI_KINDS.has(k)) {
+                        const p = progByKey[`${row.code}|${k}`] || {}
+                        const exp = p.expected_count || 0, sub = p.submitted_count || 0, app = p.approved_count || 0
+                        const subPct = exp ? Math.min(100, (sub / exp) * 100) : 0
+                        const appPct = exp ? Math.min(100, (app / exp) * 100) : 0
+                        return (
+                          <td key={k} onClick={() => setDrill({ esmId: row.esmId, esmCode: row.code, docType: k })} title={`${sub} submitted · ${app} approved of ${exp} expected — click for details`}
+                            style={{ padding: 8, cursor: 'pointer', minWidth: 92 }}>
+                            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700 }}>{sub}/{exp}</div>
+                            <div style={{ height: 5, borderRadius: 3, background: '#EFF2F6', overflow: 'hidden', marginTop: 3, position: 'relative' }}>
+                              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: subPct + '%', background: '#BFDBFE' }} />
+                              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: appPct + '%', background: '#10B981' }} />
+                            </div>
+                          </td>
+                        )
+                      }
+                      const doc = cellByKey[`${row.esmId}|${k}`]
+                      if (doc) { const [lbl, c, bg, tip] = docStatusMeta(doc.status); return <td key={k} onClick={() => openFile(doc)} title={`${tip} — click to open file`} style={{ padding: 8, cursor: 'pointer' }}><Chip label={lbl} color={c} bg={bg} /></td> }
                       return (
                         <td key={k} style={{ padding: 8 }}>
                           {canManage
@@ -395,8 +427,14 @@ export default function ProjectDetail() {
             </table></div>
           )}
         </div>
-        <ProjectDocuments projectId={id} uploadRequest={uploadReq} onChanged={refetchPdocs} />
+        <ProjectDocuments projectId={id} uploadRequest={uploadReq} onChanged={refetchDocs} />
         </>
+      )}
+
+      {/* COC MATRIX tab — Buildings × ESMs */}
+      {tab === 'coc' && (
+        <CocMatrix buildings={buildings} projectEsms={projectEsms} pdocs={pdocs} canManage={canManage}
+          onUpload={(req) => { setTab('docs'); setUploadReq({ ...req, key: Date.now() }) }} onOpenFile={openFile} />
       )}
 
       {/* MAP tab — real OpenStreetMap markers */}
@@ -438,6 +476,34 @@ export default function ProjectDetail() {
       {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
       {archiveBldg && <ArchiveBuildingModal building={archiveBldg} onClose={() => setArchiveBldg(null)} />}
       {statusBldg && <BuildingStatusModal building={statusBldg} onClose={() => setStatusBldg(null)} />}
+
+      {/* multi-kind drilldown (MIR / WIR / COC) */}
+      <Drawer open={!!drill} title={drill ? `${drill.esmCode} · ${(TYPE_LABEL[drill.docType] || drill.docType)}` : ''} subtitle="All submittals for this ESM and document kind" onClose={() => setDrill(null)}
+        footer={canManage && drill ? <Btn variant="primary" onClick={() => { setUploadReq({ esmId: drill.esmId, docType: drill.docType, key: Date.now() }); setDrill(null) }}>Upload another</Btn> : null}>
+        {drillDocs.length === 0 ? <Empty icon="doc">Nothing submitted yet for this cell.</Empty> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {drillDocs.map((d) => {
+              const [lbl, c, bg, tip] = docStatusMeta(d.status)
+              const bcode = buildings.find((b) => b.id === d.building_id)?.code
+              return (
+                <div key={d.id} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    {d.storage_path
+                      ? <button onClick={() => openFile(d)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 12.5, padding: 0, textDecoration: 'underline', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="doc" size={13} />{d.name}</button>
+                      : <span style={{ fontWeight: 600, fontSize: 12.5 }}>{d.name}</span>}
+                    <span title={tip} style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '3px 7px', borderRadius: 6, color: c, background: bg, whiteSpace: 'nowrap' }}>{lbl}</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 5, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    {bcode && <span>🏢 {bcode}</span>}<span>Rev {d.revision || 'A'}</span>
+                    {d.client_reviewer_name && <span>👤 {d.client_reviewer_name}</span>}
+                    {d.client_response_date && <span>↩ {String(d.client_response_date).slice(0, 10)}</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Drawer>
     </div>
   )
 }
