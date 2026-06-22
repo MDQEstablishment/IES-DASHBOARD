@@ -9,7 +9,7 @@ const CARD_DOCS = [
   ['Total Projects', 'Count of non-deleted projects.', 'projects table', 'Add Project / Delete Project actions'],
   ['Portfolio Progress', 'Weighted average installed ÷ planned across active projects.', 'install_log ÷ building_item_scope', 'Engineer install entries'],
   ['S-Curve', 'Planned vs actual progress over time.', 'install_log aggregated by week', 'Daily Report submissions'],
-  ['COCs Signed', 'Buildings with a signed completion certificate.', 'buildings.status_override = signed', 'COC approval flow'],
+  ['COCs Signed', 'Signed completion certificates out of the expected total (one COC per building in active projects; archived buildings excluded).', 'buildings.status_override = signed ÷ buildings in active projects', 'COC approval flow'],
   ['Progress by Project', 'Per-project weighted %.', 'install_log + building_item_scope', 'Engineer log entries'],
   ['Progress by ESM', 'Per-ESM aggregated % across the portfolio.', 'install_log grouped by ESM', 'Engineer log entries'],
   ['Attention List', 'Open escalations + blocked tasks.', 'escalations + tasks', 'Auto-detected blockers + manual escalations'],
@@ -34,7 +34,8 @@ const ESM_META = {
 export default function Dashboard() {
   const [help, setHelp] = useState(false)
   const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code,name,status,client,region'))
-  const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,project_id,status_override'))
+  const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('id,project_id,status_override'))
+  const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
   const { rows: install, loading } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: escs } = useLiveQuery('escalations', (q) =>
@@ -72,9 +73,12 @@ export default function Dashboard() {
   const portFrac = Math.min(1, overall / 100)
   const portRingDash = `${(CIRC * portFrac).toFixed(1)} ${CIRC.toFixed(1)}`
 
-  // COCs Signed = buildings with status_override='signed' out of total
-  const cocX = buildings.filter((b) => b.status_override === 'signed').length
-  const cocY = buildings.length
+  // COCs Signed = signed buildings out of the EXPECTED COCs (1 per building in
+  // active projects). Excludes archived buildings and non-active projects. (1.8)
+  const activeProjIds = new Set(projects.filter((p) => p.status === 'active').map((p) => p.id))
+  const cocScope = buildings.filter((b) => activeProjIds.has(b.project_id))
+  const cocX = cocScope.filter((b) => b.status_override === 'signed').length
+  const cocY = cocScope.length
   const cocFrac = cocY ? Math.min(1, cocX / cocY) : 0
   const cocRingDash = `${(CIRC * cocFrac).toFixed(1)} ${CIRC.toFixed(1)}`
 
