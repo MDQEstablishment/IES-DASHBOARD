@@ -104,13 +104,13 @@ function UploadModal({ projectId, buildingId, onClose }) {
   return (
     <Modal open title="Upload document" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !name.trim()}>{busy ? 'Uploading…' : 'Upload'}</Btn></>}>
-      <Field label="Document name"><input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. COC — Police HQ ESM1" /></Field>
+      <Field label="Document name"><input lang="en" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. COC — Police HQ ESM1" /></Field>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 2 }}><Field label="Type"><select style={inputStyle} value={type} onChange={(e) => setType(e.target.value)}>{DOC_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field></div>
-        <div style={{ flex: 1 }}><Field label="Version"><input style={inputStyle} value={version} onChange={(e) => setVersion(e.target.value)} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Version"><input lang="en" style={inputStyle} value={version} onChange={(e) => setVersion(e.target.value)} /></Field></div>
       </div>
-      {type === 'other' && <Field label="Custom type label"><input style={inputStyle} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="e.g. Inspection Report" /></Field>}
-      <Field label="File (PDF stored as-is; images compressed to ≤500 KB; 25 MB cap)"><input type="file" onChange={onFile} style={{ fontSize: 13 }} /></Field>
+      {type === 'other' && <Field label="Custom type label"><input lang="en" style={inputStyle} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="e.g. Inspection Report" /></Field>}
+      <Field label="File (PDF stored as-is; images compressed to ≤500 KB; 25 MB cap)"><input lang="en" type="file" onChange={onFile} style={{ fontSize: 13 }} /></Field>
     </Modal>
   )
 }

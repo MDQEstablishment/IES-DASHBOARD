@@ -49,14 +49,14 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
     <Modal open width={620} title={mode === 'edit' ? `Edit building · ${building.code}` : 'Add building'} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Add building'}</Btn></>}>
       <Row>
-        <Field label="Building code"><input style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="MOI-004" /></Field>
-        <Field label="City / region"><input style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Abha" /></Field>
+        <Field label="Building code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="MOI-004" /></Field>
+        <Field label="City / region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Abha" /></Field>
       </Row>
-      <Field label="Building name (English)"><input style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Police HQ — Abha" /></Field>
+      <Field label="Building name (English)"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Police HQ — Abha" /></Field>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
       <Row>
-        <Field label="Contractor name"><input style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} placeholder="Al-Faisal HVAC" /></Field>
-        <Field label="Contractor phone"><input style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
+        <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} placeholder="Al-Faisal HVAC" /></Field>
+        <Field label="Contractor phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
       </Row>
       <Field label="Site engineer (optional)">
         <select style={inputStyle} value={f.engineer_name} onChange={(e) => set('engineer_name', e.target.value)}>
@@ -66,15 +66,15 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
       </Field>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
       <Row>
-        <Field label="Latitude"><input style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} placeholder="18.2164" /></Field>
-        <Field label="Longitude"><input style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} placeholder="42.5053" /></Field>
+        <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} placeholder="18.2164" /></Field>
+        <Field label="Longitude"><input lang="en" style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} placeholder="42.5053" /></Field>
       </Row>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>DETAILS (OPTIONAL)</div>
       <Row>
-        <Field label="Floors"><input style={inputStyle} type="number" min="0" value={f.floors || ''} onChange={(e) => set('floors', e.target.value)} /></Field>
-        <Field label="Area (m²)"><input style={inputStyle} type="number" min="0" value={f.area_sqm || ''} onChange={(e) => set('area_sqm', e.target.value)} /></Field>
+        <Field label="Floors"><input lang="en" style={inputStyle} type="number" min="0" value={f.floors || ''} onChange={(e) => set('floors', e.target.value)} /></Field>
+        <Field label="Area (m²)"><input lang="en" style={inputStyle} type="number" min="0" value={f.area_sqm || ''} onChange={(e) => set('area_sqm', e.target.value)} /></Field>
       </Row>
-      <Field label="Remarks"><input style={inputStyle} value={f.remarks} onChange={(e) => set('remarks', e.target.value)} /></Field>
+      <Field label="Remarks"><input lang="en" style={inputStyle} value={f.remarks} onChange={(e) => set('remarks', e.target.value)} /></Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Planned scopes (ESM quantities) can be added afterwards from the building's detail page.</div>
     </Modal>
   )
@@ -100,7 +100,7 @@ export function ArchiveBuildingModal({ building, onClose }) {
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="danger" onClick={archive} disabled={busy}>{busy ? 'Archiving…' : 'Archive building'}</Btn></>}>
       <div style={{ fontSize: 13, marginBottom: 12 }}>This removes <strong>{building.name}</strong> from the project's active buildings, map and rollups. It is retained (soft-delete), not permanently deleted.</div>
       <Field label="Reason (optional)">
-        <input style={inputStyle} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Removed from scope by client" />
+        <input lang="en" style={inputStyle} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Removed from scope by client" />
       </Field>
     </Modal>
   )

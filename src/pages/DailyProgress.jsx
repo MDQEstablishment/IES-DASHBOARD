@@ -268,7 +268,7 @@ export default function DailyProgress() {
               {/* Date */}
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Date</span>
-                <input value={today()} readOnly style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14, fontFamily: 'var(--mono)', background: '#FAFBFC' }} />
+                <input lang="en" value={today()} readOnly style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14, fontFamily: 'var(--mono)', background: '#FAFBFC' }} />
               </label>
 
               {/* Building */}
@@ -319,7 +319,7 @@ export default function DailyProgress() {
               {/* Qty installed */}
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Qty installed</span>
-                <input value={qty} onChange={(e) => setQty(e.target.value)} type="number" min="1"
+                <input lang="en" value={qty} onChange={(e) => setQty(e.target.value)} type="number" min="1"
                   placeholder={sel ? `e.g. 12 (of ${sel.planned_qty})` : 'e.g. 12'}
                   style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14 }} />
               </label>
@@ -327,12 +327,12 @@ export default function DailyProgress() {
               {/* Room / note */}
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Room / location note</span>
-                <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Floor 2 east"
+                <input lang="en" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Floor 2 east"
                   style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14 }} />
               </label>
 
               {/* Photos */}
-              <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
+              <input lang="en" ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
               <button onClick={() => fileRef.current?.click()} disabled={uploading}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 11, borderRadius: 9, border: '1px dashed #CBD5E1', color: photoPath ? 'var(--ok)' : 'var(--text-3)', fontSize: 12.5, background: '#fff', cursor: 'pointer' }}>
                 <Icon name="camera" size={15} />

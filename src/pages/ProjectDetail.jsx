@@ -400,7 +400,7 @@ export default function ProjectDetail() {
             {projectEsms.map((pe) => (
               <div key={pe.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)', width: 44 }}>{pe.esm?.code}</span>
-                <input defaultValue={pe.custom_name || pe.esm?.name || ''}
+                <input lang="en" defaultValue={pe.custom_name || pe.esm?.name || ''}
                   onBlur={(e) => {
                     const v = e.target.value.trim()
                     if (v && v !== (pe.custom_name || pe.esm?.name)) bgUpdate('project_esms', pe.id, { custom_name: v }, { okMsg: 'ESM renamed' })

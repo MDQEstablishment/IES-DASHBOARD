@@ -63,7 +63,7 @@ export default function BuildingPhotos({ buildingId }) {
         <div style={{ fontWeight: 700, fontSize: 14 }}>Site Photos</div>
         {canUpload && (
           <>
-            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onFiles} />
+            <input lang="en" ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onFiles} />
             <button onClick={() => fileRef.current?.click()} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700 }}>
               <Icon name="camera" size={14} />{busy ? 'Uploading…' : 'Upload photos'}
             </button>
