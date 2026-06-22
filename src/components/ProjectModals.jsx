@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { toast } from '../lib/toast'
-import { read, utils, writeFileXLSX } from 'xlsx'
+import { read, utils } from 'xlsx'
 
 const STATUSES = ['active', 'draft', 'on_hold', 'closed']
 const num = (v) => (v === '' || v == null ? null : Number(v))
@@ -217,69 +218,146 @@ export function AssignEngineerModal({ project, onClose }) {
   )
 }
 
-// ── Excel import (SheetJS) ──────────────────────────────────────────────────
-const TEMPLATE_COLS = ['code', 'name', 'client', 'region', 'status', 'start_date', 'total_weeks', 'contractor_name', 'contractor_phone', 'building_code', 'building_name', 'building_region']
+// ── Excel import (multi-sheet template → atomic RPC) ────────────────────────
+const BSTATUSES = ['pending', 'in_progress', 'signed', 'on_hold', 'blocked']
+const ESMS = ['ESM1', 'ESM2', 'ESM3']
+const TEMPLATE_BUCKET_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/project-templates/IES-Project-Template.xlsx`
+const TEMPLATE_STATIC_URL = `${import.meta.env.BASE_URL}templates/IES-Project-Template.xlsx`
+
+const isExampleRow = (row) => Object.values(row).some((v) => String(v).trim() === 'DELETE-BEFORE-UPLOAD')
+const sheetRows = (wb, name) => {
+  const ws = wb.Sheets[name]
+  if (!ws) return []
+  return utils.sheet_to_json(ws, { defval: '' })
+    .filter((r) => !isExampleRow(r))
+    .filter((r) => Object.values(r).some((v) => String(v).trim() !== ''))
+}
+const s = (v) => (v == null ? '' : String(v).trim())
+const isNum = (v) => v !== '' && !isNaN(Number(v))
+
 export function ProjectImportModal({ onClose }) {
-  const [rows, setRows] = useState(null)
+  const navigate = useNavigate()
+  const [parsed, setParsed] = useState(null) // { project, buildings, scopes, materials }
   const [errors, setErrors] = useState([])
   const [busy, setBusy] = useState(false)
 
-  const downloadTemplate = () => {
-    const ws = utils.aoa_to_sheet([TEMPLATE_COLS, ['MOI-ASIR', 'MOI — Asir Region', 'Ministry of Interior', 'Asir', 'active', '2025-09-01', '64', 'Al-Faisal HVAC', '+966 50 000 0000', 'MOI-001', 'Police HQ — Abha', 'Abha']])
-    const wb = utils.book_new(); utils.book_append_sheet(wb, ws, 'Projects')
-    writeFileXLSX(wb, 'IES-Project-Template.xlsx')
+  const downloadTemplate = async () => {
+    for (const url of [TEMPLATE_BUCKET_URL, TEMPLATE_STATIC_URL]) {
+      try {
+        const res = await fetch(url)
+        if (!res.ok) continue
+        const blob = await res.blob()
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = 'IES-Project-Template.xlsx'
+        document.body.appendChild(a); a.click(); a.remove()
+        URL.revokeObjectURL(a.href)
+        return
+      } catch { /* try next source */ }
+    }
+    toast("Couldn't fetch the template — check your connection", 'err')
   }
 
   const onFile = async (e) => {
     const file = e.target.files?.[0]; if (!file) return
-    const buf = await file.arrayBuffer()
-    const wb = read(buf)
-    const data = utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
+    setErrors([]); setParsed(null)
+    const wb = read(await file.arrayBuffer(), { cellDates: true })
+    const pr = sheetRows(wb, 'Project')[0] || null
+    const buildings = sheetRows(wb, 'Buildings')
+    const scopes = sheetRows(wb, 'Building Scopes')
+    const materials = sheetRows(wb, 'Materials')
+
     const errs = []
-    data.forEach((r, i) => {
-      if (!r.code) errs.push(`Row ${i + 2}: missing code`)
-      if (!r.name) errs.push(`Row ${i + 2}: missing name`)
-      if (r.status && !STATUSES.includes(String(r.status))) errs.push(`Row ${i + 2}: invalid status "${r.status}"`)
+    if (!pr) errs.push('The Project sheet has no data row.')
+    if (pr && !s(pr.code)) errs.push('Project: code is required.')
+    if (pr && !s(pr.name)) errs.push('Project: name is required.')
+    if (pr && s(pr.status) && !STATUSES.includes(s(pr.status))) errs.push(`Project: invalid status "${s(pr.status)}".`)
+
+    const seen = new Set()
+    buildings.forEach((b, i) => {
+      const ln = `Buildings row ${i + 1}`
+      if (!s(b.building_code)) errs.push(`${ln}: building_code is required.`)
+      else if (seen.has(s(b.building_code))) errs.push(`${ln}: duplicate building_code "${s(b.building_code)}".`)
+      else seen.add(s(b.building_code))
+      if (pr && s(b.project_code) && s(b.project_code) !== s(pr.code)) errs.push(`${ln}: project_code "${s(b.project_code)}" ≠ Project code "${s(pr.code)}".`)
+      if (s(b.lat) && (!isNum(b.lat) || Math.abs(Number(b.lat)) > 90)) errs.push(`${ln}: lat out of range.`)
+      if (s(b.lng) && (!isNum(b.lng) || Math.abs(Number(b.lng)) > 180)) errs.push(`${ln}: lng out of range.`)
+      if (s(b.status) && !BSTATUSES.includes(s(b.status))) errs.push(`${ln}: invalid status "${s(b.status)}".`)
     })
-    setErrors(errs); setRows(data)
+    scopes.forEach((c, i) => {
+      const ln = `Scopes row ${i + 1}`
+      if (!s(c.building_code)) errs.push(`${ln}: building_code is required.`)
+      else if (!seen.has(s(c.building_code))) errs.push(`${ln}: building_code "${s(c.building_code)}" not found in Buildings.`)
+      if (!ESMS.includes(s(c.esm).toUpperCase())) errs.push(`${ln}: esm must be ESM1/ESM2/ESM3.`)
+      if (s(c.planned_qty) && !isNum(c.planned_qty)) errs.push(`${ln}: planned_qty must be a number.`)
+    })
+    materials.forEach((m, i) => {
+      const ln = `Materials row ${i + 1}`
+      if (!s(m.material_code)) errs.push(`${ln}: material_code is required.`)
+      if (!ESMS.includes(s(m.esm).toUpperCase())) errs.push(`${ln}: esm must be ESM1/ESM2/ESM3.`)
+    })
+
+    setErrors(errs)
+    setParsed({ project: pr, buildings, scopes, materials })
   }
 
+  const toIso = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : s(v) || null)
   const doImport = async () => {
-    if (!rows?.length || errors.length) return
+    if (!parsed?.project || errors.length) return
     setBusy(true)
-    // group rows by project code → one project + N buildings
-    const byCode = {}
-    rows.forEach((r) => {
-      byCode[r.code] = byCode[r.code] || { proj: { code: r.code, name: r.name, client: r.client || null, region: r.region || null, status: r.status || 'draft', start_date: r.start_date || null, total_weeks: r.total_weeks ? Number(r.total_weeks) : null, contractor_name: r.contractor_name || null, contractor_phone: r.contractor_phone || null }, blds: [] }
-      if (r.building_code) byCode[r.code].blds.push({ code: r.building_code, name: r.building_name || r.building_code, region: r.building_region || r.region || null })
-    })
-    let made = 0
-    for (const { proj, blds } of Object.values(byCode)) {
-      const { data, error } = await bgInsert('projects', proj)
-      if (error) continue
-      made++
-      if (data?.[0] && blds.length) await bgInsert('buildings', blds.map((b) => ({ ...b, project_id: data[0].id })))
+    const p = parsed.project
+    const payload = {
+      project: {
+        code: s(p.code), name: s(p.name), client: s(p.client), region: s(p.region), address: s(p.address),
+        lat: s(p.lat), lng: s(p.lng), start_date: toIso(p.start_date), end_date: toIso(p.end_date),
+        status: s(p.status), total_weeks: s(p.total_weeks), pm_email: s(p.pm_email), engineer_email: s(p.engineer_email),
+        contractor_name: s(p.contractor_name), contractor_phone: s(p.contractor_phone), contractor_email: s(p.contractor_email),
+      },
+      buildings: parsed.buildings.map((b) => ({
+        building_code: s(b.building_code), building_name: s(b.building_name), city: s(b.city), lat: s(b.lat), lng: s(b.lng),
+        floors: s(b.floors), area_sqm: s(b.area_sqm), contractor_name: s(b.contractor_name), contractor_phone: s(b.contractor_phone),
+        status: s(b.status), remarks: s(b.remarks),
+      })),
+      scopes: parsed.scopes.map((c) => ({
+        building_code: s(c.building_code), esm: s(c.esm).toUpperCase(), material_code: s(c.material_code),
+        sub_type: s(c.sub_type), planned_qty: s(c.planned_qty), unit: s(c.unit), notes: s(c.notes),
+      })),
+      materials: parsed.materials.map((m) => ({
+        material_code: s(m.material_code), description: s(m.description), esm: s(m.esm).toUpperCase(),
+        unit: s(m.unit), threshold: s(m.threshold), supplier: s(m.supplier),
+      })),
     }
+    const { data, error } = await supabase.rpc('import_project_bundle', { p: payload })
     setBusy(false)
-    toast(`Imported ${made} project${made === 1 ? '' : 's'}`)
+    if (error) { toast(`Import failed — ${error.message}`, 'err'); return }
+    toast(`Imported: 1 project, ${data.buildings} buildings, ${data.scopes} scopes, ${data.materials} materials`)
     onClose()
+    if (data.project_id) navigate(`/projects/${data.project_id}`)
   }
+
+  const counts = parsed && { p: parsed.project ? 1 : 0, b: parsed.buildings.length, c: parsed.scopes.length, m: parsed.materials.length }
 
   return (
-    <Modal open width={620} title="Import projects from Excel" onClose={onClose}
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={doImport} disabled={!rows?.length || !!errors.length || busy}>{busy ? 'Importing…' : `Import ${rows?.length || 0} row(s)`}</Btn></>}>
-      <div style={{ fontSize: 13, marginBottom: 12 }}>Step 1 — download the template, fill one row per building (repeat the project columns for each building of the same project), then upload it.</div>
+    <Modal open width={620} title="Import a project from Excel" onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={doImport} disabled={!parsed?.project || !!errors.length || busy}>{busy ? 'Importing…' : 'Confirm import'}</Btn></>}>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>Step 1 — download the template. It has 5 sheets (Instructions, Project, Buildings, Building Scopes, Materials) with colors and per-field notes. Fill them, delete the example rows, then upload.</div>
       <Btn icon="upload" onClick={downloadTemplate} style={{ marginBottom: 14 }}>Download template (.xlsx)</Btn>
-      <Field label="Step 2 — upload filled template">
+      <Field label="Step 2 — upload the filled template">
         <input type="file" accept=".xlsx,.xls" onChange={onFile} style={{ fontSize: 13 }} />
       </Field>
       {errors.length > 0 && (
         <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12, color: '#B91C1C', marginTop: 8 }}>
-          {errors.slice(0, 8).map((e, i) => <div key={i}>{e}</div>)}
-          {errors.length > 8 && <div>+{errors.length - 8} more…</div>}
+          {errors.slice(0, 10).map((e, i) => <div key={i}>{e}</div>)}
+          {errors.length > 10 && <div>+{errors.length - 10} more…</div>}
         </div>
       )}
-      {rows && !errors.length && <div style={{ fontSize: 12.5, color: 'var(--ok)', marginTop: 8 }}>✓ {rows.length} row(s) parsed, no errors. Ready to import.</div>}
+      {parsed && !errors.length && (
+        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: 12, fontSize: 13, color: '#065F46', marginTop: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Ready to import — please confirm:</div>
+          <div><strong>{counts.p}</strong> project (<span style={{ fontFamily: 'var(--mono)' }}>{s(parsed.project.code)}</span>), <strong>{counts.b}</strong> buildings, <strong>{counts.c}</strong> scopes, <strong>{counts.m}</strong> materials will be created.</div>
+          <div style={{ fontSize: 11.5, marginTop: 4, color: '#047857' }}>Everything is created in a single transaction — all or nothing.</div>
+        </div>
+      )}
     </Modal>
   )
 }
