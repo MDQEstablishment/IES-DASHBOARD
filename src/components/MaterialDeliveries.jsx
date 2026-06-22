@@ -44,12 +44,6 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
         <div style={{ fontWeight: 700, fontSize: 14 }}>Materials Delivery</div>
         {canWrite && <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={startAdd}>Add delivery</Btn>}
       </div>
-      <div style={{ background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 12px', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5, marginBottom: 10 }}>
-        Track material shipments tied to this project. Each row is one delivery: the <strong>scheduled</strong> date (when the supplier promised),
-        the <strong>actual</strong> delivery date (when it arrived), a <strong>status</strong> (pending → in transit → delivered → rejected), and notes.
-        As deliveries are recorded, the <strong>Critical Materials</strong> card on the Dashboard updates from the received-vs-consumed balance.
-        <span style={{ display: 'block', marginTop: 4, fontStyle: 'italic' }}>Tip: hover a status pill to see what it means.</span>
-      </div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         Next upcoming scheduled delivery: <strong>{nextUpcoming ? fmtDate(nextUpcoming) : '—'}</strong>
       </div>
