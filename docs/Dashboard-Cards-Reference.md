@@ -9,7 +9,7 @@ where the number comes from, and which action changes it. This mirrors the in-ap
 | **Total Projects** | Count of non-deleted projects. | `projects` table | Add Project / Delete Project actions |
 | **Portfolio Progress** | Weighted average of installed ÷ planned across active projects. | `install_log` ÷ `building_item_scope` | Engineer install entries |
 | **S-Curve** | Planned vs actual progress over time. | `install_log` aggregated by week | Daily Report submissions |
-| **COCs Signed** | Signed completion certificates out of the **expected** total — one COC per building in **active** projects (archived buildings excluded). | `buildings.status_override = 'signed'` ÷ buildings in active projects | COC approval flow |
+| **COCs Signed** | Individual COCs **approved by the client** out of the expected total, at **building × ESM** granularity across active projects. | `v_project_doc_progress` — `approved_count ÷ expected_count` (`doc_type = 'coc'`) | Client COC approvals in Doc Tracker / COC Matrix |
 | **Progress by Project** | Per-project weighted % complete. | `install_log` + `building_item_scope` | Engineer log entries |
 | **Progress by ESM** | Per-ESM aggregated % across the whole portfolio. | `install_log` grouped by ESM | Engineer log entries |
 | **Attention List** | Open escalations plus blocked/overdue tasks. | `escalations` + `tasks` | Auto-detected blockers + manually raised escalations |

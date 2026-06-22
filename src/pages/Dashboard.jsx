@@ -9,7 +9,7 @@ const CARD_DOCS = [
   ['Total Projects', 'Count of non-deleted projects.', 'projects table', 'Add Project / Delete Project actions'],
   ['Portfolio Progress', 'Weighted average installed ÷ planned across active projects.', 'install_log ÷ building_item_scope', 'Engineer install entries'],
   ['S-Curve', 'Planned vs actual progress over time.', 'install_log aggregated by week', 'Daily Report submissions'],
-  ['COCs Signed', 'Signed completion certificates out of the expected total (one COC per building in active projects; archived buildings excluded).', 'buildings.status_override = signed ÷ buildings in active projects', 'COC approval flow'],
+  ['COCs Signed', 'Individual COCs approved by the client out of the expected total, at building × ESM granularity across active projects.', 'v_project_doc_progress (approved_count ÷ expected_count, doc_type=coc)', 'Client COC approvals in Doc Tracker / COC Matrix'],
   ['Progress by Project', 'Per-project weighted %.', 'install_log + building_item_scope', 'Engineer log entries'],
   ['Progress by ESM', 'Per-ESM aggregated % across the portfolio.', 'install_log grouped by ESM', 'Engineer log entries'],
   ['Attention List', 'Open escalations + blocked tasks.', 'escalations + tasks', 'Auto-detected blockers + manual escalations'],
@@ -44,6 +44,7 @@ export default function Dashboard() {
   const { rows: tasks } = useLiveQuery('tasks', (q) => q.select('id,title,status,priority,created_at'))
   const { rows: materials } = useLiveQuery('materials', (q) => q.select('code,name,received,threshold,esm:esms(code)'))
   const { rows: activity } = useLiveQuery('audit_log', (q) => q.select('id,actor_name,action,entity_type,summary,created_at').order('created_at', { ascending: false }).limit(6))
+  const { rows: cocProg } = useLiveQuery('v_project_doc_progress', (q) => q.select('project_id,expected_count,approved_count').eq('doc_type', 'coc'))
 
   // approved-installed per scope, capped at planned_qty
   const installedByScope = {}
@@ -73,12 +74,12 @@ export default function Dashboard() {
   const portFrac = Math.min(1, overall / 100)
   const portRingDash = `${(CIRC * portFrac).toFixed(1)} ${CIRC.toFixed(1)}`
 
-  // COCs Signed = signed buildings out of the EXPECTED COCs (1 per building in
-  // active projects). Excludes archived buildings and non-active projects. (1.8)
+  // Individual COCs approved = SUM(approved_count) ÷ SUM(expected_count) across
+  // active projects, at (building × ESM) granularity from v_project_doc_progress. (Sprint 3)
   const activeProjIds = new Set(projects.filter((p) => p.status === 'active').map((p) => p.id))
-  const cocScope = buildings.filter((b) => activeProjIds.has(b.project_id))
-  const cocX = cocScope.filter((b) => b.status_override === 'signed').length
-  const cocY = cocScope.length
+  const cocRows = cocProg.filter((r) => activeProjIds.has(r.project_id))
+  const cocX = cocRows.reduce((s, r) => s + (r.approved_count || 0), 0)
+  const cocY = cocRows.reduce((s, r) => s + (r.expected_count || 0), 0)
   const cocFrac = cocY ? Math.min(1, cocX / cocY) : 0
   const cocRingDash = `${(CIRC * cocFrac).toFixed(1)} ${CIRC.toFixed(1)}`
 
@@ -224,7 +225,7 @@ export default function Dashboard() {
             </svg>
             <div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{cocX}<span style={{ fontSize: 15, color: 'var(--text-3)' }}> of {cocY}</span></div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>certificates signed</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>individual COCs approved across active projects</div>
             </div>
           </div>
         </div>
