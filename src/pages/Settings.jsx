@@ -41,6 +41,14 @@ export default function Settings() {
     (q) => q.select('*').order('full_name'))
   const nameById = Object.fromEntries(people.map((p) => [p.id, p.full_name]))
 
+  // "Currently assigned to" — project codes each user is PM/engineer for (1.7)
+  const { rows: assignProjects } = useLiveQuery('projects', (q) => q.select('code,pm_id,engineer_id,status').neq('status', 'deleted'))
+  const assignedByUser = {}
+  assignProjects.forEach((p) => {
+    if (p.pm_id) (assignedByUser[p.pm_id] = assignedByUser[p.pm_id] || []).push(`${p.code} (PM)`)
+    if (p.engineer_id) (assignedByUser[p.engineer_id] = assignedByUser[p.engineer_id] || []).push(`${p.code} (Eng)`)
+  })
+
   const { rows: audit, loading: auditLoading } = useLiveQuery('audit_log',
     (q) => q.select('*').order('created_at', { ascending: false }).limit(50))
   const filteredAudit = audit.filter((a) => auditAction === 'all' || a.action === auditAction)
@@ -90,6 +98,7 @@ export default function Settings() {
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>ROLE</th>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>EMAIL</th>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>REPORTS TO</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Projects this user is assigned to as Project Manager (PM) or Project Engineer (Eng)">ASSIGNED TO</th>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
                   </tr></thead>
                   <tbody>
@@ -104,6 +113,13 @@ export default function Settings() {
                         <td style={{ padding: '10px 8px', color: 'var(--text-3)' }}>{roleTitle(u.role)}</td>
                         <td style={{ padding: '10px 8px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{u.email}</td>
                         <td style={{ padding: '10px 8px', color: 'var(--text-3)' }}>{nameById[u.manager_id] || '—'}</td>
+                        <td style={{ padding: '10px 8px' }}>
+                          {(assignedByUser[u.id] || []).length === 0
+                            ? <span style={{ color: 'var(--text-3)' }}>—</span>
+                            : <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {assignedByUser[u.id].map((c) => <span key={c} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6, color: '#2563EB', background: '#EFF6FF' }}>{c}</span>)}
+                              </span>}
+                        </td>
                         <td style={{ padding: '10px 8px' }}>
                           {u.archived
                             ? <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#94A3B8', background: '#F1F5F9' }}>archived</span>

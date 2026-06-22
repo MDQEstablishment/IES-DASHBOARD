@@ -8,7 +8,7 @@ import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
 import { statusMeta, MANAGERS } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
-import { ProjectFormModal, StatusChangeModal } from '../components/ProjectModals'
+import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../components/ProjectModals'
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import MaterialDeliveries from '../components/MaterialDeliveries'
@@ -40,6 +40,7 @@ export default function ProjectDetail() {
   const [esmPanel, setEsmPanel] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
+  const [engOpen, setEngOpen] = useState(false)
   const [addBldgOpen, setAddBldgOpen] = useState(false)
   const [editBldg, setEditBldg] = useState(null)
   const [archiveBldg, setArchiveBldg] = useState(null)
@@ -47,7 +48,7 @@ export default function ProjectDetail() {
   const canManage = can(role, MANAGERS) || role === 'admin'
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
-    q.select('*,pm:profiles!projects_pm_id_fkey(full_name)').eq('id', id), [id])
+    q.select('*,pm:profiles!projects_pm_id_fkey(full_name),engineer:profiles!projects_engineer_id_fkey(full_name)').eq('id', id), [id])
   const project = projects[0]
   useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
@@ -171,6 +172,15 @@ export default function ProjectDetail() {
                 <span>🏛 {project.client || '—'}</span>
                 <span>📍 {project.region || '—'}</span>
                 <span>👷 PM {project.pm?.full_name || '—'}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  🛠 Eng {project.engineer?.full_name || 'Unassigned'}
+                  {canManage && (
+                    <button title="Change project engineer" onClick={() => setEngOpen(true)} className="ies-hover"
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 6, color: '#CBD5E1', background: 'rgba(255,255,255,.08)' }}>
+                      <Icon name="edit" size={11} />
+                    </button>
+                  )}
+                </span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#fff' }}>⏱ {timeline}</span>
               </div>
             </div>
@@ -404,6 +414,7 @@ export default function ProjectDetail() {
 
       {editOpen && <ProjectFormModal mode="edit" project={project} onClose={() => setEditOpen(false)} />}
       {statusOpen && <StatusChangeModal project={project} onClose={() => setStatusOpen(false)} />}
+      {engOpen && <AssignEngineerModal project={project} onClose={() => setEngOpen(false)} />}
       {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
       {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
       {archiveBldg && <ArchiveBuildingModal building={archiveBldg} onClose={() => setArchiveBldg(null)} />}
