@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Avatar, Chip, Loading, Empty, Drawer, Btn } from '../components/ui'
-import { useLiveQuery, bgUpdate } from '../lib/db'
+import { useLiveQuery, bgUpdate, signedUrlFor } from '../lib/db'
 import { useAuth, can } from '../rbac'
+import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
 import { statusMeta, MANAGERS } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal } from '../components/ProjectModals'
+import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import MaterialDeliveries from '../components/MaterialDeliveries'
 import ProjectDocuments from '../components/ProjectDocuments'
@@ -38,19 +40,37 @@ export default function ProjectDetail() {
   const [esmPanel, setEsmPanel] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
-  const canManage = can(role, MANAGERS)
+  const [addBldgOpen, setAddBldgOpen] = useState(false)
+  const [editBldg, setEditBldg] = useState(null)
+  const [archiveBldg, setArchiveBldg] = useState(null)
+  const [statusBldg, setStatusBldg] = useState(null)
+  const canManage = can(role, MANAGERS) || role === 'admin'
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
     q.select('*,pm:profiles!projects_pm_id_fkey(full_name)').eq('id', id), [id])
   const project = projects[0]
   useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
-  const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
+  const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
+  const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: docStatus } = useLiveQuery('esm_doc_status', (q) =>
     q.select('*,esm:esms(code,name)').eq('project_id', id).order('esm_id'), [id])
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) =>
     q.select('id,project_id,custom_name,ordinal,esm:esms(code,name)').eq('project_id', id).order('ordinal'), [id])
+  // COC approval documents per building — drives the "COC Approval" click-through (1.6)
+  const { rows: cocDocs } = useLiveQuery('project_documents', (q) =>
+    q.select('id,building_id,name,storage_path,status').eq('project_id', id).eq('doc_type', 'COC'), [id])
+  const cocByB = {}
+  cocDocs.forEach((d) => { if (d.building_id && !cocByB[d.building_id]) cocByB[d.building_id] = d })
+
+  const openCoc = async (b) => {
+    const doc = cocByB[b.id]
+    if (!doc) { setTab('docs'); toast('No COC document recorded yet — upload it in Doc Tracker'); return }
+    if (!doc.storage_path) { setTab('docs'); toast('COC recorded but no file attached — see Doc Tracker'); return }
+    const url = await signedUrlFor('project-docs', doc.storage_path)
+    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the document", 'err')
+  }
 
   if (loading && !project) return <Loading />
   if (!project) return <Empty icon="projects">Project not found.</Empty>
@@ -129,6 +149,7 @@ export default function ProjectDetail() {
         </Link>
         {canManage && (
           <div style={{ display: 'flex', gap: 8 }}>
+            <Btn icon="plus" variant="primary" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setAddBldgOpen(true)}>Add building</Btn>
             <Btn icon="edit" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setEditOpen(true)}>Edit project</Btn>
             <Btn icon="settings" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setStatusOpen(true)}>Change status</Btn>
           </div>
@@ -224,8 +245,9 @@ export default function ProjectDetail() {
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>ENGINEER</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>PROGRESS</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Scheduled vs actual material delivery for the building">MATERIAL DELIVERY</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Approval status of formal COCs and material submittals for this building">APPROVAL</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Date the building's Certificate of Completion (COC) was approved, and by whom. Click a date to open the approval document.">COC APPROVAL</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
+                {canManage && <th style={{ padding: '9px 8px', fontWeight: 600, width: 64 }} />}
               </tr></thead>
               <tbody>
                 {buildings.map((b) => {
@@ -246,11 +268,25 @@ export default function ProjectDetail() {
                         <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.delivery_date ? fmtDate(b.delivery_date) : '—'}</div>
                         <Chip status={b.delivery_status || 'pending'} />
                       </td>
-                      <td style={{ padding: '11px 8px' }}>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.approval_date ? fmtDate(b.approval_date) : '—'}</div>
+                      <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
+                        {b.approval_date
+                          ? <button title="Open the COC approval document" onClick={() => openCoc(b)} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}>{fmtDate(b.approval_date)}</button>
+                          : <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>—</div>}
                         <Chip status={b.approval_status || 'awaiting'} />
                       </td>
-                      <td style={{ padding: '11px 8px' }}><Chip status={b.status_override || 'pending'} /></td>
+                      <td style={{ padding: '11px 8px' }} onClick={(e) => canManage && e.stopPropagation()}>
+                        {canManage
+                          ? <button title="Change building status (with reason)" onClick={() => setStatusBldg(b)} style={{ cursor: 'pointer', background: 'none' }}><Chip status={b.status_override || 'pending'} /></button>
+                          : <Chip status={b.status_override || 'pending'} />}
+                      </td>
+                      {canManage && (
+                        <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
+                          <span style={{ display: 'flex', gap: 6 }}>
+                            <button title="Edit building" onClick={() => setEditBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="edit" size={13} /></button>
+                            <button title="Archive building" onClick={() => setArchiveBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
+                          </span>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
@@ -368,6 +404,10 @@ export default function ProjectDetail() {
 
       {editOpen && <ProjectFormModal mode="edit" project={project} onClose={() => setEditOpen(false)} />}
       {statusOpen && <StatusChangeModal project={project} onClose={() => setStatusOpen(false)} />}
+      {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
+      {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
+      {archiveBldg && <ArchiveBuildingModal building={archiveBldg} onClose={() => setArchiveBldg(null)} />}
+      {statusBldg && <BuildingStatusModal building={statusBldg} onClose={() => setStatusBldg(null)} />}
     </div>
   )
 }
