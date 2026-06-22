@@ -15,7 +15,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const [f, setF] = useState({
     code: init('code'), name: init('name'), client: init('client'), region: init('region'),
     status: init('status', 'draft'), start_date: init('start_date'), end_date: init('end_date'),
-    total_weeks: init('total_weeks'), pm_id: init('pm_id'),
+    total_weeks: init('total_weeks'), pm_id: init('pm_id'), engineer_id: init('engineer_id'),
     location_address: init('location_address'), location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name'), contractor_phone: init('contractor_phone'), contractor_email: init('contractor_email'),
   })
@@ -29,7 +29,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     const payload = {
       code: f.code.trim(), name: f.name.trim(), client: f.client || null, region: f.region || null,
       status: f.status, start_date: f.start_date || null, end_date: f.end_date || null,
-      total_weeks: num(f.total_weeks), pm_id: f.pm_id || null,
+      total_weeks: num(f.total_weeks), pm_id: f.pm_id || null, engineer_id: f.engineer_id || null,
       location_address: f.location_address || null, location_lat: num(f.location_lat), location_lng: num(f.location_lng),
       contractor_name: f.contractor_name || null, contractor_phone: f.contractor_phone || null, contractor_email: f.contractor_email || null,
     }
@@ -65,7 +65,10 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="End date"><input style={inputStyle} type="date" value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
         <Field label="Total weeks"><input style={inputStyle} type="number" min="1" value={f.total_weeks || ''} onChange={(e) => set('total_weeks', e.target.value)} /></Field>
       </Row>
-      <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
+      <Row>
+        <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
+        <Field label="Project engineer"><select style={inputStyle} value={f.engineer_id || ''} onChange={(e) => set('engineer_id', e.target.value)}><option value="">Unassigned</option>{people.filter((p) => p.role === 'proje').map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
+      </Row>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
       <Row>
         <Field label="Contractor name"><input style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} /></Field>
@@ -154,6 +157,34 @@ export function DeleteProjectModal({ project, onClose }) {
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="danger" onClick={del} disabled={!ok || busy}>{busy ? 'Deleting…' : 'Delete project'}</Btn></>}>
       <div style={{ fontSize: 13, marginBottom: 12 }}>This soft-deletes the project — it disappears from the default list but is retained. Type <strong style={{ fontFamily: 'var(--mono)' }}>{project.code}</strong> to confirm.</div>
       <input style={inputStyle} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={project.code} />
+    </Modal>
+  )
+}
+
+// ── Quick-assign project engineer from the Project Detail header (1.7) ──────
+export function AssignEngineerModal({ project, onClose }) {
+  const { rows: engineers } = useLiveQuery('profiles', (q) =>
+    q.select('id,full_name,role').eq('role', 'proje').eq('archived', false).order('full_name'))
+  const [engineerId, setEngineerId] = useState(project.engineer_id || '')
+  const [busy, setBusy] = useState(false)
+
+  const save = async () => {
+    if ((engineerId || '') === (project.engineer_id || '')) { onClose(); return }
+    setBusy(true)
+    const { error } = await bgUpdate('projects', project.id, { engineer_id: engineerId || null }, { okMsg: 'Project engineer updated' })
+    setBusy(false); if (!error) onClose()
+  }
+
+  return (
+    <Modal open title={`Project engineer · ${project.code}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Assign'}</Btn></>}>
+      <Field label="Project engineer">
+        <select style={inputStyle} value={engineerId} onChange={(e) => setEngineerId(e.target.value)}>
+          <option value="">Unassigned</option>
+          {engineers.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+        </select>
+      </Field>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>The change is recorded in the audit log with your name and the time.</div>
     </Modal>
   )
 }
