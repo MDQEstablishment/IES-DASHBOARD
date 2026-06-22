@@ -41,6 +41,16 @@ export function fmtDateTime(d) {
   return `${t.getDate()} ${MON[t.getMonth()]} · ${hh}:${mm}`
 }
 
+// Live header clock — built from String()/padStart (always Latin digits), never
+// a locale formatter, so it stays English under any OS locale (e.g. ar-SA).
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+export function fmtClock(d) {
+  const t = d instanceof Date ? d : new Date(d)
+  if (isNaN(t)) return '—'
+  const p = (x) => String(x).padStart(2, '0')
+  return `${DOW[t.getDay()]} ${p(t.getDate())} ${MON[t.getMonth()]} · ${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`
+}
+
 export function ago(d) {
   if (!d) return '—'
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)

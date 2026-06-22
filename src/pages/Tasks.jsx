@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Icon from '../components/Icon'
 import { Avatar, Chip, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
+import DateInput from '../components/DateInput'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { fmtDate, daysUntil, initials } from '../lib/format'
@@ -288,7 +289,7 @@ function NewTask({ onClose, user }) {
         </div>
         <div style={{ flex: 1 }}>
           <Field label="Due date">
-            <input lang="en" style={inputStyle} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+            <DateInput style={inputStyle} value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
         </div>
       </div>
