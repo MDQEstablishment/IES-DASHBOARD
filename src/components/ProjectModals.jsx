@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Modal, Field, inputStyle, Btn } from './ui'
+import DateInput from './DateInput'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
@@ -74,9 +75,9 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
       </Row>
       <Row>
-        <Field label="Start date"><input lang="en" style={inputStyle} type="date" value={f.start_date || ''} onChange={(e) => set('start_date', e.target.value)} /></Field>
-        <Field label="End date"><input lang="en" style={inputStyle} type="date" value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
-        <Field label="Total weeks"><input lang="en" style={inputStyle} type="number" min="1" value={f.total_weeks || ''} onChange={(e) => set('total_weeks', e.target.value)} /></Field>
+        <Field label="Start date"><DateInput style={inputStyle} value={f.start_date || ''} onChange={(e) => set('start_date', e.target.value)} /></Field>
+        <Field label="End date"><DateInput style={inputStyle} value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
+        <Field label="Total weeks"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="1" value={f.total_weeks || ''} onChange={(e) => set('total_weeks', e.target.value)} /></Field>
       </Row>
       <Row>
         <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>

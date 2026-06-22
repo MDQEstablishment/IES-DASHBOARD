@@ -6,15 +6,12 @@ import { ROLE_ORDER, ROSTER, roleColor, roleTitle } from '../lib/constants'
 import { navForRole, crumbsFor } from '../lib/nav'
 import { useAuth } from '../rbac'
 import { useBreadcrumb } from '../breadcrumbs'
+import { fmtClock } from '../lib/format'
 
 function Clock() {
   const [now, setNow] = useState(new Date())
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const p = (x) => String(x).padStart(2, '0')
-  const s = `${days[now.getDay()]} ${p(now.getDate())} ${M[now.getMonth()]} · ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`
-  return <div className="ies-topmeta" style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#94A3B8' }}>{s}</div>
+  return <div lang="en" className="ies-topmeta" style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#94A3B8' }}>{fmtClock(now)}</div>
 }
 
 export default function Shell() {

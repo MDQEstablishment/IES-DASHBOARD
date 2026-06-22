@@ -71,8 +71,8 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
       </Row>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>DETAILS (OPTIONAL)</div>
       <Row>
-        <Field label="Floors"><input lang="en" style={inputStyle} type="number" min="0" value={f.floors || ''} onChange={(e) => set('floors', e.target.value)} /></Field>
-        <Field label="Area (m²)"><input lang="en" style={inputStyle} type="number" min="0" value={f.area_sqm || ''} onChange={(e) => set('area_sqm', e.target.value)} /></Field>
+        <Field label="Floors"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={f.floors || ''} onChange={(e) => set('floors', e.target.value)} /></Field>
+        <Field label="Area (m²)"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={f.area_sqm || ''} onChange={(e) => set('area_sqm', e.target.value)} /></Field>
       </Row>
       <Field label="Remarks"><input lang="en" style={inputStyle} value={f.remarks} onChange={(e) => set('remarks', e.target.value)} /></Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Planned scopes (ESM quantities) can be added afterwards from the building's detail page.</div>

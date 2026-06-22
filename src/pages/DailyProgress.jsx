@@ -319,7 +319,7 @@ export default function DailyProgress() {
               {/* Qty installed */}
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Qty installed</span>
-                <input lang="en" value={qty} onChange={(e) => setQty(e.target.value)} type="number" min="1"
+                <input lang="en" value={qty} onChange={(e) => setQty(e.target.value)} type="text" inputMode="numeric" min="1"
                   placeholder={sel ? `e.g. 12 (of ${sel.planned_qty})` : 'e.g. 12'}
                   style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14 }} />
               </label>
