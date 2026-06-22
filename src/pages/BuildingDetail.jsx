@@ -226,7 +226,7 @@ export default function BuildingDetail() {
                           <td style={{ padding: '9px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--ok)' }}>{num(used)}</td>
                           <td style={{ padding: '9px 8px', textAlign: 'right' }}>
                             {canInstall
-                              ? <input defaultValue={planned} type="number" min="0" onBlur={(e) => Number(e.target.value) !== planned && bgUpdate('building_item_scope', s.id, { planned_qty: Math.max(0, parseInt(e.target.value, 10) || 0) }, { okMsg: 'Planned updated' })} style={{ width: 70, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'right' }} />
+                              ? <input lang="en" defaultValue={planned} type="number" min="0" onBlur={(e) => Number(e.target.value) !== planned && bgUpdate('building_item_scope', s.id, { planned_qty: Math.max(0, parseInt(e.target.value, 10) || 0) }, { okMsg: 'Planned updated' })} style={{ width: 70, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'right' }} />
                               : <span style={{ fontFamily: 'var(--mono)' }}>{num(planned)}</span>}
                           </td>
                           <td style={{ padding: '9px 8px', width: 160 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: Math.min(100, p) + '%', background: 'var(--accent)' }} /></div><span style={{ fontFamily: 'var(--mono)', fontSize: 11, width: 34, textAlign: 'right' }}>{p}%</span></div></td>
@@ -278,7 +278,7 @@ export default function BuildingDetail() {
                 <div style={{ minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{a.actor_name || 'System'}</div><div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{a.summary || a.action}</div></div>
               </div>
             ))}
-            <input disabled placeholder="Add a comment… (coming soon)" style={{ ...inputStyle, marginTop: 10, fontSize: 12.5, background: '#FAFBFC', color: 'var(--text-3)' }} />
+            <input lang="en" disabled placeholder="Add a comment… (coming soon)" style={{ ...inputStyle, marginTop: 10, fontSize: 12.5, background: '#FAFBFC', color: 'var(--text-3)' }} />
           </div>
         </div>
       </div>
@@ -317,8 +317,8 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Define each room and the item types installed there. Daily Progress picks its location from this list.</div>
       {adding && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <input style={{ ...inputStyle, flex: 1 }} placeholder="Room name (e.g. Classroom 101)" value={name} onChange={(e) => setName(e.target.value)} />
-          <input style={{ ...inputStyle, width: 90 }} placeholder="Floor" value={floor} onChange={(e) => setFloor(e.target.value)} />
+          <input lang="en" style={{ ...inputStyle, flex: 1 }} placeholder="Room name (e.g. Classroom 101)" value={name} onChange={(e) => setName(e.target.value)} />
+          <input lang="en" style={{ ...inputStyle, width: 90 }} placeholder="Floor" value={floor} onChange={(e) => setFloor(e.target.value)} />
           <Btn variant="primary" onClick={addRoom}>Save</Btn>
         </div>
       )}
@@ -392,14 +392,14 @@ function InstallModal({ bid, scopes, rooms, esmOf, user, onClose }) {
         </select>
       </Field>
       <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1 }}><Field label="Quantity installed"><input style={inputStyle} type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="e.g. 12" /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Install date"><input style={inputStyle} type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Quantity installed"><input lang="en" style={inputStyle} type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="e.g. 12" /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Install date"><input lang="en" style={inputStyle} type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field></div>
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 2 }}><Field label="Location / room"><select style={inputStyle} value={roomId} onChange={(e) => setRoomId(e.target.value)}><option value="">—</option>{rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field></div>
-        <div style={{ flex: 1 }}><Field label="Workers"><input style={inputStyle} type="number" min="0" value={workers} onChange={(e) => setWorkers(e.target.value)} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Workers"><input lang="en" style={inputStyle} type="number" min="0" value={workers} onChange={(e) => setWorkers(e.target.value)} /></Field></div>
       </div>
-      <Field label="Photos (compressed to ≤200 KB, tagged by ESM + date)"><input type="file" accept="image/*" multiple onChange={(e) => setFiles([...(e.target.files || [])])} style={{ fontSize: 13 }} /></Field>
+      <Field label="Photos (compressed to ≤200 KB, tagged by ESM + date)"><input lang="en" type="file" accept="image/*" multiple onChange={(e) => setFiles([...(e.target.files || [])])} style={{ fontSize: 13 }} /></Field>
     </Modal>
   )
 }

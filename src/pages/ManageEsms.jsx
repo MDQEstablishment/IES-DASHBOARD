@@ -108,7 +108,7 @@ export default function ManageEsms() {
                         <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(m.inStock)}</td>
                         <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                           {canMove
-                            ? <input defaultValue={m.threshold} onBlur={(e) => onThresh(m, e.target.value)} style={{ width: 60, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'center' }} />
+                            ? <input lang="en" defaultValue={m.threshold} onBlur={(e) => onThresh(m, e.target.value)} style={{ width: 60, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'center' }} />
                             : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.threshold)}</span>}
                         </td>
                         <td style={{ padding: '10px 8px' }}>
@@ -177,8 +177,8 @@ function MoveModal({ material, materials, user, onClose }) {
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !qty || !mid}>{busy ? 'Saving…' : 'Record'}</Btn></>}>
       <Field label="Material"><select style={inputStyle} value={mid} onChange={(e) => setMid(e.target.value)}><option value="">Select…</option>{materials.map((m) => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}</select></Field>
       <Field label="Kind"><select style={inputStyle} value={kind} onChange={(e) => setKind(e.target.value)}><option value="receipt">Receipt (received)</option><option value="request">Request (ordered)</option></select></Field>
-      <Field label="Quantity"><input style={inputStyle} type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" /></Field>
-      <Field label="Note"><input style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="PO / DN reference…" /></Field>
+      <Field label="Quantity"><input lang="en" style={inputStyle} type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="0" /></Field>
+      <Field label="Note"><input lang="en" style={inputStyle} value={note} onChange={(e) => setNote(e.target.value)} placeholder="PO / DN reference…" /></Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Updates the material's running counters via the ledger trigger.</div>
     </Modal>
   )
@@ -203,13 +203,13 @@ function AddMaterialModal({ esms, onClose }) {
     <Modal open title="Add material" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !code.trim() || !name.trim()}>{busy ? 'Saving…' : 'Add'}</Btn></>}>
       <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1 }}><Field label="SKU"><input style={inputStyle} value={code} onChange={(e) => setCode(e.target.value)} placeholder="M-L01" /></Field></div>
-        <div style={{ flex: 2 }}><Field label="Name"><input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="LED Panel 40W" /></Field></div>
+        <div style={{ flex: 1 }}><Field label="SKU"><input lang="en" style={inputStyle} value={code} onChange={(e) => setCode(e.target.value)} placeholder="M-L01" /></Field></div>
+        <div style={{ flex: 2 }}><Field label="Name"><input lang="en" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="LED Panel 40W" /></Field></div>
       </div>
       <Field label="ESM"><select style={inputStyle} value={esmId} onChange={(e) => setEsmId(e.target.value)}>{esms.map((e) => <option key={e.id} value={e.id}>{e.code} · {e.name}</option>)}</select></Field>
       <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1 }}><Field label="Planned"><input style={inputStyle} type="number" min="0" value={planned} onChange={(e) => setPlanned(e.target.value)} /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Threshold"><input style={inputStyle} type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Planned"><input lang="en" style={inputStyle} type="number" min="0" value={planned} onChange={(e) => setPlanned(e.target.value)} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Threshold"><input lang="en" style={inputStyle} type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} /></Field></div>
       </div>
     </Modal>
   )

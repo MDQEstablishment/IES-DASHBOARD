@@ -252,7 +252,7 @@ function NewTask({ onClose, user }) {
         <Btn variant="primary" onClick={save} disabled={busy || !title.trim()}>{busy ? 'Saving…' : 'Raise task'}</Btn>
       </>}>
       <Field label="Title">
-        <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" />
+        <input lang="en" style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" />
       </Field>
       <Field label="Description">
         <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} />
@@ -288,7 +288,7 @@ function NewTask({ onClose, user }) {
         </div>
         <div style={{ flex: 1 }}>
           <Field label="Due date">
-            <input style={inputStyle} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+            <input lang="en" style={inputStyle} type="date" value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
         </div>
       </div>

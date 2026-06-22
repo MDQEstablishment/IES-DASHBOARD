@@ -179,7 +179,7 @@ function NewEscalation({ onClose, user }) {
     <Modal open title="Raise an escalation" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !valid}>{busy ? 'Saving…' : 'Raise'}</Btn></>}>
       <Field label="Title">
-        <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short summary" />
+        <input lang="en" style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short summary" />
       </Field>
       <Field label="Description (min 10 chars — auto-routes to your manager)">
         <textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} value={description} onChange={(e) => setDescription(e.target.value)} />

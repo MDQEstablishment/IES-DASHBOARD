@@ -65,18 +65,18 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         </div>
       )}
       <Row>
-        <Field label="Project code"><input style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="MOI-ASIR" /></Field>
+        <Field label="Project code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="MOI-ASIR" /></Field>
         <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
       </Row>
-      <Field label="Project name"><input style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="MOI — Asir Region" /></Field>
+      <Field label="Project name"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="MOI — Asir Region" /></Field>
       <Row>
-        <Field label="Client"><input style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Ministry of Interior" /></Field>
-        <Field label="Region"><input style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
+        <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Ministry of Interior" /></Field>
+        <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
       </Row>
       <Row>
-        <Field label="Start date"><input style={inputStyle} type="date" value={f.start_date || ''} onChange={(e) => set('start_date', e.target.value)} /></Field>
-        <Field label="End date"><input style={inputStyle} type="date" value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
-        <Field label="Total weeks"><input style={inputStyle} type="number" min="1" value={f.total_weeks || ''} onChange={(e) => set('total_weeks', e.target.value)} /></Field>
+        <Field label="Start date"><input lang="en" style={inputStyle} type="date" value={f.start_date || ''} onChange={(e) => set('start_date', e.target.value)} /></Field>
+        <Field label="End date"><input lang="en" style={inputStyle} type="date" value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
+        <Field label="Total weeks"><input lang="en" style={inputStyle} type="number" min="1" value={f.total_weeks || ''} onChange={(e) => set('total_weeks', e.target.value)} /></Field>
       </Row>
       <Row>
         <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
@@ -84,15 +84,15 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       </Row>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
       <Row>
-        <Field label="Contractor name"><input style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} /></Field>
-        <Field label="Phone"><input style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
+        <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} /></Field>
+        <Field label="Phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
       </Row>
-      <Field label="Contractor email"><input style={inputStyle} value={f.contractor_email} onChange={(e) => set('contractor_email', e.target.value)} /></Field>
+      <Field label="Contractor email"><input lang="en" style={inputStyle} value={f.contractor_email} onChange={(e) => set('contractor_email', e.target.value)} /></Field>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
       <Row>
-        <Field label="Address"><input style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
-        <Field label="Latitude"><input style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} placeholder="18.2164" /></Field>
-        <Field label="Longitude"><input style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} placeholder="42.5053" /></Field>
+        <Field label="Address"><input lang="en" style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
+        <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} placeholder="18.2164" /></Field>
+        <Field label="Longitude"><input lang="en" style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} placeholder="42.5053" /></Field>
       </Row>
 
       {mode === 'add' && (
@@ -111,16 +111,16 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
                   <button onClick={() => setBuildings((arr) => arr.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginBottom: 8 }}>
-                  <input style={inputStyle} value={b.code} placeholder="Code (MOI-004)" onChange={(e) => upd('code', e.target.value)} />
-                  <input style={inputStyle} value={b.name} placeholder="Building name (English)" onChange={(e) => upd('name', e.target.value)} />
+                  <input lang="en" style={inputStyle} value={b.code} placeholder="Code (MOI-004)" onChange={(e) => upd('code', e.target.value)} />
+                  <input lang="en" style={inputStyle} value={b.name} placeholder="Building name (English)" onChange={(e) => upd('name', e.target.value)} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                  <input style={inputStyle} value={b.location_lat} placeholder="Latitude" onChange={(e) => upd('location_lat', e.target.value)} />
-                  <input style={inputStyle} value={b.location_lng} placeholder="Longitude" onChange={(e) => upd('location_lng', e.target.value)} />
+                  <input lang="en" style={inputStyle} value={b.location_lat} placeholder="Latitude" onChange={(e) => upd('location_lat', e.target.value)} />
+                  <input lang="en" style={inputStyle} value={b.location_lng} placeholder="Longitude" onChange={(e) => upd('location_lng', e.target.value)} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <input style={inputStyle} value={b.contractor_name} placeholder="Contractor name" onChange={(e) => upd('contractor_name', e.target.value)} />
-                  <input style={inputStyle} value={b.contractor_phone} placeholder="Contractor phone" onChange={(e) => upd('contractor_phone', e.target.value)} />
+                  <input lang="en" style={inputStyle} value={b.contractor_name} placeholder="Contractor name" onChange={(e) => upd('contractor_name', e.target.value)} />
+                  <input lang="en" style={inputStyle} value={b.contractor_phone} placeholder="Contractor phone" onChange={(e) => upd('contractor_phone', e.target.value)} />
                 </div>
               </div>
             )
@@ -185,7 +185,7 @@ export function DeleteProjectModal({ project, onClose }) {
     <Modal open title={`Delete project · ${project.code}`} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="danger" onClick={del} disabled={!ok || busy}>{busy ? 'Deleting…' : 'Delete project'}</Btn></>}>
       <div style={{ fontSize: 13, marginBottom: 12 }}>This soft-deletes the project — it disappears from the default list but is retained. Type <strong style={{ fontFamily: 'var(--mono)' }}>{project.code}</strong> to confirm.</div>
-      <input style={inputStyle} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={project.code} />
+      <input lang="en" style={inputStyle} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={project.code} />
     </Modal>
   )
 }
@@ -343,7 +343,7 @@ export function ProjectImportModal({ onClose }) {
       <div style={{ fontSize: 13, marginBottom: 12 }}>Step 1 — download the template. It has 5 sheets (Instructions, Project, Buildings, Building Scopes, Materials) with colors and per-field notes. Fill them, delete the example rows, then upload.</div>
       <Btn icon="upload" onClick={downloadTemplate} style={{ marginBottom: 14 }}>Download template (.xlsx)</Btn>
       <Field label="Step 2 — upload the filled template">
-        <input type="file" accept=".xlsx,.xls" onChange={onFile} style={{ fontSize: 13 }} />
+        <input lang="en" type="file" accept=".xlsx,.xls" onChange={onFile} style={{ fontSize: 13 }} />
       </Field>
       {errors.length > 0 && (
         <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12, color: '#B91C1C', marginTop: 8 }}>

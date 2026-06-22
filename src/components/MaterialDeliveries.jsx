@@ -63,12 +63,12 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
             <tbody>
               {add && (
                 <tr style={{ borderTop: '1px solid var(--line)', background: '#F8FAFC' }}>
-                  <td style={{ padding: 6 }}><input style={{ ...inp, width: 150 }} value={add.material_name} placeholder="Material" onChange={(e) => setAdd({ ...add, material_name: e.target.value })} /></td>
+                  <td style={{ padding: 6 }}><input lang="en" style={{ ...inp, width: 150 }} value={add.material_name} placeholder="Material" onChange={(e) => setAdd({ ...add, material_name: e.target.value })} /></td>
                   <td style={{ padding: 6 }}><select style={inp} value={add.building_id} onChange={(e) => setAdd({ ...add, building_id: e.target.value })}><option value="">All / —</option>{buildings.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}</select></td>
-                  <td style={{ padding: 6 }}><input type="date" style={inp} value={add.scheduled_date} onChange={(e) => setAdd({ ...add, scheduled_date: e.target.value })} /></td>
+                  <td style={{ padding: 6 }}><input lang="en" type="date" style={inp} value={add.scheduled_date} onChange={(e) => setAdd({ ...add, scheduled_date: e.target.value })} /></td>
                   <td style={{ padding: 6, color: 'var(--text-3)' }}>—</td>
                   <td style={{ padding: 6 }}><select style={inp} value={add.status} onChange={(e) => setAdd({ ...add, status: e.target.value })}>{Object.keys(DSTATUS).map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select></td>
-                  <td style={{ padding: 6 }}><input style={{ ...inp, width: 140 }} value={add.notes} placeholder="Notes" onChange={(e) => setAdd({ ...add, notes: e.target.value })} /></td>
+                  <td style={{ padding: 6 }}><input lang="en" style={{ ...inp, width: 140 }} value={add.notes} placeholder="Notes" onChange={(e) => setAdd({ ...add, notes: e.target.value })} /></td>
                   <td style={{ padding: 6, whiteSpace: 'nowrap' }}><button onClick={saveAdd} style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 12, marginRight: 8 }}>Save</button><button onClick={() => setAdd(null)} style={{ color: 'var(--text-3)', fontSize: 12 }}>Cancel</button></td>
                 </tr>
               )}
@@ -81,7 +81,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{r.scheduled_date ? fmtDate(r.scheduled_date) : '—'}</td>
                     <td style={{ padding: '9px 8px' }}>
                       {canWrite
-                        ? <input type="date" defaultValue={r.actual_date || ''} onBlur={(e) => e.target.value !== (r.actual_date || '') && bgUpdate('material_deliveries', r.id, { actual_date: e.target.value || null }, { okMsg: 'Updated' })} style={{ ...inp, padding: '4px 6px' }} />
+                        ? <input lang="en" type="date" defaultValue={r.actual_date || ''} onBlur={(e) => e.target.value !== (r.actual_date || '') && bgUpdate('material_deliveries', r.id, { actual_date: e.target.value || null }, { okMsg: 'Updated' })} style={{ ...inp, padding: '4px 6px' }} />
                         : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{r.actual_date ? fmtDate(r.actual_date) : '—'}</span>}
                     </td>
                     <td style={{ padding: '9px 8px' }}>
