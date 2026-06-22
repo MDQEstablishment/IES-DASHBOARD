@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { useAuth } from '../rbac'
@@ -10,6 +11,7 @@ const num = (v) => (v === '' || v == null ? null : Number(v))
 
 // ── Add / Edit project ──────────────────────────────────────────────────────
 export function ProjectFormModal({ mode = 'add', project, onClose }) {
+  const navigate = useNavigate()
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name,role').eq('archived', false).order('full_name'))
   const init = (k, d = '') => (project?.[k] ?? d)
   const [f, setF] = useState({
@@ -41,16 +43,26 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     const { data, error } = await bgInsert('projects', payload, { okMsg: 'Project created' })
     if (!error && data?.[0] && buildings.length) {
       const pid = data[0].id
-      await bgInsert('buildings', buildings.filter((b) => b.code && b.name).map((b) => ({
-        project_id: pid, code: b.code, name: b.name, region: b.region || f.region || null,
+      const valid = buildings.filter((b) => b.code && b.name)
+      if (valid.length) await bgInsert('buildings', valid.map((b) => ({
+        project_id: pid, code: b.code.trim(), name: b.name.trim(), region: b.region || f.region || null,
+        location_lat: num(b.location_lat), location_lng: num(b.location_lng),
+        contractor: b.contractor_name || null, contractor_name: b.contractor_name || null,
+        contractor_phone: b.contractor_phone || null, status_override: 'pending',
       })))
     }
-    setBusy(false); if (!error) onClose()
+    setBusy(false)
+    if (!error) { onClose(); if (data?.[0]) navigate(`/projects/${data[0].id}`) }
   }
 
   return (
     <Modal open width={640} title={mode === 'edit' ? `Edit project · ${project.code}` : 'Add project'} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Create project'}</Btn></>}>
+      {mode === 'add' && (
+        <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 9, padding: '10px 12px', fontSize: 12, color: '#1E40AF', marginBottom: 16 }}>
+          After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later.
+        </div>
+      )}
       <Row>
         <Field label="Project code"><input style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="MOI-ASIR" /></Field>
         <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
@@ -85,17 +97,33 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       {mode === 'add' && (
         <div style={{ marginTop: 8, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>Buildings (optional)</div>
-            <button onClick={() => setBuildings((b) => [...b, { code: '', name: '', region: '' }])} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add building</button>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>Buildings (you can add now or later)</div>
+            <button onClick={() => setBuildings((b) => [...b, { code: '', name: '', region: '', location_lat: '', location_lng: '', contractor_name: '', contractor_phone: '' }])} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add building</button>
           </div>
-          {buildings.map((b, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr auto', gap: 8, marginBottom: 8 }}>
-              <input style={inputStyle} value={b.code} placeholder="Code" onChange={(e) => setBuildings((arr) => arr.map((x, j) => j === i ? { ...x, code: e.target.value } : x))} />
-              <input style={inputStyle} value={b.name} placeholder="Building name" onChange={(e) => setBuildings((arr) => arr.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
-              <input style={inputStyle} value={b.region} placeholder="Region" onChange={(e) => setBuildings((arr) => arr.map((x, j) => j === i ? { ...x, region: e.target.value } : x))} />
-              <button onClick={() => setBuildings((arr) => arr.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 12, fontWeight: 700 }}>Remove</button>
-            </div>
-          ))}
+          {buildings.length === 0 && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 4 }}>No buildings added yet — you can add them here, or any time later from the project page.</div>}
+          {buildings.map((b, i) => {
+            const upd = (k, v) => setBuildings((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
+            return (
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#F8FAFC' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>BUILDING {i + 1}</span>
+                  <button onClick={() => setBuildings((arr) => arr.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginBottom: 8 }}>
+                  <input style={inputStyle} value={b.code} placeholder="Code (MOI-004)" onChange={(e) => upd('code', e.target.value)} />
+                  <input style={inputStyle} value={b.name} placeholder="Building name (English)" onChange={(e) => upd('name', e.target.value)} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                  <input style={inputStyle} value={b.location_lat} placeholder="Latitude" onChange={(e) => upd('location_lat', e.target.value)} />
+                  <input style={inputStyle} value={b.location_lng} placeholder="Longitude" onChange={(e) => upd('location_lng', e.target.value)} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <input style={inputStyle} value={b.contractor_name} placeholder="Contractor name" onChange={(e) => upd('contractor_name', e.target.value)} />
+                  <input style={inputStyle} value={b.contractor_phone} placeholder="Contractor phone" onChange={(e) => upd('contractor_phone', e.target.value)} />
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </Modal>
