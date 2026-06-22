@@ -22,7 +22,7 @@ const inp = { padding: '7px 9px', border: '1px solid var(--line)', borderRadius:
 export default function MaterialDeliveries({ projectId, buildings = [] }) {
   const { user, role } = useAuth()
   const canWrite = WRITE_ROLES.includes(role)
-  const { rows } = useLiveQuery('material_deliveries',
+  const { rows, refetch } = useLiveQuery('material_deliveries',
     (q) => q.select('*,building:buildings(code)').eq('project_id', projectId).order('scheduled_date', { ascending: true }), [projectId])
   const [add, setAdd] = useState(null) // draft row or null
 
@@ -33,19 +33,18 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
       project_id: projectId, material_name: add.material_name.trim(), building_id: add.building_id || null,
       scheduled_date: add.scheduled_date || null, status: add.status, notes: add.notes || null, created_by: user.id,
     }, { okMsg: 'Delivery added' })
-    if (!error) setAdd(null)
+    if (!error) { setAdd(null); refetch() }
   }
-
-  const nextUpcoming = rows.filter((r) => r.scheduled_date && r.status !== 'delivered').map((r) => r.scheduled_date).sort()[0]
+  // Silent-success row mutations; bgUpdate/bgDelete still surface errors via toast.
+  // refetch() guarantees the UI reflects the change immediately (not realtime-dependent).
+  const patchRow = async (id, patch) => { const { error } = await bgUpdate('material_deliveries', id, patch); if (!error) refetch() }
+  const removeRow = async (id) => { const { error } = await bgDelete('material_deliveries', id); if (!error) refetch() }
 
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Materials Delivery</div>
         {canWrite && <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={startAdd}>Add delivery</Btn>}
-      </div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
-        Next upcoming scheduled delivery: <strong>{nextUpcoming ? fmtDate(nextUpcoming) : '—'}</strong>
       </div>
       {rows.length === 0 && !add ? <Empty icon="box">No deliveries scheduled.</Empty> : (
         <div className="ies-table-wrap">
@@ -76,16 +75,16 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{r.scheduled_date ? fmtDate(r.scheduled_date) : '—'}</td>
                     <td style={{ padding: '9px 8px' }}>
                       {canWrite
-                        ? <DateInput value={r.actual_date || ''} onChange={(e) => e.target.value !== (r.actual_date || '') && bgUpdate('material_deliveries', r.id, { actual_date: e.target.value || null }, { okMsg: 'Updated' })} style={{ ...inp, padding: '4px 6px' }} />
+                        ? <DateInput value={r.actual_date || ''} onChange={(e) => e.target.value !== (r.actual_date || '') && patchRow(r.id, { actual_date: e.target.value || null })} style={{ ...inp, padding: '4px 6px' }} />
                         : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{r.actual_date ? fmtDate(r.actual_date) : '—'}</span>}
                     </td>
                     <td style={{ padding: '9px 8px' }}>
                       {canWrite
-                        ? <select title={DDESC[r.status] || ''} value={r.status} onChange={(e) => bgUpdate('material_deliveries', r.id, { status: e.target.value }, { okMsg: 'Status updated' })} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, color: col, background: bg, border: `1px solid ${col}33` }}>{Object.keys(DSTATUS).map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select>
+                        ? <select title={DDESC[r.status] || ''} value={r.status} onChange={(e) => patchRow(r.id, { status: e.target.value })} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, color: col, background: bg, border: `1px solid ${col}33` }}>{Object.keys(DSTATUS).map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select>
                         : <span title={DDESC[r.status] || ''} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span>}
                     </td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)', fontSize: 11.5, maxWidth: 200 }}>{r.notes || '—'}</td>
-                    {canWrite && <td style={{ padding: '9px 8px' }}><button onClick={() => bgDelete('material_deliveries', r.id, { okMsg: 'Deleted' })} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button></td>}
+                    {canWrite && <td style={{ padding: '9px 8px' }}><button onClick={() => removeRow(r.id)} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button></td>}
                   </tr>
                 )
               })}
