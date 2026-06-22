@@ -23,6 +23,12 @@ const DOC_COLS = [
   ['coc', 'COC'],
 ]
 
+// project_documents.status -> [label, color, bg] for the tracker matrix pills
+const DOC_PILL = {
+  submitted: ['Submitted', '#2563EB', '#EFF6FF'], under_review: ['In Review', '#F59E0B', '#FFFBEB'],
+  approved: ['Approved', '#10B981', '#ECFDF5'], rejected: ['Rejected', '#EF4444', '#FEF2F2'], superseded: ['Superseded', '#64748B', '#F1F5F9'],
+}
+
 const TABS = [
   ['buildings', 'Buildings'],
   ['rollup', 'ESM Rollup'],
@@ -55,15 +61,15 @@ export default function ProjectDetail() {
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
-  const { rows: docStatus } = useLiveQuery('esm_doc_status', (q) =>
-    q.select('*,esm:esms(code,name)').eq('project_id', id).order('esm_id'), [id])
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) =>
-    q.select('id,project_id,custom_name,ordinal,esm:esms(code,name)').eq('project_id', id).order('ordinal'), [id])
-  // COC approval documents per building — drives the "COC Approval" click-through (1.6)
-  const { rows: cocDocs } = useLiveQuery('project_documents', (q) =>
-    q.select('id,building_id,name,storage_path,status').eq('project_id', id).eq('doc_type', 'COC'), [id])
+    q.select('id,project_id,custom_name,ordinal,esm:esms(id,code,name)').eq('project_id', id).order('ordinal'), [id])
+  // Single source of truth for the ESM Documentation Tracker + the COC click-through:
+  // all project_documents for this project (matrix uses project-level esm-tagged rows).
+  const { rows: pdocs, refetch: refetchPdocs } = useLiveQuery('project_documents', (q) =>
+    q.select('id,esm_id,building_id,doc_type,status,name,storage_path,version,submitted_at').eq('project_id', id), [id])
+  const [uploadReq, setUploadReq] = useState(null)
   const cocByB = {}
-  cocDocs.forEach((d) => { if (d.building_id && !cocByB[d.building_id]) cocByB[d.building_id] = d })
+  pdocs.forEach((d) => { if (d.doc_type === 'coc' && d.building_id && !cocByB[d.building_id]) cocByB[d.building_id] = d })
 
   const openCoc = async (b) => {
     const doc = cocByB[b.id]
@@ -132,14 +138,19 @@ export default function ProjectDetail() {
       })
     : []
 
-  // --- doc tracker matrix ------------------------------------------------------
-  const esmByCode = {}
-  docStatus.forEach((d) => {
-    const code = d.esm?.code || `ESM${d.esm_id}`
-    esmByCode[code] = esmByCode[code] || { code, name: d.esm?.name, cells: {} }
-    esmByCode[code].cells[d.kind] = d.status
+  // --- doc tracker matrix (computed LIVE from project_documents) ---------------
+  // One row per project ESM; each cell = the latest project-level document for
+  // (esm, doc_kind), mapped to a review-state pill (or "Missing" if none).
+  const cellByKey = {} // `${esm_id}|${doc_type}` -> latest doc
+  pdocs.filter((d) => d.building_id == null && d.esm_id).forEach((d) => {
+    const k = `${d.esm_id}|${d.doc_type}`
+    const cur = cellByKey[k]
+    if (!cur || new Date(d.submitted_at || 0) >= new Date(cur.submitted_at || 0)) cellByKey[k] = d
   })
-  const docRows = Object.values(esmByCode)
+  const docRows = projectEsms.filter((pe) => pe.esm).map((pe) => ({
+    esmId: pe.esm.id, code: pe.esm.code, name: pe.custom_name || pe.esm.name,
+    cells: Object.fromEntries(DOC_COLS.map(([kind]) => [kind, cellByKey[`${pe.esm.id}|${kind}`] || null])),
+  }))
 
   return (
     <div data-screen-label="Project Detail">
@@ -354,9 +365,9 @@ export default function ProjectDetail() {
         <>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>ESM Documentation Tracker</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Submittal readiness per ESM across document kinds.</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Submittal readiness per ESM, computed live from uploaded documents.{canManage && ' Click a “Missing” cell to upload that document.'}</div>
           {docRows.length === 0 ? (
-            <Empty icon="doc">No ESM document tracking yet.</Empty>
+            <Empty icon="doc">No ESMs configured for this project.</Empty>
           ) : (
             <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 640 }}>
               <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
@@ -367,16 +378,24 @@ export default function ProjectDetail() {
                 {docRows.map((row) => (
                   <tr key={row.code} style={{ borderTop: '1px solid var(--line)' }}>
                     <td style={{ padding: '10px 8px', fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{row.code}</td>
-                    {DOC_COLS.map(([k]) => (
-                      <td key={k} style={{ padding: 8 }}><Chip status={row.cells[k] || 'Missing'} /></td>
-                    ))}
+                    {DOC_COLS.map(([k]) => {
+                      const doc = row.cells[k]
+                      if (doc) { const [lbl, c, bg] = DOC_PILL[doc.status] || DOC_PILL.submitted; return <td key={k} style={{ padding: 8 }}><Chip label={lbl} color={c} bg={bg} /></td> }
+                      return (
+                        <td key={k} style={{ padding: 8 }}>
+                          {canManage
+                            ? <button title={`Upload ${row.code} ${k.replace(/_/g, ' ')}`} onClick={() => setUploadReq({ esmId: row.esmId, docType: k, key: Date.now() })} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}><Chip label="Missing" color="#94A3B8" bg="#F1F5F9" /></button>
+                            : <Chip label="Missing" color="#94A3B8" bg="#F1F5F9" />}
+                        </td>
+                      )
+                    })}
                   </tr>
                 ))}
               </tbody>
             </table></div>
           )}
         </div>
-        <ProjectDocuments projectId={id} />
+        <ProjectDocuments projectId={id} uploadRequest={uploadReq} onChanged={refetchPdocs} />
         </>
       )}
 
