@@ -129,7 +129,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
 }
 
 // ── Client-court status update + revision ───────────────────────────────────
-function UpdateStatusModal({ doc, onClose, onDone }) {
+export function UpdateStatusModal({ doc, onClose, onDone }) {
   const [reviewer, setReviewer] = useState(doc.client_reviewer_name || '')
   const [notes, setNotes] = useState(doc.response_notes || '')
   const [busy, setBusy] = useState(false)

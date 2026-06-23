@@ -17,16 +17,22 @@ const reshape = (t) => {
   catch { return String(t) }
 }
 
+// Browser entry: fetch the embedded Amiri TTFs from /public/fonts, then render.
 export async function generateCocPdf(data) {
-  const { PDFDocument, rgb } = await import('pdf-lib')
-  const fontkit = (await import('@pdf-lib/fontkit')).default
-  const pdf = await PDFDocument.create()
-  pdf.registerFontkit(fontkit)
   const base = import.meta.env.BASE_URL || '/'
   const [regBuf, boldBuf] = await Promise.all([
     fetch(base + 'fonts/Amiri-Regular.ttf').then((r) => r.arrayBuffer()),
     fetch(base + 'fonts/Amiri-Bold.ttf').then((r) => r.arrayBuffer()),
   ])
+  return renderCocPdf(data, regBuf, boldBuf)
+}
+
+// Pure renderer (font bytes injected) — unit-testable outside the browser.
+export async function renderCocPdf(data, regBuf, boldBuf) {
+  const { PDFDocument, rgb } = await import('pdf-lib')
+  const fontkit = (await import('@pdf-lib/fontkit')).default
+  const pdf = await PDFDocument.create()
+  pdf.registerFontkit(fontkit)
   const font = await pdf.embedFont(regBuf, { subset: true })
   const bold = await pdf.embedFont(boldBuf, { subset: true })
   const col = (c) => rgb(c[0], c[1], c[2])
