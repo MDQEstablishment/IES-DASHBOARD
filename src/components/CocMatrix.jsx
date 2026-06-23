@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Empty } from './ui'
+import { Empty, Btn } from './ui'
 import { docStatusMeta } from './ProjectDocuments'
+import CocWizard from './CocWizard'
 
 // COC Buildings × ESMs matrix. Rows = active buildings, columns = project ESMs;
 // each cell is the COC status for that (building, esm) pair. Paginated at 50
@@ -8,8 +9,9 @@ import { docStatusMeta } from './ProjectDocuments'
 // TODO(Sprint 4): consolidated final-COC PDF export — deferred by owner.
 const PAGE = 50
 
-export default function CocMatrix({ buildings = [], projectEsms = [], pdocs = [], canManage = false, onUpload, onOpenFile }) {
+export default function CocMatrix({ projectId, project, buildings = [], projectEsms = [], pdocs = [], canManage = false, onUpload, onOpenFile, onChanged }) {
   const [page, setPage] = useState(0)
+  const [wiz, setWiz] = useState(false)
   const esms = projectEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, label: pe.custom_name || pe.esm.name }))
   const rows = [...buildings].sort((a, b) => (a.code || '').localeCompare(b.code || ''))
 
@@ -52,6 +54,10 @@ export default function CocMatrix({ buildings = [], projectEsms = [], pdocs = []
 
   return (
     <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontWeight: 700, fontSize: 15 }}>Certificates of Completion</div>
+        {canManage && <Btn icon="plus" variant="primary" onClick={() => setWiz(true)}>New COC</Btn>}
+      </div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         {kpi('Total COCs Expected', expected, `${rows.length} buildings × ${esms.length} ESMs`)}
         {kpi('COCs Approved', `${approved} `, `${pct}% of expected`, '#10B981')}
@@ -112,6 +118,7 @@ export default function CocMatrix({ buildings = [], projectEsms = [], pdocs = []
           </div>
         )}
       </div>
+      {wiz && <CocWizard projectId={projectId} project={project} onClose={() => setWiz(false)} onDone={onChanged} />}
     </div>
   )
 }

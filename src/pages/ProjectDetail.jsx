@@ -438,8 +438,8 @@ export default function ProjectDetail() {
 
       {/* COC MATRIX tab — Buildings × ESMs */}
       {tab === 'coc' && (
-        <CocMatrix buildings={buildings} projectEsms={projectEsms} pdocs={pdocs} canManage={canManage}
-          onUpload={(req) => { setTab('docs'); setUploadReq({ ...req, key: Date.now() }) }} onOpenFile={openFile} />
+        <CocMatrix projectId={id} project={project} buildings={buildings} projectEsms={projectEsms} pdocs={pdocs} canManage={canManage}
+          onChanged={refetchDocs} onUpload={(req) => { setTab('docs'); setUploadReq({ ...req, key: Date.now() }) }} onOpenFile={openFile} />
       )}
 
       {/* MAP tab — real OpenStreetMap markers */}
