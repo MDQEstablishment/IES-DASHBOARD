@@ -14,6 +14,7 @@ import BuildingsMap from '../components/BuildingsMap'
 import MaterialDeliveries from '../components/MaterialDeliveries'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL } from '../components/ProjectDocuments'
 import CocMatrix from '../components/CocMatrix'
+import ProjectItems from '../components/ProjectItems'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -27,6 +28,7 @@ const DOC_COLS = [
 const TABS = [
   ['buildings', 'Buildings'],
   ['rollup', 'ESM Rollup'],
+  ['items', 'Items & Replacements'],
   ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
   ['coc', 'COC Matrix'],
@@ -369,6 +371,9 @@ export default function ProjectDetail() {
           )}
         </div>
       )}
+
+      {/* ITEMS & REPLACEMENTS tab */}
+      {tab === 'items' && <ProjectItems projectId={id} />}
 
       {/* DELIVERIES tab */}
       {tab === 'deliveries' && <MaterialDeliveries projectId={id} buildings={buildings} />}
