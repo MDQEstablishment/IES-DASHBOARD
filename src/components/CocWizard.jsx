@@ -1,0 +1,166 @@
+import { useState, useMemo } from 'react'
+import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket } from '../lib/db'
+import { useAuth } from '../rbac'
+import { Modal, Field, inputStyle, Btn, Empty } from './ui'
+import { toast } from '../lib/toast'
+import { generateCocPdf } from '../lib/cocPdf'
+
+// Build the PDF data object + generate + upload + attach storage_path. Shared by
+// the create wizard and the "Regenerate PDF" action.
+export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, buildings, esmList, installed, removed, userId }) {
+  const selEsm = new Set(esmList.map((e) => e.code))
+  const data = {
+    cocNo, revision: revision || 'A', projectName: project?.name, projectCode: project?.code,
+    rfpNo: project?.code, startDate: project?.start_date, endDate: project?.end_date,
+    executingCompany: project?.contractor_name || 'IES', subContractor: '',
+    facility: project?.client, buildingType: '', region: project?.region, city: '',
+    gps: project?.location_lat != null && project?.location_lng != null ? `${project.location_lat}, ${project.location_lng}` : '',
+    buildingIds: buildings.map((b) => b.code).join(', '),
+    esmLabels: esmList.map((e) => `${e.code} ${e.name || ''}`.trim()).join(', '),
+    description: esmList.map((e) => e.name || e.code).join('; '),
+    installed: installed.filter((i) => selEsm.has(i.esm_code)),
+    removed: removed.filter((i) => selEsm.has(i.esm_code)),
+  }
+  const bytes = await generateCocPdf(data)
+  const file = new File([bytes], `${cocNo}.pdf`, { type: 'application/pdf' })
+  const { path, error } = await uploadToBucket('project-docs', file, { userId, prefix: project?.id || project?.code })
+  if (error) return { error }
+  const { error: upErr } = await bgUpdate('project_documents', docId, { storage_path: path, updated_at: new Date().toISOString() })
+  return { error: upErr, path }
+}
+
+export default function CocWizard({ projectId, project, onClose, onDone }) {
+  const { user } = useAuth()
+  const [step, setStep] = useState(1)
+  const [busy, setBusy] = useState(false)
+  const [selB, setSelB] = useState(() => new Set())
+  const [selE, setSelE] = useState(() => new Set())
+  const [rangeStr, setRangeStr] = useState('')
+  const [respPick, setRespPick] = useState('')
+
+  const { rows: bRows } = useLiveQuery('buildings', (q) => q.select('id,code,name,responsible_person_name,status_override').eq('project_id', projectId).order('code'), [projectId])
+  const buildings = useMemo(() => bRows.filter((b) => b.status_override !== 'archived'), [bRows])
+  const { rows: pEsms } = useLiveQuery('project_esms', (q) => q.select('custom_name,ordinal,esm:esms(id,code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
+  const esms = useMemo(() => pEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, name: pe.custom_name || pe.esm.name })), [pEsms])
+  const { rows: installed } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
+  const { rows: removed } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
+  const { rows: cocRows, refetch } = useLiveQuery('project_documents', (q) => q.select('id').eq('project_id', projectId).eq('doc_type', 'coc'), [projectId])
+
+  const responsibles = useMemo(() => [...new Set(buildings.map((b) => b.responsible_person_name).filter(Boolean))], [buildings])
+  const selBuildings = buildings.filter((b) => selB.has(b.id))
+  const selEsmList = esms.filter((e) => selE.has(e.code))
+  const selEsmCodes = new Set(selEsmList.map((e) => e.code))
+
+  const toggle = (set, setter, key) => { const n = new Set(set); n.has(key) ? n.delete(key) : n.add(key); setter(n) }
+  const applyRange = () => {
+    const m = rangeStr.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/)
+    if (!m) { toast('Range looks like "1-22"', 'err'); return }
+    const a = Math.max(1, +m[1]), b = Math.min(buildings.length, +m[2])
+    const n = new Set(selB); buildings.slice(a - 1, b).forEach((x) => n.add(x.id)); setSelB(n)
+  }
+  const selectByResp = () => { if (!respPick) return; const n = new Set(selB); buildings.filter((x) => x.responsible_person_name === respPick).forEach((x) => n.add(x.id)); setSelB(n) }
+
+  const cocNo = `${project?.code || 'PRJ'}-COC-${String((cocRows.length || 0) + 1).padStart(3, '0')}`
+
+  const generate = async () => {
+    if (selBuildings.length === 0 || selEsmList.length === 0) { toast('Select at least one building and one ESM', 'err'); return }
+    setBusy(true)
+    const { data, error } = await bgInsert('project_documents', {
+      project_id: projectId, doc_type: 'coc', name: cocNo, revision: 'A', version: 'A', status: 'draft',
+      esm_id: selEsmList[0].id, building_id: selBuildings[0].id, submitted_by: user.id, submitted_at: new Date().toISOString(),
+    })
+    if (error || !data?.[0]) { setBusy(false); return }
+    const docId = data[0].id
+    await bgInsert('coc_buildings', selBuildings.map((b) => ({ coc_id: docId, building_id: b.id })))
+    await bgInsert('coc_esms', selEsmList.map((e) => ({ coc_id: docId, esm_code: e.code })))
+    const { error: pErr } = await buildAndAttachCocPdf({ docId, cocNo, revision: 'A', project, buildings: selBuildings, esmList: selEsmList, installed, removed, userId: user.id })
+    setBusy(false)
+    if (pErr) { toast('COC created, but PDF generation failed — ' + (pErr.message || ''), 'err') }
+    else toast(`COC ${cocNo} created`)
+    refetch(); onDone?.(); onClose()
+  }
+
+  const previewInstalled = installed.filter((i) => selEsmCodes.has(i.esm_code))
+  const previewRemoved = removed.filter((i) => selEsmCodes.has(i.esm_code))
+
+  return (
+    <Modal open width={680} title={`New COC · Step ${step} of 3`} onClose={onClose}
+      footer={<>
+        <Btn onClick={onClose}>Cancel</Btn>
+        {step > 1 && <Btn onClick={() => setStep(step - 1)}>Back</Btn>}
+        {step < 3 && <Btn variant="primary" onClick={() => setStep(step + 1)} disabled={step === 1 && (selBuildings.length === 0 || selEsmList.length === 0)}>Next</Btn>}
+        {step === 3 && <Btn variant="primary" onClick={generate} disabled={busy}>{busy ? 'Generating…' : 'Generate COC + PDF'}</Btn>}
+      </>}>
+      {step === 1 && (
+        <>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Scope — buildings</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
+            <button onClick={() => setSelB(new Set(buildings.map((b) => b.id)))} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Select all</button>
+            <button onClick={() => setSelB(new Set())} style={{ fontSize: 12, color: 'var(--text-3)' }}>Clear</button>
+            <input lang="en" inputMode="numeric" style={{ ...inputStyle, width: 90, padding: '6px 8px' }} placeholder="1-22" value={rangeStr} onChange={(e) => setRangeStr(e.target.value)} />
+            <button onClick={applyRange} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Add range</button>
+            {responsibles.length > 0 && <>
+              <select style={{ ...inputStyle, width: 200, padding: '6px 8px' }} value={respPick} onChange={(e) => setRespPick(e.target.value)}><option value="">By responsible person…</option>{responsibles.map((r) => <option key={r} value={r}>{r}</option>)}</select>
+              <button onClick={selectByResp} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Add</button>
+            </>}
+          </div>
+          <div style={{ maxHeight: 200, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 8, padding: 8, marginBottom: 14 }}>
+            {buildings.length === 0 ? <Empty icon="buildings">No active buildings.</Empty> : buildings.map((b, i) => (
+              <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px', fontSize: 12.5, cursor: 'pointer' }}>
+                <input type="checkbox" checked={selB.has(b.id)} onChange={() => toggle(selB, setSelB, b.id)} />
+                <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)', width: 24 }}>{i + 1}</span>
+                <span style={{ fontWeight: 600 }}>{b.code}</span><span style={{ color: 'var(--text-3)' }}>{b.name}</span>
+                {b.responsible_person_name && <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--text-3)' }}>👤 {b.responsible_person_name}</span>}
+              </label>
+            ))}
+          </div>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Scope — ESMs</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {esms.map((e) => (
+              <button key={e.code} onClick={() => toggle(selE, setSelE, e.code)}
+                style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: '1px solid ' + (selE.has(e.code) ? 'var(--accent)' : 'var(--line)'), background: selE.has(e.code) ? '#EFF6FF' : '#fff', color: selE.has(e.code) ? 'var(--accent)' : 'var(--text-3)' }}>{e.code} · {e.name}</button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 12 }}>{selBuildings.length} buildings × {selEsmList.length} ESMs selected. This will create one COC ({cocNo}).</div>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <div style={{ background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 12.5 }}>
+            <div style={{ fontWeight: 700 }}>{project?.name} <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>· {cocNo}</span></div>
+            <div style={{ color: 'var(--text-3)', marginTop: 4 }}>🏢 {project?.client || '—'} · 📍 {project?.region || '—'} · 🛠 {selEsmList.map((e) => e.code).join('+')}</div>
+            <div style={{ marginTop: 6 }}><strong>Buildings ({selBuildings.length}):</strong> {selBuildings.map((b) => b.code).join(', ')}</div>
+          </div>
+          <PreviewTable title="Installed Items" rows={previewInstalled} cols={['item_description', 'model_code', 'cap', 'eff', 'total_quantity']} headers={['Description', 'Model', 'Capacity', 'Efficiency', 'Qty']} />
+          <PreviewTable title="Removed Items" rows={previewRemoved} cols={['item_description', 'cap', 'eff', 'total_quantity', 'ret']} headers={['Description', 'Capacity', 'Efficiency', 'Qty', 'Returned']} />
+          {previewInstalled.length === 0 && previewRemoved.length === 0 && <div style={{ fontSize: 12, color: 'var(--warn)' }}>No items captured for the selected ESMs — the COC will generate with empty item tables. Add them in the Items &amp; Replacements tab first if needed.</div>}
+        </>
+      )}
+
+      {step === 3 && (
+        <div style={{ fontSize: 13 }}>
+          <p>Ready to create <strong>{cocNo}</strong> covering <strong>{selBuildings.length}</strong> buildings × <strong>{selEsmList.length}</strong> ESMs.</p>
+          <p style={{ color: 'var(--text-3)', fontSize: 12.5 }}>This creates a draft COC, writes the building/ESM coverage, generates the Tarshid-style PDF, and attaches it. You can update its status and regenerate later.</p>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+function PreviewTable({ title, rows, cols, headers }) {
+  const cell = (r, c) => c === 'cap' ? (r.capacity_value != null ? `${r.capacity_value} ${r.capacity_unit || ''}` : '—')
+    : c === 'eff' ? (r.efficiency_value != null ? `${r.efficiency_value} ${r.efficiency_unit || ''}` : '—')
+    : c === 'ret' ? (r.returned_to_facility ? 'Yes' : 'No') : (r[c] ?? '—')
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 4 }}>{title} ({rows.length})</div>
+      {rows.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>None.</div> : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+          <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)' }}>{headers.map((h) => <th key={h} style={{ padding: '4px 6px', fontWeight: 600 }}>{h}</th>)}</tr></thead>
+          <tbody>{rows.map((r) => <tr key={r.id} style={{ borderTop: '1px solid var(--line)' }}>{cols.map((c) => <td key={c} style={{ padding: '4px 6px', fontFamily: c === 'total_quantity' ? 'var(--mono)' : undefined }}>{cell(r, c)}</td>)}</tr>)}</tbody>
+        </table>
+      )}
+    </div>
+  )
+}
