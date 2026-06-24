@@ -373,7 +373,7 @@ export default function ProjectDetail() {
       )}
 
       {/* ITEMS & REPLACEMENTS tab */}
-      {tab === 'items' && <ProjectItems projectId={id} />}
+      {tab === 'items' && <ProjectItems projectId={id} project={project} />}
 
       {/* DELIVERIES tab */}
       {tab === 'deliveries' && <MaterialDeliveries projectId={id} buildings={buildings} />}
