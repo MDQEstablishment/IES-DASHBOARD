@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useLiveQuery, signedUrlFor } from '../lib/db'
+import { useLiveQuery, signedUrlFor, bgInsert } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
-import { Empty, Btn } from './ui'
+import { Empty, Btn, Modal } from './ui'
 import { toast } from '../lib/toast'
 import { docStatusMeta, UpdateStatusModal, DocHistoryDrawer } from './ProjectDocuments'
 import CocWizard, { buildAndAttachCocPdf } from './CocWizard'
@@ -23,6 +24,36 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   const [statusDoc, setStatusDoc] = useState(null)
   const [historyDoc, setHistoryDoc] = useState(null)
   const [regenId, setRegenId] = useState(null)
+  const [plan, setPlan] = useState(null) // { rows:[{building_ids,esm_codes}] } or null
+  const [genBusy, setGenBusy] = useState(false)
+  const bCodeById = Object.fromEntries(rows.map((b) => [b.id, b.code]))
+
+  const openDefaults = async () => {
+    const { data, error } = await supabase.rpc('default_coc_plan', { p_project_id: projectId })
+    if (error) { toast('Could not compute the plan — ' + error.message, 'err'); return }
+    setPlan(data || [])
+  }
+  const confirmDefaults = async () => {
+    setGenBusy(true)
+    const base = cocList.length
+    let n = 0
+    for (let i = 0; i < plan.length; i++) {
+      const row = plan[i]
+      const cocNo = `${project?.code || 'PRJ'}-COC-${String(base + n + 1).padStart(3, '0')}`
+      const { data, error } = await bgInsert('project_documents', {
+        project_id: projectId, doc_type: 'coc', name: cocNo, revision: 'A', version: 'A', status: 'draft',
+        esm_id: null, building_id: (row.building_ids || [])[0] || null, submitted_by: user.id, submitted_at: new Date().toISOString(),
+      })
+      if (error || !data?.[0]) continue
+      const docId = data[0].id
+      await bgInsert('coc_buildings', (row.building_ids || []).map((bid) => ({ coc_id: docId, building_id: bid })))
+      await bgInsert('coc_esms', (row.esm_codes || []).map((code) => ({ coc_id: docId, esm_code: code })))
+      n++
+    }
+    setGenBusy(false); setPlan(null)
+    toast(`Generated ${n} default COC${n === 1 ? '' : 's'}`)
+    refresh()
+  }
 
   const esms = projectEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, label: pe.custom_name || pe.esm.name }))
   const rows = [...buildings].sort((a, b) => (a.code || '').localeCompare(b.code || ''))
@@ -90,6 +121,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
         <div style={{ fontWeight: 700, fontSize: 15 }}>Certificates of Completion</div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 4 }}>{toggleBtn('matrix', '⌖ Matrix')}{toggleBtn('list', '☰ List')}</div>
+          {canManage && <Btn onClick={openDefaults}>Generate Default COCs</Btn>}
           {canManage && <Btn icon="plus" variant="primary" onClick={() => setWiz(true)}>New COC</Btn>}
         </div>
       </div>
@@ -193,6 +225,23 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
       {wiz && <CocWizard projectId={projectId} project={project} onClose={() => setWiz(false)} onDone={refresh} />}
       {statusDoc && <UpdateStatusModal doc={statusDoc} onClose={() => setStatusDoc(null)} onDone={refresh} />}
       {historyDoc && <DocHistoryDrawer doc={historyDoc} onClose={() => setHistoryDoc(null)} />}
+      {plan && (
+        <Modal open width={560} title="Generate default COCs" onClose={() => setPlan(null)}
+          footer={<><Btn onClick={() => setPlan(null)}>Cancel</Btn><Btn variant="primary" onClick={confirmDefaults} disabled={genBusy || plan.length === 0}>{genBusy ? 'Generating…' : `Create ${plan.length} COC${plan.length === 1 ? '' : 's'}`}</Btn></>}>
+          <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 10 }}>Based on the project's COC layout and ESM bundles, the system will create:</div>
+          {plan.length === 0 ? <Empty icon="doc">No plan rows — configure ESMs and buildings first.</Empty> : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {plan.map((r, i) => (
+                <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, fontSize: 12.5 }}>
+                  <div style={{ fontWeight: 700 }}>COC {i + 1}</div>
+                  <div style={{ color: 'var(--text-3)', marginTop: 2 }}>Buildings ({(r.building_ids || []).map((bid) => bCodeById[bid] || '?').join(', ')})</div>
+                  <div style={{ color: 'var(--text-3)' }}>ESMs ({(r.esm_codes || []).join(' + ')})</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   )
 }
