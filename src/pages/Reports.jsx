@@ -1,3 +1,4 @@
+import { utils, writeFileXLSX } from 'xlsx'
 import { useAuth } from '../rbac'
 import { useLiveQuery } from '../lib/db'
 import { Loading } from '../components/ui'
@@ -40,6 +41,14 @@ export default function Reports() {
     }
   }).filter((e) => e.handled > 0).sort((a, b) => b.handled - a.handled)
 
+  // real export of the live materials-consumption table (opens in Excel)
+  const exportConsumption = () => {
+    if (consBars.length === 0) return
+    const ws = utils.json_to_sheet(consBars.map((b) => ({ ESM: b.esm, Material: b.name, Unit: b.unit, Quantity: b.qty })))
+    const wb = utils.book_new(); utils.book_append_sheet(wb, ws, 'Consumption')
+    writeFileXLSX(wb, 'materials-consumption.csv', { bookType: 'csv' })
+  }
+
   if (loading) return <Loading />
 
   return (
@@ -55,8 +64,7 @@ export default function Reports() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>1 · Materials Consumption</div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button className="ies-hover" style={{ fontSize: 11, fontWeight: 600, padding: '6px 11px', borderRadius: 7, border: '1px solid var(--line)' }}>Export PDF</button>
-              <button style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 7, background: '#10B981', color: '#fff' }}>Export Excel</button>
+              <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 7, background: consBars.length === 0 ? '#E5E7EB' : '#10B981', color: consBars.length === 0 ? 'var(--text-3)' : '#fff', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -83,7 +91,7 @@ export default function Reports() {
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: '#F59E0B', fontWeight: 700 }}>2 · AWAITING CLIENT FORMAT</div>
           <div style={{ fontWeight: 700, fontSize: 15, margin: '8px 0 6px' }}>Tarsheed Excel</div>
           <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.45 }}>Tarsheed report template — awaiting client format. Once received, this report will export to the exact Excel layout the client submits to Tarsheed.</div>
-          <button disabled style={{ marginTop: 14, alignSelf: 'flex-start', fontSize: 12, fontWeight: 600, padding: '8px 13px', borderRadius: 8, border: '1px solid var(--line)', color: 'var(--text-3)', cursor: 'not-allowed' }}>Locked — pending template</button>
+          <div style={{ marginTop: 14, alignSelf: 'flex-start', fontSize: 12, fontWeight: 600, padding: '8px 13px', borderRadius: 8, border: '1px solid var(--line)', color: 'var(--text-3)', background: '#FAFAFA' }}>Locked — pending template</div>
         </div>
       </div>
 
@@ -132,7 +140,6 @@ export default function Reports() {
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', fontWeight: 700 }}>[ DESIGNER SUGGESTION ]</div>
         <div style={{ fontWeight: 700, fontSize: 15, margin: '8px 0 6px' }}>ESM Progress vs Plan</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-3)', maxWidth: 560 }}>Per-ESM planned vs actual installed quantities over time, with delay attribution by building. High-value for the Planning Engineer's delay analysis.</div>
-        <button style={{ marginTop: 12, fontSize: 12, fontWeight: 700, padding: '8px 13px', borderRadius: 8, background: 'var(--accent)', color: '#fff' }}>Build report</button>
       </div>
     </div>
   )

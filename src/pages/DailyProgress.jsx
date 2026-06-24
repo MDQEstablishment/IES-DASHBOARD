@@ -248,7 +248,7 @@ export default function DailyProgress() {
 
       {/* Tab toggle: Quick entry / Batch grid */}
       <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 10, padding: 3, background: '#fff', width: 'max-content', marginBottom: 14 }}>
-        {[['quick', 'Quick entry'], ['batch', 'Batch grid'], ['import', 'Excel import']].map(([k, l]) => (
+        {[['quick', 'Quick entry'], ['batch', 'Batch grid']].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} style={{
             padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 7, cursor: 'pointer',
             color: tab === k ? '#fff' : 'var(--text-3)', background: tab === k ? 'var(--accent)' : 'transparent',
@@ -355,16 +355,6 @@ export default function DailyProgress() {
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
             Use Quick entry to log individual installs. End-of-day batch grid is recorded one row per install via the same log.
           </div>
-        </div>
-      )}
-
-      {tab === 'import' && (
-        <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 14, padding: 16, maxWidth: 560 }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Excel import</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4, marginBottom: 12 }}>
-            Bulk-load a day's installs from the site Excel sheet. Each row maps to building · sub-type · qty and is appended to the same install log.
-          </div>
-          <button style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13 }}><Icon name="upload" size={15} />Choose Excel file…</button>
         </div>
       )}
 

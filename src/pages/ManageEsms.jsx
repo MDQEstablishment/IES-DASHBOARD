@@ -58,7 +58,6 @@ export default function ManageEsms() {
         <PageTitle kicker="STOCK · ALL PROJECTS" title="Materials" />
         {canMove && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13 }}><Icon name="upload" size={15} />Import Excel</button>
             <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13 }}><Icon name="plus" size={15} />Add Material</button>
           </div>
         )}
