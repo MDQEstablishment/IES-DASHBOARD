@@ -3,7 +3,7 @@ import { useLiveQuery, signedUrlFor } from '../lib/db'
 import { useAuth } from '../rbac'
 import { Empty, Btn } from './ui'
 import { toast } from '../lib/toast'
-import { docStatusMeta, UpdateStatusModal } from './ProjectDocuments'
+import { docStatusMeta, UpdateStatusModal, DocHistoryDrawer } from './ProjectDocuments'
 import CocWizard, { buildAndAttachCocPdf } from './CocWizard'
 
 // COC views over the M:N junctions: a COC covers a set of buildings × a set of
@@ -21,6 +21,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   const [view, setView] = useState('matrix')
   const [wiz, setWiz] = useState(false)
   const [statusDoc, setStatusDoc] = useState(null)
+  const [historyDoc, setHistoryDoc] = useState(null)
   const [regenId, setRegenId] = useState(null)
 
   const esms = projectEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, label: pe.custom_name || pe.esm.name }))
@@ -126,7 +127,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
                       const anyPending = cs.some((c) => PENDING.has(c.status))
                       const c = cs.length ? cs[0] : null
                       const color = anyApproved ? ['#10B981', '#ECFDF5'] : anyPending ? ['#F59E0B', '#FFFBEB'] : ['#94A3B8', '#F1F5F9']
-                      const tip = cs.length ? `${cs.length} COC${cs.length === 1 ? '' : 's'}: ${cs.map((x) => x.name).join(', ')}` : 'No COC — click to create'
+                      const tip = cs.length ? `${cs.length} COC${cs.length === 1 ? '' : 's'}: ${cs.map((x) => `${x.name} (Rev ${x.revision || 'A'}, ${(docStatusMeta(x.status)[0])})`).join('; ')}` : 'No COC — click to create'
                       return (
                         <td key={e.id} style={{ padding: 8, textAlign: 'center' }}>
                           <button title={tip} onClick={() => (c ? (c.storage_path ? openCoc(c) : setView('list')) : (canManage && setWiz(true)))}
@@ -177,6 +178,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
                       <td style={{ padding: '9px 8px' }}>{c.storage_path ? <button onClick={() => openCoc(c)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', textDecoration: 'underline', fontSize: 12 }}>Open PDF</button> : <span style={{ color: 'var(--text-3)' }}>—</span>}</td>
                       {canManage && <td style={{ padding: '9px 8px', whiteSpace: 'nowrap' }}>
                         <button onClick={() => setStatusDoc(c)} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', marginRight: 10 }}>Update Status</button>
+                        <button onClick={() => setHistoryDoc(c)} title="History" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', marginRight: 10 }}>⌚ History</button>
                         <button onClick={() => regenerate(c)} disabled={regenId === c.id} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)' }}>{regenId === c.id ? 'Regenerating…' : 'Regenerate PDF'}</button>
                       </td>}
                     </tr>
@@ -190,6 +192,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
 
       {wiz && <CocWizard projectId={projectId} project={project} onClose={() => setWiz(false)} onDone={refresh} />}
       {statusDoc && <UpdateStatusModal doc={statusDoc} onClose={() => setStatusDoc(null)} onDone={refresh} />}
+      {historyDoc && <DocHistoryDrawer doc={historyDoc} onClose={() => setHistoryDoc(null)} />}
     </div>
   )
 }
