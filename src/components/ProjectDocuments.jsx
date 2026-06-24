@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor } from '../lib/db'
 import { useAuth } from '../rbac'
 import Icon from './Icon'
-import { Empty, Btn, Modal, Field, inputStyle } from './ui'
+import { Empty, Btn, Modal, Field, inputStyle, Drawer } from './ui'
 import { compressImage } from '../lib/image'
 import { toast } from '../lib/toast'
 
@@ -18,11 +18,11 @@ export const MULTI_KINDS = new Set(['mir', 'wir', 'coc'])
 // Client-court status vocabulary: [label, color, bg, tooltip].
 export const DOC_STATUS = {
   draft:                  ['Draft', '#64748B', '#F1F5F9', 'Prepared by the contractor, not yet submitted to the client.'],
-  submitted:              ['Submitted', '#2563EB', '#EFF6FF', 'Submitted to the client’s technical team — awaiting their acknowledgement.'],
-  under_review:           ['Under Review', '#F59E0B', '#FFFBEB', 'Client confirmed receipt and is reviewing the submittal.'],
+  submitted:              ['Submitted', '#2563EB', '#EFF6FF', 'Submitted to the client (Tarshid) — logged with the submission date.'],
+  under_review:           ['With Client', '#7C3AED', '#F3E8FF', 'With the client (Tarshid) for review — awaiting their response.'],
   approved:               ['Approved', '#10B981', '#ECFDF5', 'Approved by Client — ready for project closeout.'],
-  approved_with_comments: ['Approved w/ Comments', '#0D9488', '#ECFEFF', 'Approved by Client with minor comments to address.'],
-  rejected:               ['Rejected', '#EF4444', '#FEF2F2', 'Returned by Client — changes required (see notes).'],
+  approved_with_comments: ['Approved w/ Comments', '#CA8A04', '#FEF9C3', 'Approved by Client with comments — a cover-comments version was uploaded.'],
+  rejected:               ['Rejected', '#EF4444', '#FEF2F2', 'Returned by Client — must be revised and resubmitted (see notes).'],
   resubmitted:            ['Resubmitted', '#2563EB', '#EFF6FF', 'Revised and resubmitted to the client after a return.'],
   superseded:             ['Superseded', '#64748B', '#F1F5F9', 'Replaced by a newer revision.'],
 }
@@ -47,6 +47,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
   const [up, setUp] = useState(false)
   const [prefill, setPrefill] = useState(null)
   const [statusDoc, setStatusDoc] = useState(null)
+  const [historyDoc, setHistoryDoc] = useState(null)
   const { rows, refetch } = useLiveQuery('project_documents',
     (q) => {
       let b = q.select('*,esm:esms(code),building:buildings(code)').eq('project_id', projectId)
@@ -99,6 +100,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
                         ? <button onClick={() => openDoc(d)} title="Open file" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 12.5, padding: 0, textDecoration: 'underline' }}><Icon name="doc" size={13} />{d.name}</button>
                         : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)' }}><Icon name="doc" size={13} />{d.name}</span>}
                       {d.building?.code && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>· {d.building.code}</span>}
+                      <button title="View submission history" onClick={() => setHistoryDoc(d)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>⌚</button>
                     </td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{d.esm?.code || '—'}</td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{typeLabel}</td>
@@ -124,14 +126,18 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
       {up && <UploadModal projectId={projectId} buildingId={buildingId} esmOpts={esmOpts} bldgOpts={bldgOpts} rows={rows} prefill={prefill}
         onClose={() => { setUp(false); setPrefill(null) }} onDone={afterChange} />}
       {statusDoc && <UpdateStatusModal doc={statusDoc} onClose={() => setStatusDoc(null)} onDone={afterChange} />}
+      {historyDoc && <DocHistoryDrawer doc={historyDoc} onClose={() => setHistoryDoc(null)} />}
     </div>
   )
 }
 
-// ── Client-court status update + revision ───────────────────────────────────
+// ── Doc lifecycle: submit → with client → approved/comments/rejected ────────
+// History rows are written automatically by the DB trigger on status change.
 export function UpdateStatusModal({ doc, onClose, onDone }) {
+  const { user } = useAuth()
   const [reviewer, setReviewer] = useState(doc.client_reviewer_name || '')
   const [notes, setNotes] = useState(doc.response_notes || '')
+  const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
 
   const apply = async (patch) => {
@@ -143,44 +149,97 @@ export function UpdateStatusModal({ doc, onClose, onDone }) {
     onDone?.(); onClose()
   }
   const now = () => new Date().toISOString()
-  const act = (decision) => {
-    if ((decision === 'approved' || decision === 'approved_with_comments') && !reviewer.trim()) { toast('Client reviewer name is required', 'err'); return }
-    if (decision === 'rejected' && !notes.trim()) { toast('Response notes (rejection reason) are required', 'err'); return }
-    if (decision === 'submitted') return apply({ status: 'submitted' })
-    if (decision === 'under_review') return apply({ status: 'under_review', client_reviewer_name: reviewer.trim() || null })
-    return apply({ status: decision, client_reviewer_name: reviewer.trim() || null, client_response_date: now(), response_notes: notes.trim() || null })
+  const uploadFile = async () => {
+    if (!file) return null
+    const toUp = file.type.startsWith('image/') ? await compressImage(file, { maxBytes: 500000 }) : file
+    const { path, error } = await uploadToBucket('project-docs', toUp, { userId: user.id, prefix: doc.project_id })
+    if (error) return { error }
+    return { path }
+  }
+  const decide = async (decision) => {
+    const needsFile = decision === 'approved' || decision === 'approved_with_comments'
+    if (needsFile && !reviewer.trim()) { toast('Client reviewer name is required', 'err'); return }
+    if (needsFile && !file) { toast('Upload the approved version file', 'err'); return }
+    if (decision === 'approved_with_comments' && !notes.trim()) { toast('Notes capturing the client comments are required', 'err'); return }
+    if (decision === 'rejected' && !notes.trim()) { toast('Rejection reason (notes) is required', 'err'); return }
+    setBusy(true)
+    let storage_path
+    if (needsFile) { const up = await uploadFile(); if (up?.error) { setBusy(false); return } storage_path = up?.path }
+    setBusy(false)
+    const patch = decision === 'submitted' ? { status: 'submitted', submitted_at: doc.submitted_at || now() }
+      : decision === 'under_review' ? { status: 'under_review', client_reviewer_name: reviewer.trim() || null }
+      : { status: decision, client_reviewer_name: reviewer.trim() || null, client_response_date: now(), response_notes: notes.trim() || null, ...(storage_path ? { storage_path } : {}) }
+    return apply(patch)
   }
   const createRevision = async () => {
     setBusy(true)
     const { error } = await bgInsert('project_documents', {
       project_id: doc.project_id, building_id: doc.building_id || null, esm_id: doc.esm_id || null, delivery_id: doc.delivery_id || null,
-      doc_type: doc.doc_type, custom_type_label: doc.custom_type_label || null, name: doc.name, storage_path: doc.storage_path || null,
+      doc_type: doc.doc_type, custom_type_label: doc.custom_type_label || null, name: doc.name, storage_path: null,
       revision: nextRev(doc.revision), version: doc.version || 'A', status: 'draft', submitted_by: doc.submitted_by || null,
     })
     setBusy(false); if (!error) { onDone?.(); onClose() }
   }
-
   const btn = (label, onClick, variant = 'secondary') => <Btn variant={variant} style={{ fontSize: 12, padding: '7px 10px' }} disabled={busy} onClick={onClick}>{label}</Btn>
 
   return (
-    <Modal open width={520} title={`Update status · ${doc.name} (Rev ${doc.revision || 'A'})`} onClose={onClose}
+    <Modal open width={540} title={`Update status · ${doc.name} (Rev ${doc.revision || 'A'})`} onClose={onClose}
       footer={<Btn onClick={onClose}>Close</Btn>}>
       <Field label="Client reviewer name (required to approve)"><input lang="en" style={inputStyle} value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="e.g. Eng. Khalid Al-Mutairi" /></Field>
-      <Field label="Response notes (required to reject)"><textarea style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Client comments / rejection reason" /></Field>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>CLIENT DECISION</div>
+      <Field label="Notes / client comments (required to reject or approve-with-comments)"><textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Client comments / rejection reason" /></Field>
+      <Field label="Approved / cover-comments version file (required for an approval)"><input lang="en" type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: 13 }} /></Field>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>WORKFLOW</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {doc.status === 'draft' && btn('Mark Submitted', () => act('submitted'))}
-        {btn('Mark Under Review', () => act('under_review'))}
-        {btn('Approved by Client', () => act('approved'), 'primary')}
-        {btn('Approved w/ Comments', () => act('approved_with_comments'))}
-        {btn('Rejected', () => act('rejected'), 'danger')}
+        {doc.status === 'draft' && btn('Mark Submitted', () => decide('submitted'))}
+        {(doc.status === 'submitted') && btn('Mark With Client', () => decide('under_review'))}
+        {btn('Approved by Client', () => decide('approved'), 'primary')}
+        {btn('Approved w/ Comments', () => decide('approved_with_comments'))}
+        {btn('Rejected', () => decide('rejected'), 'danger')}
       </div>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '14px 0 8px' }}>RESUBMISSION</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {btn(`Create Revision ${nextRev(doc.revision)}`, createRevision)}
-        <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Clones this row as a draft for re-upload; the client review starts over.</span>
+        <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Clones this as a draft (new file awaited); client review restarts.</span>
       </div>
     </Modal>
+  )
+}
+
+// ── Doc submission history timeline drawer (5C) ─────────────────────────────
+const ACTION_META = {
+  submitted: ['Submitted to client', '#2563EB'], client_received: ['Received by client', '#7C3AED'],
+  approved: ['Approved', '#10B981'], approved_with_comments: ['Approved with comments', '#CA8A04'],
+  rejected: ['Rejected', '#EF4444'], resubmitted: ['Resubmitted', '#2563EB'],
+}
+export function DocHistoryDrawer({ doc, onClose }) {
+  const { rows: events } = useLiveQuery('doc_submission_history', (q) => q.select('*').eq('doc_id', doc.id).order('action_date', { ascending: true }), [doc.id])
+  const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name'))
+  const nameById = Object.fromEntries(people.map((p) => [p.id, p.full_name]))
+  const openFile = async (p) => { const u = await signedUrlFor('project-docs', p); if (u) window.open(u, '_blank', 'noopener') }
+  return (
+    <Drawer open title={`History · ${doc.name}`} subtitle={`Rev ${doc.revision || 'A'} · ${doc.doc_type}`} onClose={onClose}>
+      {events.length === 0 ? <Empty icon="doc">No history yet.</Empty> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {events.map((ev, i) => {
+            const [lbl, c] = ACTION_META[ev.action] || [ev.action, '#64748B']
+            return (
+              <div key={ev.id} style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: c, marginTop: 4 }} />
+                  {i < events.length - 1 && <span style={{ flex: 1, width: 2, background: 'var(--line)' }} />}
+                </div>
+                <div style={{ paddingBottom: 16, flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: c }}>{lbl}</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{fmtIso(ev.action_date)} · {nameById[ev.actor_id] || 'System'}</div>
+                  {ev.notes && <div style={{ fontSize: 12, color: 'var(--text)', marginTop: 3 }}>{ev.notes}</div>}
+                  {ev.file_path && <button onClick={() => openFile(ev.file_path)} style={{ fontSize: 11.5, color: 'var(--accent)', textDecoration: 'underline', marginTop: 3, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Open attached file</button>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Drawer>
   )
 }
 
