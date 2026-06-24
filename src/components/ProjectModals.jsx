@@ -15,6 +15,7 @@ const num = (v) => (v === '' || v == null ? null : Number(v))
 export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const navigate = useNavigate()
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name,role').eq('archived', false).order('full_name'))
+  const { rows: allEsms } = useLiveQuery('esms', (q) => q.select('code,name').order('code'))
   const init = (k, d = '') => (project?.[k] ?? d)
   const [f, setF] = useState({
     code: init('code'), name: init('name'), client: init('client'), region: init('region'),
@@ -24,8 +25,11 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     contractor_name: init('contractor_name'), contractor_phone: init('contractor_phone'), contractor_email: init('contractor_email'),
   })
   const [buildings, setBuildings] = useState([])
+  const [items, setItems] = useState([]) // optional pair drafts captured at creation
+  const [showItems, setShowItems] = useState(false)
   const [busy, setBusy] = useState(false)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  const setItem = (i, k, v) => setItems((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
 
   const save = async () => {
     if (!f.code.trim() || !f.name.trim()) { toast('Code and name are required', 'err'); return }
@@ -52,6 +56,16 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         contractor: b.contractor_name || null, contractor_name: b.contractor_name || null,
         contractor_phone: b.contractor_phone || null, status_override: 'pending',
       })))
+    }
+    // optional Items & Replacements captured at creation (fill-once)
+    if (!error && data?.[0] && items.length) {
+      const pid = data[0].id
+      for (const it of items.filter((x) => x.esm_code && (x.iDesc || x.rDesc))) {
+        let iId = null, rId = null
+        if (it.iDesc || it.iQty) { const { data: di } = await bgInsert('project_installed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.iDesc || null, model_code: it.iModel || null, capacity_value: num(it.iCap), capacity_unit: it.iCapU || 'kBTU', efficiency_value: num(it.iEff), efficiency_unit: it.iEffU || 'SEER', total_quantity: num(it.iQty) }); iId = di?.[0]?.id }
+        if (it.rDesc || it.rQty) { const { data: dr } = await bgInsert('project_removed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.rDesc || null, capacity_value: num(it.rCap), capacity_unit: it.rCapU || 'kBTU', efficiency_value: num(it.rEff), efficiency_unit: it.rEffU || 'SEER', total_quantity: num(it.rQty), returned_to_facility: it.rRet !== false }); rId = dr?.[0]?.id }
+        if (iId && rId) await bgInsert('project_item_pairs', { project_id: pid, esm_code: it.esm_code, installed_item_id: iId, removed_item_id: rId, notes: it.note || null })
+      }
     }
     setBusy(false)
     if (!error) { onClose(); if (data?.[0]) navigate(`/projects/${data[0].id}`) }
@@ -126,6 +140,41 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {mode === 'add' && (
+        <div style={{ marginTop: 8, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <button type="button" onClick={() => setShowItems((s) => !s)} style={{ fontWeight: 700, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}>Items &amp; Replacements (optional) {showItems ? '▲' : '▼'}</button>
+            {showItems && <button onClick={() => setItems((a) => [...a, { esm_code: allEsms[0]?.code || '', iCapU: 'kBTU', iEffU: 'SEER', rCapU: 'kBTU', rEffU: 'SEER', rRet: true }])} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add pair</button>}
+          </div>
+          {showItems && <>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 6 }}>Fill once at creation — installed ↔ removed pairs are persisted with the project. You can refine later in the Items &amp; Replacements tab.</div>
+            {items.map((it, i) => (
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#F8FAFC' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
+                  <select style={{ ...inputStyle, width: 130, padding: '6px 8px' }} value={it.esm_code} onChange={(e) => setItem(i, 'esm_code', e.target.value)}>{allEsms.map((e) => <option key={e.code} value={e.code}>{e.code}</option>)}</select>
+                  <button onClick={() => setItems((a) => a.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ok)', marginBottom: 3 }}>INSTALLED</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 0.8fr', gap: 6, marginBottom: 6 }}>
+                  <input lang="en" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Description" value={it.iDesc || ''} onChange={(e) => setItem(i, 'iDesc', e.target.value)} />
+                  <input lang="en" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Model" value={it.iModel || ''} onChange={(e) => setItem(i, 'iModel', e.target.value)} />
+                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Cap (kBTU)" value={it.iCap || ''} onChange={(e) => setItem(i, 'iCap', e.target.value)} />
+                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="SEER" value={it.iEff || ''} onChange={(e) => setItem(i, 'iEff', e.target.value)} />
+                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Qty" value={it.iQty || ''} onChange={(e) => setItem(i, 'iQty', e.target.value)} />
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--bad)', marginBottom: 3 }}>REMOVED</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 0.8fr', gap: 6 }}>
+                  <input lang="en" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Description" value={it.rDesc || ''} onChange={(e) => setItem(i, 'rDesc', e.target.value)} />
+                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Cap (kBTU)" value={it.rCap || ''} onChange={(e) => setItem(i, 'rCap', e.target.value)} />
+                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="SEER" value={it.rEff || ''} onChange={(e) => setItem(i, 'rEff', e.target.value)} />
+                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Qty" value={it.rQty || ''} onChange={(e) => setItem(i, 'rQty', e.target.value)} />
+                </div>
+              </div>
+            ))}
+          </>}
         </div>
       )}
     </Modal>

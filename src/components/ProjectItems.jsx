@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLiveQuery, bgInsert, bgUpdate, bgDelete } from '../lib/db'
 import { useAuth } from '../rbac'
 import { Empty, Btn } from './ui'
@@ -8,162 +8,166 @@ import { read, utils, writeFileXLSX } from 'xlsx'
 const EDIT_ROLES = ['admin', 'pmo', 'projm', 'proje']
 const CAP_UNITS = ['kBTU', 'kW', 'W', 'lm']
 const EFF_UNITS = ['SEER', 'EER', 'COP', 'lm/W']
-const inp = { padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, background: '#fff', width: '100%' }
 const numOrNull = (v) => (v === '' || v == null ? null : Number(v))
-const blankInstalled = (esm) => ({ esm_code: esm, item_description: '', model_code: '', capacity_value: '', capacity_unit: 'kBTU', efficiency_value: '', efficiency_unit: 'SEER', total_quantity: '', notes: '' })
-const blankRemoved = (esm) => ({ esm_code: esm, item_description: '', capacity_value: '', capacity_unit: 'kBTU', efficiency_value: '', efficiency_unit: 'SEER', total_quantity: '', returned_to_facility: true, notes: '' })
+const cellInput = { width: '100%', padding: '5px 6px', border: '1px solid transparent', borderRadius: 5, fontSize: 11.5, background: 'transparent' }
+const cellFocus = { border: '1px solid var(--accent)', background: '#fff' }
 
-export default function ProjectItems({ projectId }) {
+// Borderless cell that saves on blur (Sheets-like). select/toggle save on change.
+function Cell({ value, onSave, type = 'text', options, placeholder, align }) {
+  const [v, setV] = useState(value ?? '')
+  const [foc, setFoc] = useState(false)
+  useEffect(() => { setV(value ?? '') }, [value])
+  if (options) return <select value={v ?? ''} onChange={(e) => { setV(e.target.value); onSave(e.target.value) }} style={{ ...cellInput, ...(foc ? cellFocus : {}) }} onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}>{options.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+  if (type === 'toggle') return <button onClick={() => onSave(!value)} style={{ ...cellInput, cursor: 'pointer', fontWeight: 700, color: value ? 'var(--ok)' : 'var(--text-3)', textAlign: 'center' }}>{value ? 'Yes' : 'No'}</button>
+  return <input lang="en" inputMode={type === 'num' ? 'numeric' : undefined} value={v ?? ''} placeholder={placeholder}
+    onChange={(e) => setV(e.target.value)} onFocus={() => setFoc(true)}
+    onBlur={() => { setFoc(false); if ((v ?? '') !== (value ?? '')) onSave(v) }}
+    style={{ ...cellInput, textAlign: align || 'left', ...(foc ? cellFocus : {}) }} />
+}
+
+export default function ProjectItems({ projectId, project }) {
   const { role } = useAuth()
   const canEdit = EDIT_ROLES.includes(role)
-  const { rows: installed, refetch: refInstalled } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
-  const { rows: removed, refetch: refRemoved } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
+  const { rows: installed, refetch: refI } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
+  const { rows: removed, refetch: refR } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
+  const { rows: pairs, refetch: refP } = useLiveQuery('project_item_pairs', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
   const { rows: pEsms } = useLiveQuery('project_esms', (q) => q.select('custom_name,ordinal,esm:esms(code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
   const esms = pEsms.filter((pe) => pe.esm).map((pe) => ({ code: pe.esm.code, name: pe.custom_name || pe.esm.name }))
-  const [open, setOpen] = useState({}) // esm_code -> bool (accordion)
-  const [edit, setEdit] = useState(null) // { table, id|'new', esm_code, fields }
+  const [open, setOpen] = useState({})
+  const refreshAll = () => { refI(); refR(); refP() }
 
-  const tableOf = (t) => (t === 'installed' ? 'project_installed_items' : 'project_removed_items')
-  const refOf = (t) => (t === 'installed' ? refInstalled : refRemoved)
+  const insById = Object.fromEntries(installed.map((r) => [r.id, r]))
+  const remById = Object.fromEntries(removed.map((r) => [r.id, r]))
+  const pairedI = new Set(pairs.map((p) => p.installed_item_id).filter(Boolean))
+  const pairedR = new Set(pairs.map((p) => p.removed_item_id).filter(Boolean))
 
-  const startAdd = (table, esm) => setEdit({ table, id: 'new', esm_code: esm, fields: table === 'installed' ? blankInstalled(esm) : blankRemoved(esm) })
-  const startEdit = (table, row) => setEdit({ table, id: row.id, esm_code: row.esm_code, fields: { ...row } })
-  const setF = (k, v) => setEdit((e) => ({ ...e, fields: { ...e.fields, [k]: v } }))
+  const saveI = async (id, patch) => { const { error } = await bgUpdate('project_installed_items', id, patch); if (!error) refI() }
+  const saveR = async (id, patch) => { const { error } = await bgUpdate('project_removed_items', id, patch); if (!error) refR() }
+  const numGuard = (k, v) => (k === 'total_quantity' && v !== '' && !(Number(v) > 0) ? (toast('Quantity must be > 0', 'err'), false) : true)
 
-  const save = async () => {
-    const f = edit.fields, isInstalled = edit.table === 'installed'
-    if (!String(f.item_description || '').trim()) { toast('Description is required', 'err'); return }
-    if (!(Number(f.total_quantity) > 0)) { toast('Total quantity must be greater than 0', 'err'); return }
-    if (isInstalled && (numOrNull(f.capacity_value) == null || numOrNull(f.efficiency_value) == null)) { toast('Capacity & efficiency are required for installed items', 'err'); return }
-    const payload = {
-      project_id: projectId, esm_code: edit.esm_code, item_description: f.item_description.trim(),
-      capacity_value: numOrNull(f.capacity_value), capacity_unit: f.capacity_unit || null,
-      efficiency_value: numOrNull(f.efficiency_value), efficiency_unit: f.efficiency_unit || null,
-      total_quantity: numOrNull(f.total_quantity), notes: f.notes || null,
-      ...(isInstalled ? { model_code: f.model_code || null } : { returned_to_facility: !!f.returned_to_facility }),
-    }
-    const { error } = edit.id === 'new'
-      ? await bgInsert(tableOf(edit.table), payload)
-      : await bgUpdate(tableOf(edit.table), edit.id, payload)
-    if (!error) { setEdit(null); refOf(edit.table)() }
+  const addPair = async (esm) => {
+    const { data: di } = await bgInsert('project_installed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1 })
+    const { data: dr } = await bgInsert('project_removed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1, returned_to_facility: true })
+    if (di?.[0] && dr?.[0]) await bgInsert('project_item_pairs', { project_id: projectId, esm_code: esm, installed_item_id: di[0].id, removed_item_id: dr[0].id })
+    refreshAll()
   }
-  const remove = async (table, id) => { const { error } = await bgDelete(tableOf(table), id); if (!error) refOf(table)() }
+  const addStandalone = async (esm, side) => {
+    if (side === 'installed') await bgInsert('project_installed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1 })
+    else await bgInsert('project_removed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1, returned_to_facility: true })
+    refreshAll()
+  }
+  const delRow = async (row) => {
+    if (row.pair) await bgDelete('project_item_pairs', row.pair.id)
+    if (row.inst) await bgDelete('project_installed_items', row.inst.id)
+    if (row.rem) await bgDelete('project_removed_items', row.rem.id)
+    refreshAll()
+  }
+
+  // rows per ESM = pairs + unpaired installed + unpaired removed
+  const rowsForEsm = (esm) => {
+    const ps = pairs.filter((p) => (p.esm_code || '') === esm).map((p) => ({ key: 'p' + p.id, pair: p, inst: insById[p.installed_item_id], rem: remById[p.removed_item_id] }))
+    const soI = installed.filter((r) => r.esm_code === esm && !pairedI.has(r.id)).map((r) => ({ key: 'i' + r.id, inst: r, rem: null }))
+    const soR = removed.filter((r) => r.esm_code === esm && !pairedR.has(r.id)).map((r) => ({ key: 'r' + r.id, inst: null, rem: r }))
+    return [...ps, ...soI, ...soR]
+  }
 
   const exportCsv = () => {
-    const ins = installed.map((r) => ({ kind: 'installed', esm_code: r.esm_code, item_description: r.item_description, model_code: r.model_code, capacity_value: r.capacity_value, capacity_unit: r.capacity_unit, efficiency_value: r.efficiency_value, efficiency_unit: r.efficiency_unit, total_quantity: r.total_quantity, returned_to_facility: '', notes: r.notes }))
-    const rem = removed.map((r) => ({ kind: 'removed', esm_code: r.esm_code, item_description: r.item_description, model_code: '', capacity_value: r.capacity_value, capacity_unit: r.capacity_unit, efficiency_value: r.efficiency_value, efficiency_unit: r.efficiency_unit, total_quantity: r.total_quantity, returned_to_facility: r.returned_to_facility, notes: r.notes }))
-    const ws = utils.json_to_sheet([...ins, ...rem])
-    const wb = utils.book_new(); utils.book_append_sheet(wb, ws, 'Items')
-    writeFileXLSX(wb, 'project-items.csv', { bookType: 'csv' })
+    const out = []
+    esms.forEach((e) => rowsForEsm(e.code).forEach((row) => out.push({
+      esm_code: e.code,
+      installed_description: row.inst?.item_description || '', installed_model: row.inst?.model_code || '',
+      installed_capacity: row.inst?.capacity_value ?? '', installed_capacity_unit: row.inst?.capacity_unit || '',
+      installed_efficiency: row.inst?.efficiency_value ?? '', installed_efficiency_unit: row.inst?.efficiency_unit || '', installed_qty: row.inst?.total_quantity ?? '',
+      removed_description: row.rem?.item_description || '', removed_capacity: row.rem?.capacity_value ?? '', removed_capacity_unit: row.rem?.capacity_unit || '',
+      removed_efficiency: row.rem?.efficiency_value ?? '', removed_efficiency_unit: row.rem?.efficiency_unit || '', removed_qty: row.rem?.total_quantity ?? '',
+      removed_returned: row.rem ? (row.rem.returned_to_facility ? 'Yes' : 'No') : '', pair_note: row.pair?.notes || '',
+    })))
+    const ws = utils.json_to_sheet(out); const wb = utils.book_new(); utils.book_append_sheet(wb, ws, 'Pairs')
+    writeFileXLSX(wb, 'project-item-pairs.csv', { bookType: 'csv' })
   }
   const importCsv = async (e) => {
     const file = e.target.files?.[0]; if (!file) return
-    const wb = read(await file.arrayBuffer())
-    const data = utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
+    const wb = read(await file.arrayBuffer()); const data = utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
     let n = 0
     for (const r of data) {
-      const kind = String(r.kind || '').toLowerCase()
-      if (!r.item_description || !(Number(r.total_quantity) > 0)) continue
-      const base = { project_id: projectId, esm_code: r.esm_code || null, item_description: String(r.item_description).trim(), capacity_value: numOrNull(r.capacity_value), capacity_unit: r.capacity_unit || null, efficiency_value: numOrNull(r.efficiency_value), efficiency_unit: r.efficiency_unit || null, total_quantity: numOrNull(r.total_quantity), notes: r.notes || null }
-      if (kind === 'removed') { const { error } = await bgInsert('project_removed_items', { ...base, returned_to_facility: ['yes', 'true', '1'].includes(String(r.returned_to_facility).toLowerCase()) }); if (!error) n++ }
-      else { const { error } = await bgInsert('project_installed_items', { ...base, model_code: r.model_code || null }); if (!error) n++ }
+      const esm = r.esm_code || null
+      const hasI = r.installed_description || r.installed_qty, hasR = r.removed_description || r.removed_qty
+      let iId = null, rId = null
+      if (hasI) { const { data: d } = await bgInsert('project_installed_items', { project_id: projectId, esm_code: esm, item_description: r.installed_description || null, model_code: r.installed_model || null, capacity_value: numOrNull(r.installed_capacity), capacity_unit: r.installed_capacity_unit || 'kBTU', efficiency_value: numOrNull(r.installed_efficiency), efficiency_unit: r.installed_efficiency_unit || 'SEER', total_quantity: numOrNull(r.installed_qty) }); iId = d?.[0]?.id }
+      if (hasR) { const { data: d } = await bgInsert('project_removed_items', { project_id: projectId, esm_code: esm, item_description: r.removed_description || null, capacity_value: numOrNull(r.removed_capacity), capacity_unit: r.removed_capacity_unit || 'kBTU', efficiency_value: numOrNull(r.removed_efficiency), efficiency_unit: r.removed_efficiency_unit || 'SEER', total_quantity: numOrNull(r.removed_qty), returned_to_facility: ['yes', 'true', '1'].includes(String(r.removed_returned).toLowerCase()) }); rId = d?.[0]?.id }
+      if (iId && rId) await bgInsert('project_item_pairs', { project_id: projectId, esm_code: esm, installed_item_id: iId, removed_item_id: rId, notes: r.pair_note || null })
+      if (hasI || hasR) n++
     }
-    e.target.value = ''; refInstalled(); refRemoved()
-    toast(`Imported ${n} item${n === 1 ? '' : 's'}`)
+    e.target.value = ''; refreshAll(); toast(`Imported ${n} row${n === 1 ? '' : 's'}`)
   }
 
-  if (esms.length === 0) return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}><Empty icon="materials">Add ESMs to this project to capture installed & removed items.</Empty></div>
+  if (esms.length === 0) return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}><Empty icon="materials">Add ESMs to capture installed & removed items.</Empty></div>
 
-  const editingCell = (k, type = 'text', options) => {
-    if (type === 'select') return <select style={inp} value={edit.fields[k] ?? ''} onChange={(e) => setF(k, e.target.value)}>{options.map((o) => <option key={o} value={o}>{o}</option>)}</select>
-    if (type === 'toggle') return <button onClick={() => setF(k, !edit.fields[k])} style={{ ...inp, cursor: 'pointer', fontWeight: 700, color: edit.fields[k] ? 'var(--ok)' : 'var(--text-3)' }}>{edit.fields[k] ? 'Yes' : 'No'}</button>
-    return <input lang="en" inputMode={type === 'num' ? 'numeric' : undefined} style={inp} value={edit.fields[k] ?? ''} onChange={(e) => setF(k, e.target.value)} />
-  }
-
-  const renderTable = (table, esm, rows) => {
-    const isInstalled = table === 'installed'
-    const editingHere = edit && edit.table === table && edit.esm_code === esm
-    const cols = isInstalled
-      ? ['#', 'Description', 'Model', 'Capacity', 'Efficiency', 'Qty', 'Notes', '']
-      : ['#', 'Description', 'Capacity', 'Efficiency', 'Qty', 'Returned', 'Notes', '']
-    return (
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <div style={{ fontWeight: 700, fontSize: 12.5, color: isInstalled ? 'var(--ok)' : 'var(--bad)' }}>{isInstalled ? 'Installed Items (new)' : 'Removed Items (old)'}</div>
-          {canEdit && <button onClick={() => startAdd(table, esm)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add row</button>}
-        </div>
-        <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 760 }}>
-          <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)' }}>{cols.map((c, i) => <th key={i} style={{ padding: '6px 8px', fontWeight: 600 }}>{c}</th>)}</tr></thead>
-          <tbody>
-            {rows.length === 0 && !(editingHere && edit.id === 'new') && <tr><td colSpan={cols.length} style={{ padding: 10, color: 'var(--text-3)' }}>No rows yet.</td></tr>}
-            {rows.map((r, i) => {
-              const isEd = editingHere && edit.id === r.id
-              return (
-                <tr key={r.id} style={{ borderTop: '1px solid var(--line)' }}>
-                  <td style={{ padding: '6px 8px', color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>{i + 1}</td>
-                  {isEd ? <>
-                    <td style={{ padding: 4 }}>{editingCell('item_description')}</td>
-                    {isInstalled && <td style={{ padding: 4 }}>{editingCell('model_code')}</td>}
-                    <td style={{ padding: 4, display: 'flex', gap: 4 }}>{editingCell('capacity_value', 'num')}{editingCell('capacity_unit', 'select', CAP_UNITS)}</td>
-                    <td style={{ padding: 4, display: 'flex', gap: 4 }}>{editingCell('efficiency_value', 'num')}{editingCell('efficiency_unit', 'select', EFF_UNITS)}</td>
-                    <td style={{ padding: 4, width: 70 }}>{editingCell('total_quantity', 'num')}</td>
-                    {!isInstalled && <td style={{ padding: 4, width: 70 }}>{editingCell('returned_to_facility', 'toggle')}</td>}
-                    <td style={{ padding: 4 }}>{editingCell('notes')}</td>
-                    <td style={{ padding: 4, whiteSpace: 'nowrap' }}><button onClick={save} style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 12, marginRight: 8 }}>Save</button><button onClick={() => setEdit(null)} style={{ color: 'var(--text-3)', fontSize: 12 }}>Cancel</button></td>
-                  </> : <>
-                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>{r.item_description || '—'}</td>
-                    {isInstalled && <td style={{ padding: '6px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{r.model_code || '—'}</td>}
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--mono)' }}>{r.capacity_value != null ? `${r.capacity_value} ${r.capacity_unit || ''}` : '—'}</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--mono)' }}>{r.efficiency_value != null ? `${r.efficiency_value} ${r.efficiency_unit || ''}` : '—'}</td>
-                    <td style={{ padding: '6px 8px', fontFamily: 'var(--mono)', fontWeight: 700 }}>{r.total_quantity ?? '—'}</td>
-                    {!isInstalled && <td style={{ padding: '6px 8px', fontWeight: 700, color: r.returned_to_facility ? 'var(--ok)' : 'var(--text-3)' }}>{r.returned_to_facility ? 'Yes' : 'No'}</td>}
-                    <td style={{ padding: '6px 8px', color: 'var(--text-3)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.notes || ''}>{r.notes || '—'}</td>
-                    <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{canEdit && <><button title="Edit" onClick={() => startEdit(table, r)} style={{ marginRight: 8 }}>✏</button><button title="Remove" onClick={() => remove(table, r.id)} style={{ color: 'var(--bad)' }}>🗑</button></>}</td>
-                  </>}
-                </tr>
-              )
-            })}
-            {editingHere && edit.id === 'new' && (
-              <tr style={{ borderTop: '1px solid var(--line)', background: '#F8FAFC' }}>
-                <td style={{ padding: '6px 8px', color: 'var(--text-3)' }}>new</td>
-                <td style={{ padding: 4 }}>{editingCell('item_description')}</td>
-                {isInstalled && <td style={{ padding: 4 }}>{editingCell('model_code')}</td>}
-                <td style={{ padding: 4, display: 'flex', gap: 4 }}>{editingCell('capacity_value', 'num')}{editingCell('capacity_unit', 'select', CAP_UNITS)}</td>
-                <td style={{ padding: 4, display: 'flex', gap: 4 }}>{editingCell('efficiency_value', 'num')}{editingCell('efficiency_unit', 'select', EFF_UNITS)}</td>
-                <td style={{ padding: 4, width: 70 }}>{editingCell('total_quantity', 'num')}</td>
-                {!isInstalled && <td style={{ padding: 4, width: 70 }}>{editingCell('returned_to_facility', 'toggle')}</td>}
-                <td style={{ padding: 4 }}>{editingCell('notes')}</td>
-                <td style={{ padding: 4, whiteSpace: 'nowrap' }}><button onClick={save} style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 12, marginRight: 8 }}>Save</button><button onClick={() => setEdit(null)} style={{ color: 'var(--text-3)', fontSize: 12 }}>Cancel</button></td>
-              </tr>
-            )}
-          </tbody>
-        </table></div>
-      </div>
-    )
-  }
+  const th = (t) => <th style={{ padding: '6px 7px', fontWeight: 600, fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{t}</th>
+  const layout = project?.coc_layout
 
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>Items & Replacements</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Items &amp; Replacements</div>
+          {layout && <span title={layout === 'scattered' ? 'Scattered: buildings far apart → per-building COCs' : 'Concatenated: one site → project-wide COCs'} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: '#EFF6FF', cursor: 'help' }}>Layout: {layout === 'scattered' ? 'Scattered' : 'Concatenated'} ⓘ</span>}
+        </div>
         {canEdit && <div style={{ display: 'flex', gap: 8 }}>
           <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={exportCsv}>Export CSV</Btn>
           <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import CSV<input type="file" accept=".csv,.xlsx" onChange={importCsv} style={{ display: 'none' }} /></label>
         </div>}
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Project-level equipment counts per ESM. These totals appear on every COC for the ESM (the COC certifies they were installed across the buildings it covers).</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Each row is a replacement pair: installed (new) ↔ removed (old). Click any cell to edit — changes save automatically.</div>
       {esms.map((e) => {
-        const ins = installed.filter((r) => r.esm_code === e.code)
-        const rem = removed.filter((r) => r.esm_code === e.code)
+        const rows = rowsForEsm(e.code)
         const isOpen = open[e.code] ?? (esms.length <= 2)
         return (
           <div key={e.code} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 12, marginBottom: 10 }}>
             <button onClick={() => setOpen((o) => ({ ...o, [e.code]: !isOpen }))} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', cursor: 'pointer', marginBottom: isOpen ? 10 : 0 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{e.code}</span>
-              <span style={{ fontWeight: 600 }}>{e.name}</span>
-              <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{ins.length} installed · {rem.length} removed · {isOpen ? '▲' : '▼'}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{e.code}</span><span style={{ fontWeight: 600 }}>{e.name}</span>
+              <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{rows.length} pairs/items · {isOpen ? '▲' : '▼'}</span>
             </button>
-            {isOpen && <>{renderTable('installed', e.code, ins)}{renderTable('removed', e.code, rem)}</>}
+            {isOpen && <>
+              {canEdit && <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                <button onClick={() => addPair(e.code)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add Pair</button>
+                <button onClick={() => addStandalone(e.code, 'installed')} style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)' }}>+ Standalone Installed</button>
+                <button onClick={() => addStandalone(e.code, 'removed')} style={{ fontSize: 12, fontWeight: 700, color: 'var(--bad)' }}>+ Standalone Removed</button>
+              </div>}
+              <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
+                <thead><tr style={{ textAlign: 'left' }}>
+                  {th('INSTALLED — DESC')}{th('MODEL')}{th('CAP')}{th('U')}{th('EFF')}{th('U')}{th('QTY')}
+                  {th('↔ NOTE')}
+                  {th('REMOVED — DESC')}{th('CAP')}{th('U')}{th('EFF')}{th('U')}{th('QTY')}{th('RET')}{canEdit && th('')}
+                </tr></thead>
+                <tbody>
+                  {rows.length === 0 && <tr><td colSpan={16} style={{ padding: 10, color: 'var(--text-3)', fontSize: 12 }}>No items yet.</td></tr>}
+                  {rows.map((row) => (
+                    <tr key={row.key} style={{ borderTop: '1px solid var(--line)', background: row.inst && row.rem ? '#fff' : '#FCFCFD' }}>
+                      {/* installed side */}
+                      <td style={{ padding: 2, minWidth: 140 }}>{row.inst ? <Cell value={row.inst.item_description} onSave={(v) => saveI(row.inst.id, { item_description: v || null })} placeholder="Installed item" /> : <span style={{ color: 'var(--text-3)', fontSize: 11, paddingLeft: 6 }}>—</span>}</td>
+                      <td style={{ padding: 2 }}>{row.inst && <Cell value={row.inst.model_code} onSave={(v) => saveI(row.inst.id, { model_code: v || null })} placeholder="Model" />}</td>
+                      <td style={{ padding: 2, width: 60 }}>{row.inst && <Cell value={row.inst.capacity_value} type="num" align="right" onSave={(v) => saveI(row.inst.id, { capacity_value: numOrNull(v) })} />}</td>
+                      <td style={{ padding: 2, width: 60 }}>{row.inst && <Cell value={row.inst.capacity_unit} options={CAP_UNITS} onSave={(v) => saveI(row.inst.id, { capacity_unit: v })} />}</td>
+                      <td style={{ padding: 2, width: 56 }}>{row.inst && <Cell value={row.inst.efficiency_value} type="num" align="right" onSave={(v) => saveI(row.inst.id, { efficiency_value: numOrNull(v) })} />}</td>
+                      <td style={{ padding: 2, width: 64 }}>{row.inst && <Cell value={row.inst.efficiency_unit} options={EFF_UNITS} onSave={(v) => saveI(row.inst.id, { efficiency_unit: v })} />}</td>
+                      <td style={{ padding: 2, width: 50 }}>{row.inst && <Cell value={row.inst.total_quantity} type="num" align="right" onSave={(v) => numGuard('total_quantity', v) && saveI(row.inst.id, { total_quantity: numOrNull(v) })} />}</td>
+                      {/* pair note */}
+                      <td style={{ padding: 2, minWidth: 90, borderLeft: '1px solid var(--line)', borderRight: '1px solid var(--line)' }}>{row.pair && <Cell value={row.pair.notes} onSave={(v) => { bgUpdate('project_item_pairs', row.pair.id, { notes: v || null }).then(refP) }} placeholder="↔" />}</td>
+                      {/* removed side */}
+                      <td style={{ padding: 2, minWidth: 140 }}>{row.rem ? <Cell value={row.rem.item_description} onSave={(v) => saveR(row.rem.id, { item_description: v || null })} placeholder="Removed item" /> : <span style={{ color: 'var(--text-3)', fontSize: 11, paddingLeft: 6 }}>—</span>}</td>
+                      <td style={{ padding: 2, width: 60 }}>{row.rem && <Cell value={row.rem.capacity_value} type="num" align="right" onSave={(v) => saveR(row.rem.id, { capacity_value: numOrNull(v) })} />}</td>
+                      <td style={{ padding: 2, width: 60 }}>{row.rem && <Cell value={row.rem.capacity_unit} options={CAP_UNITS} onSave={(v) => saveR(row.rem.id, { capacity_unit: v })} />}</td>
+                      <td style={{ padding: 2, width: 56 }}>{row.rem && <Cell value={row.rem.efficiency_value} type="num" align="right" onSave={(v) => saveR(row.rem.id, { efficiency_value: numOrNull(v) })} />}</td>
+                      <td style={{ padding: 2, width: 64 }}>{row.rem && <Cell value={row.rem.efficiency_unit} options={EFF_UNITS} onSave={(v) => saveR(row.rem.id, { efficiency_unit: v })} />}</td>
+                      <td style={{ padding: 2, width: 50 }}>{row.rem && <Cell value={row.rem.total_quantity} type="num" align="right" onSave={(v) => numGuard('total_quantity', v) && saveR(row.rem.id, { total_quantity: numOrNull(v) })} />}</td>
+                      <td style={{ padding: 2, width: 50 }}>{row.rem && <Cell value={row.rem.returned_to_facility} type="toggle" onSave={(v) => saveR(row.rem.id, { returned_to_facility: v })} />}</td>
+                      {canEdit && <td style={{ padding: 2, width: 28, textAlign: 'center' }}><button title="Delete" onClick={() => delRow(row)} style={{ color: 'var(--bad)' }}>🗑</button></td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+            </>}
           </div>
         )
       })}
