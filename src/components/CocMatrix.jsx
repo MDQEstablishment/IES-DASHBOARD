@@ -26,7 +26,6 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   const [regenId, setRegenId] = useState(null)
   const [plan, setPlan] = useState(null) // { rows:[{building_ids,esm_codes}] } or null
   const [genBusy, setGenBusy] = useState(false)
-  const bCodeById = Object.fromEntries(rows.map((b) => [b.id, b.code]))
 
   const openDefaults = async () => {
     const { data, error } = await supabase.rpc('default_coc_plan', { p_project_id: projectId })
@@ -57,6 +56,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
 
   const esms = projectEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, label: pe.custom_name || pe.esm.name }))
   const rows = [...buildings].sort((a, b) => (a.code || '').localeCompare(b.code || ''))
+  const bCodeById = Object.fromEntries(rows.map((b) => [b.id, b.code]))
 
   const { rows: cbRows, refetch: rcb } = useLiveQuery('coc_buildings',
     (q) => q.select('coc_id,building_id,coc:project_documents!inner(id,name,revision,status,client_reviewer_name,client_response_date,submitted_at,updated_at,storage_path,project_id,doc_type)').eq('coc.project_id', projectId).eq('coc.doc_type', 'coc'), [projectId])
