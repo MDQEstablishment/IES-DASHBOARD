@@ -4,6 +4,8 @@ import { useBreadcrumb } from '../breadcrumbs'
 import Icon from '../components/Icon'
 import { Avatar, Chip, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import DateInput from '../components/DateInput'
+import { toast } from '../lib/toast'
+import { createInspectionDoc } from '../components/CocWizard'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgUpdate, bgInsert, bgDelete, uploadToBucket } from '../lib/db'
 import { CAN_QA, CAN_INSTALL, labelize } from '../lib/constants'
@@ -43,8 +45,18 @@ export default function BuildingDetail() {
   const activeTab = isInstallItem ? '' : (seg[0] || '')
   const itemId = isInstallItem ? seg[1] : null
 
-  const { rows: bRows, loading } = useLiveQuery('buildings', (q) => q.select('*,project:projects(code,name)').eq('id', bid), [bid])
+  const { rows: bRows, loading } = useLiveQuery('buildings', (q) => q.select('*,project:projects(code,name,region)').eq('id', bid), [bid])
   const b = bRows[0]
+  const { rows: installedItems } = useLiveQuery('project_installed_items', (q) => b?.project_id ? q.select('*').eq('project_id', b.project_id) : q.select('*').limit(0), [b?.project_id])
+  const [wirBusy, setWirBusy] = useState(false)
+  const genWir = async () => {
+    if (!b) return
+    setWirBusy(true)
+    const res = await createInspectionDoc({ kind: 'wir', project: { id: b.project_id, code: b.project?.code, name: b.project?.name, region: b.region || b.project?.region }, esm: null, building: { id: b.id, code: b.code, name: b.name }, installed: installedItems, userId: user.id })
+    setWirBusy(false)
+    if (res?.error) toast('WIR generation failed — ' + (res.error.message || ''), 'err')
+    else toast(`WIR ${res.docNo} generated — see Building Documents`)
+  }
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) =>
     q.select('*,project_esm:project_esms(id,esm:esms(code,name))').eq('building_id', bid).order('sub_type'), [bid])
   const { rows: install } = useLiveQuery('install_log', (q) =>
@@ -95,6 +107,9 @@ export default function BuildingDetail() {
                   <span>Eng: {b.engineer_name || '—'}</span>
                   <span>Contractor: {b.contractor_name || b.contractor || '—'}</span>
                 </div>
+                {['admin', 'pmo', 'projm', 'proje'].includes(role) && (
+                  <button onClick={genWir} disabled={wirBusy} title="Create a Work/Mockup Inspection Form (WIR) PDF" style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 8, padding: '6px 11px', background: '#fff', cursor: 'pointer' }}>{wirBusy ? 'Generating…' : 'Generate WIR PDF'}</button>
+                )}
               </div>
               <div style={{ textAlign: 'right', minWidth: 110 }} title="Weighted progress = installed ÷ planned across building scopes">
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 26, fontWeight: 800 }}>{prog}%</div>
