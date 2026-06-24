@@ -3,30 +3,54 @@ import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket } from '../lib/db'
 import { useAuth } from '../rbac'
 import { Modal, Field, inputStyle, Btn, Empty } from './ui'
 import { toast } from '../lib/toast'
-import { generateCocPdf } from '../lib/cocPdf'
+import { generateDocPdf } from '../lib/docPdf'
 
-// Build the PDF data object + generate + upload + attach storage_path. Shared by
-// the create wizard and the "Regenerate PDF" action.
+// Build the COC PDF data object + generate + upload + attach storage_path. Shared
+// by the create wizard and the "Regenerate PDF" action.
 export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, buildings, esmList, installed, removed, userId }) {
   const selEsm = new Set(esmList.map((e) => e.code))
+  const ins = installed.filter((i) => selEsm.has(i.esm_code))
   const data = {
-    cocNo, revision: revision || 'A', projectName: project?.name, projectCode: project?.code,
-    rfpNo: project?.code, startDate: project?.start_date, endDate: project?.end_date,
-    executingCompany: project?.contractor_name || 'IES', subContractor: '',
-    facility: project?.client, buildingType: '', region: project?.region, city: '',
-    gps: project?.location_lat != null && project?.location_lng != null ? `${project.location_lat}, ${project.location_lng}` : '',
+    docNo: cocNo, revision: revision || 'A', projectName: project?.name,
     buildingIds: buildings.map((b) => b.code).join(', '),
-    esmLabels: esmList.map((e) => `${e.code} ${e.name || ''}`.trim()).join(', '),
-    description: esmList.map((e) => e.name || e.code).join('; '),
-    installed: installed.filter((i) => selEsm.has(i.esm_code)),
-    removed: removed.filter((i) => selEsm.has(i.esm_code)),
+    region: [project?.region, project?.client].filter(Boolean).join(' / '),
+    esmNo: esmList.map((e) => e.code).join('+'), esmName: esmList.map((e) => e.name || '').filter(Boolean).join(', '),
+    brief: `Completion of ${esmList.map((e) => e.name || e.code).join(', ')} across ${buildings.length} building(s).`,
+    totalBoqs: ins.reduce((s, i) => s + (Number(i.total_quantity) || 0), 0),
+    installed: ins, location: [project?.region, project?.client].filter(Boolean).join(' / '),
   }
-  const bytes = await generateCocPdf(data)
+  const bytes = await generateDocPdf('coc', data)
   const file = new File([bytes], `${cocNo}.pdf`, { type: 'application/pdf' })
   const { path, error } = await uploadToBucket('project-docs', file, { userId, prefix: project?.id || project?.code })
   if (error) return { error }
   const { error: upErr } = await bgUpdate('project_documents', docId, { storage_path: path, updated_at: new Date().toISOString() })
   return { error: upErr, path }
+}
+
+// Create a MIR/WIR inspection document (row + PDF + upload). esm = {code,name,id}.
+export async function createInspectionDoc({ kind, project, esm, building, installed, userId }) {
+  const seq = Date.now().toString().slice(-4)
+  const docNo = `${project?.code || 'PRJ'}-${kind.toUpperCase()}-${seq}`
+  const { data, error } = await bgInsert('project_documents', {
+    project_id: project.id, building_id: building?.id || null, esm_id: esm?.id || null,
+    doc_type: kind, name: docNo, revision: 'A', version: 'A', status: 'draft', submitted_by: userId, submitted_at: new Date().toISOString(),
+  })
+  if (error || !data?.[0]) return { error: error || { message: 'insert failed' } }
+  const docId = data[0].id
+  const ins = (installed || []).filter((i) => !esm?.code || i.esm_code === esm.code)
+  const pdfData = {
+    docNo, revision: 'A', projectName: project?.name,
+    esmNo: esm?.code || '', esmName: esm?.name || '',
+    brief: `${kind === 'mir' ? 'Material & equipment inspection' : 'Work / mockup inspection'} for ${esm?.name || esm?.code || ''}${building ? ' at ' + building.code : ''}.`,
+    installed: ins, storageLocation: building?.name || project?.region || '', installationLocation: building?.name || project?.region || '',
+    expectedResubmission: '',
+  }
+  const bytes = await generateDocPdf(kind, pdfData)
+  const file = new File([bytes], `${docNo}.pdf`, { type: 'application/pdf' })
+  const { path, error: upErr } = await uploadToBucket('project-docs', file, { userId, prefix: project.id })
+  if (upErr) return { error: upErr, docId }
+  await bgUpdate('project_documents', docId, { storage_path: path })
+  return { docId, path, docNo }
 }
 
 export default function CocWizard({ projectId, project, onClose, onDone }) {

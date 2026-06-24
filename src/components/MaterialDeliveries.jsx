@@ -4,6 +4,8 @@ import { useAuth } from '../rbac'
 import { Empty, Btn } from './ui'
 import DateInput from './DateInput'
 import { fmtDate } from '../lib/format'
+import { toast } from '../lib/toast'
+import { createInspectionDoc } from './CocWizard'
 
 const DSTATUS = {
   pending: ['Pending', '#64748B', '#F1F5F9'], in_transit: ['In Transit', '#2563EB', '#EFF6FF'],
@@ -23,8 +25,20 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
   const { user, role } = useAuth()
   const canWrite = WRITE_ROLES.includes(role)
   const { rows, refetch } = useLiveQuery('material_deliveries',
-    (q) => q.select('*,building:buildings(code)').eq('project_id', projectId).order('scheduled_date', { ascending: true }), [projectId])
+    (q) => q.select('*,building:buildings(id,code,name),esm:esms(id,code,name)').eq('project_id', projectId).order('scheduled_date', { ascending: true }), [projectId])
+  const { rows: projRows } = useLiveQuery('projects', (q) => q.select('id,code,name,region').eq('id', projectId), [projectId])
+  const { rows: installed } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
   const [add, setAdd] = useState(null) // draft row or null
+  const [mirBusy, setMirBusy] = useState(null)
+  const project = projRows[0]
+
+  const genMir = async (r) => {
+    setMirBusy(r.id)
+    const res = await createInspectionDoc({ kind: 'mir', project, esm: r.esm || null, building: r.building || null, installed, userId: user.id })
+    setMirBusy(null)
+    if (res?.error) toast('MIR generation failed — ' + (res.error.message || ''), 'err')
+    else toast(`MIR ${res.docNo} generated — see Doc Tracker`)
+  }
 
   const startAdd = () => setAdd({ material_name: '', building_id: '', scheduled_date: '', status: 'pending', notes: '' })
   const saveAdd = async () => {
@@ -84,7 +98,10 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                         : <span title={DDESC[r.status] || ''} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span>}
                     </td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)', fontSize: 11.5, maxWidth: 200 }}>{r.notes || '—'}</td>
-                    {canWrite && <td style={{ padding: '9px 8px' }}><button onClick={() => removeRow(r.id)} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button></td>}
+                    {canWrite && <td style={{ padding: '9px 8px', whiteSpace: 'nowrap' }}>
+                      <button onClick={() => genMir(r)} disabled={mirBusy === r.id || !project} title="Create a Material & Equipment Inspection Form PDF" style={{ color: 'var(--accent)', fontSize: 11.5, fontWeight: 700, marginRight: 10 }}>{mirBusy === r.id ? 'Generating…' : 'Generate MIR'}</button>
+                      <button onClick={() => removeRow(r.id)} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
+                    </td>}
                   </tr>
                 )
               })}
