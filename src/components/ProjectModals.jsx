@@ -20,6 +20,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const [f, setF] = useState({
     code: init('code'), name: init('name'), client: init('client'), region: init('region'),
     status: init('status', 'draft'), start_date: init('start_date'), end_date: init('end_date'),
+    coc_layout: init('coc_layout', 'concatenated'),
     total_weeks: init('total_weeks'), pm_id: init('pm_id'), engineer_id: init('engineer_id'),
     location_address: init('location_address'), location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name'), contractor_phone: init('contractor_phone'), contractor_email: init('contractor_email'),
@@ -37,6 +38,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     const payload = {
       code: f.code.trim(), name: f.name.trim(), client: f.client || null, region: f.region || null,
       status: f.status, start_date: f.start_date || null, end_date: f.end_date || null,
+      coc_layout: f.coc_layout || 'concatenated',
       total_weeks: num(f.total_weeks), pm_id: f.pm_id || null, engineer_id: f.engineer_id || null,
       location_address: f.location_address || null, location_lat: num(f.location_lat), location_lng: num(f.location_lng),
       contractor_name: f.contractor_name || null, contractor_phone: f.contractor_phone || null, contractor_email: f.contractor_email || null,
@@ -88,6 +90,17 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Ministry of Interior" /></Field>
         <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
       </Row>
+      <Field label="COC Layout">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
+            <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 8, padding: '8px 10px', background: f.coc_layout === v ? '#EFF6FF' : '#fff' }}>
+              <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
+              <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
+            </label>
+          ))}
+        </div>
+      </Field>
+      {mode === 'edit' && <EsmBundles projectId={project.id} />}
       <Row>
         <Field label="Start date"><DateInput style={inputStyle} value={f.start_date || ''} onChange={(e) => set('start_date', e.target.value)} /></Field>
         <Field label="End date"><DateInput style={inputStyle} value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
@@ -413,4 +426,26 @@ export function ProjectImportModal({ onClose }) {
 }
 
 function Row({ children }) { return <div style={{ display: 'grid', gridTemplateColumns: `repeat(${children.length || 2}, 1fr)`, gap: 12 }}>{children}</div> }
+
+// ESM bundle-key editor (Edit Project). ESMs sharing a key group onto one COC.
+function EsmBundles({ projectId }) {
+  const { rows } = useLiveQuery('project_esms', (q) => q.select('id,coc_bundle_key,ordinal,esm:esms(code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
+  if (!rows.length) return null
+  const suggest = (pe) => pe.coc_bundle_key ?? (/light/i.test(pe.esm?.name || '') ? 'lighting' : '')
+  return (
+    <div style={{ marginTop: 4 }}>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 6px' }}>ESM BUNDLES</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8 }}>ESMs sharing a bundle key go on one COC (e.g. ESM1+ESM2 = “lighting”). Empty = standalone.</div>
+      {rows.map((pe) => (
+        <div key={pe.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)', width: 48 }}>{pe.esm?.code}</span>
+          <span style={{ flex: 1, fontSize: 12.5 }}>{pe.esm?.name}</span>
+          <input lang="en" defaultValue={suggest(pe)} placeholder="bundle key"
+            onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (pe.coc_bundle_key || null)) bgUpdate('project_esms', pe.id, { coc_bundle_key: v }) }}
+            style={{ ...inputStyle, width: 140, padding: '6px 8px' }} />
+        </div>
+      ))}
+    </div>
+  )
+}
 function statusLabel(s) { return ({ active: 'Active', draft: 'Draft', on_hold: 'On-Hold', closed: 'Closed', deleted: 'Deleted' })[s] || s }

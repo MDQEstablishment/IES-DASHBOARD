@@ -64,8 +64,10 @@ export default function CocWizard({ projectId, project, onClose, onDone }) {
 
   const { rows: bRows } = useLiveQuery('buildings', (q) => q.select('id,code,name,responsible_person_name,status_override').eq('project_id', projectId).order('code'), [projectId])
   const buildings = useMemo(() => bRows.filter((b) => b.status_override !== 'archived'), [bRows])
-  const { rows: pEsms } = useLiveQuery('project_esms', (q) => q.select('custom_name,ordinal,esm:esms(id,code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
-  const esms = useMemo(() => pEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, name: pe.custom_name || pe.esm.name })), [pEsms])
+  const { rows: pEsms } = useLiveQuery('project_esms', (q) => q.select('custom_name,ordinal,coc_bundle_key,esm:esms(id,code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
+  const esms = useMemo(() => pEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, name: pe.custom_name || pe.esm.name, bundle: pe.coc_bundle_key })), [pEsms])
+  // bundle key -> all esm codes in that bundle
+  const bundles = useMemo(() => { const m = {}; esms.forEach((e) => { if (e.bundle) (m[e.bundle] = m[e.bundle] || []).push(e.code) }); return m }, [esms])
   const { rows: installed } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
   const { rows: removed } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
   const { rows: cocRows, refetch } = useLiveQuery('project_documents', (q) => q.select('id').eq('project_id', projectId).eq('doc_type', 'coc'), [projectId])
@@ -88,6 +90,9 @@ export default function CocWizard({ projectId, project, onClose, onDone }) {
 
   const generate = async () => {
     if (selBuildings.length === 0 || selEsmList.length === 0) { toast('Select at least one building and one ESM', 'err'); return }
+    // bundle-break warning: a configured bundle is only partially selected
+    const broken = Object.entries(bundles).filter(([, codes]) => { const sel = codes.filter((c) => selEsmCodes.has(c)).length; return sel > 0 && sel < codes.length }).map(([k]) => k)
+    if (broken.length && !window.confirm(`This breaks the ${broken.join(', ')} bundle defined for this project (those ESMs are normally certified together). Continue anyway?`)) return
     setBusy(true)
     const { data, error } = await bgInsert('project_documents', {
       project_id: projectId, doc_type: 'coc', name: cocNo, revision: 'A', version: 'A', status: 'draft',
