@@ -7,12 +7,12 @@ import { generateDocPdf } from '../lib/docPdf'
 
 // Build the COC PDF data object + generate + upload + attach storage_path. Shared
 // by the create wizard and the "Regenerate PDF" action.
-export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, buildings, esmList, installed, removed, userId }) {
+export async function buildAndAttachCocPdf({ docId, cocNo, revision, referenceNo, project, buildings, esmList, installed, removed, userId }) {
   const selEsm = new Set(esmList.map((e) => e.code))
   const ins = installed.filter((i) => selEsm.has(i.esm_code))
   const b0 = buildings[0] || {}
   const data = {
-    docNo: cocNo, revision: revision || 'A', projectName: project?.name, projectCode: project?.code,
+    docNo: cocNo, referenceNo: referenceNo || cocNo, revision: revision || 'A', projectName: project?.name, projectCode: project?.code,
     clientName: project?.client || project?.beneficiary_entity || 'Tarshid', date: new Date().toISOString().slice(0, 10),
     buildingIds: buildings.map((b) => b.code).join(', '),
     buildingList: buildings.map((b) => `${b.code}${b.name ? ' - ' + b.name : ''}`),
@@ -36,41 +36,54 @@ export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, bu
   return { error: upErr, path }
 }
 
-// Create an MIR/WIR submittal: persists a project_documents row (so it shows in
-// the Doc Tracker + Project Documents), generates the Tarshid PDF with prefilled
-// fields and embedded photos, uploads it and links the file. status defaults to
-// 'submitted' so the engineer only has to add a wet signature and send.
-export async function createInspectionDoc({ kind, project, esm, building, installed, userId, generatedBy, material, poRef, photoFiles, extra = {}, status = 'submitted' }) {
-  const seq = Date.now().toString().slice(-4)
-  const docNo = `${project?.code || 'PRJ'}-${kind.toUpperCase()}-${seq}`
+// ── MIR/WIR generation: build-for-preview, then commit-on-download ──────────
+export const slugify = (s) => String(s || '').trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'document'
+// {PROJECT_CODE}_{KIND}-{YYYY-SEQ}_{slug}.pdf  (KIND/CODE already in refNo prefix)
+export function smartFilename({ projectCode, kind, referenceNo, title }) {
+  const tail = String(referenceNo || '').split('-').slice(-2).join('-') || Date.now().toString().slice(-4)
+  return `${projectCode || 'PRJ'}_${kind.toUpperCase()}-${tail}_${slugify(title)}.pdf`
+}
+
+// Assemble the PDF data object from project defaults + the modal's items/photos.
+function inspectionPdfData({ kind, project, esm, building, items, photoFiles, title, generatedBy, referenceNo }) {
+  return {
+    referenceNo, projectName: project?.name, projectCode: project?.code,
+    clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
+    generatedBy: generatedBy || '', region: project?.region || '',
+    rev: project?.doc_rev || '00', revDate: new Date().toISOString().slice(0, 10),
+    projectRef: project?.project_reference_no || '',
+    beneficiary: project?.beneficiary_entity || project?.client || '',
+    contractor: project?.contractor_name || '',
+    esmNo: esm?.code || '', esmName: title || esm?.name || '',
+    items: items || [],
+    storageLocation: building?.name || project?.region || '', installationLocation: building?.name || project?.region || '',
+    attachmentsChecked: (photoFiles && photoFiles.length) ? ['Pictures'] : [],
+    photoFiles: photoFiles || [],
+  }
+}
+
+// Build the PDF bytes for preview (no DB writes, nothing persisted).
+export async function buildInspectionPdf(opts) {
+  return await generateDocPdf(opts.kind, inspectionPdfData(opts))
+}
+
+// Commit: persist the project_documents row (reference_no explicit so it matches
+// the previewed PDF), upload the bytes under a traceable path, link storage_path.
+export async function commitInspectionDoc({ kind, project, esm, building, userId, referenceNo, title, bytes, status = 'submitted' }) {
   const { data, error } = await bgInsert('project_documents', {
     project_id: project.id, building_id: building?.id || null, esm_id: esm?.id || null,
-    doc_type: kind, name: docNo, revision: 'A', version: 'A', status, submitted_by: userId, submitted_at: new Date().toISOString(),
+    doc_type: kind, name: title || referenceNo, reference_no: referenceNo || null,
+    revision: 'A', version: 'A', status, submitted_by: userId, submitted_at: new Date().toISOString(),
   })
   if (error || !data?.[0]) return { error: error || { message: 'insert failed' } }
   const docId = data[0].id
-  const ins = (installed || []).filter((i) => !esm?.code || i.esm_code === esm.code)
-  const pdfData = {
-    docNo, revision: 'A', projectName: project?.name, projectCode: project?.code,
-    clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
-    generatedBy: generatedBy || '', poRef: poRef || '', region: project?.region || '',
-    // official-template fields (project columns where present, else modal overrides)
-    rev: extra.rev || project?.doc_rev || '00', revDate: extra.revDate || new Date().toISOString().slice(0, 10),
-    projectRef: extra.projectRef || project?.project_reference_no || '',
-    beneficiary: extra.beneficiary || project?.beneficiary_entity || project?.client || '',
-    contractor: extra.contractor || project?.contractor_name || '',
-    esmNo: esm?.code || '', esmName: esm?.name || '',
-    brief: material || `${kind === 'mir' ? 'Material & equipment inspection' : 'Work / mockup inspection'} for ${esm?.name || esm?.code || ''}${building ? ' at ' + building.code : ''}.`,
-    installed: ins, storageLocation: building?.name || project?.region || '', installationLocation: building?.name || project?.region || '',
-    attachmentsChecked: (photoFiles && photoFiles.length) ? ['Pictures'] : [],
-    photoFiles: photoFiles || [], expectedResubmission: '',
-  }
-  const bytes = await generateDocPdf(kind, pdfData)
-  const file = new File([bytes], `${docNo}.pdf`, { type: 'application/pdf' })
-  const { path, error: upErr } = await uploadToBucket('project-docs', file, { userId, prefix: project.id })
+  const refNo = data[0].reference_no || referenceNo
+  const filename = smartFilename({ projectCode: project?.code, kind, referenceNo: refNo, title })
+  const file = new File([bytes], filename, { type: 'application/pdf' })
+  const { path, error: upErr } = await uploadToBucket('project-docs', file, { userId, prefix: project.id, label: refNo })
   if (upErr) return { error: upErr, docId }
   await bgUpdate('project_documents', docId, { storage_path: path })
-  return { docId, path, docNo }
+  return { docId, path, filename, referenceNo: refNo }
 }
 
 export default function CocWizard({ projectId, project, onClose, onDone }) {
@@ -120,9 +133,10 @@ export default function CocWizard({ projectId, project, onClose, onDone }) {
     })
     if (error || !data?.[0]) { setBusy(false); return }
     const docId = data[0].id
+    const refNo = data[0].reference_no || cocNo
     await bgInsert('coc_buildings', selBuildings.map((b) => ({ coc_id: docId, building_id: b.id })))
     await bgInsert('coc_esms', selEsmList.map((e) => ({ coc_id: docId, esm_code: e.code })))
-    const { error: pErr } = await buildAndAttachCocPdf({ docId, cocNo, revision: 'A', project, buildings: selBuildings, esmList: selEsmList, installed, removed, userId: user.id })
+    const { error: pErr } = await buildAndAttachCocPdf({ docId, cocNo, referenceNo: refNo, revision: 'A', project, buildings: selBuildings, esmList: selEsmList, installed, removed, userId: user.id })
     setBusy(false)
     if (pErr) { toast('COC created, but PDF generation failed — ' + (pErr.message || ''), 'err') }
     else toast(`COC ${cocNo} created`)

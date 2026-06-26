@@ -44,9 +44,8 @@ export default function BuildingDetail() {
   const activeTab = isInstallItem ? '' : (seg[0] || '')
   const itemId = isInstallItem ? seg[1] : null
 
-  const { rows: bRows, loading } = useLiveQuery('buildings', (q) => q.select('*,project:projects(code,name,region)').eq('id', bid), [bid])
+  const { rows: bRows, loading } = useLiveQuery('buildings', (q) => q.select('*,project:projects(id,code,name,region,client,project_reference_no,beneficiary_entity,contractor_name,doc_rev)').eq('id', bid), [bid])
   const b = bRows[0]
-  const { rows: installedItems } = useLiveQuery('project_installed_items', (q) => b?.project_id ? q.select('*').eq('project_id', b.project_id) : q.select('*').limit(0), [b?.project_id])
   const [wirOpen, setWirOpen] = useState(false)
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) =>
     q.select('*,project_esm:project_esms(id,esm:esms(code,name))').eq('building_id', bid).order('sub_type'), [bid])
@@ -292,10 +291,8 @@ export default function BuildingDetail() {
 
       {addOpen && <InstallModal bid={bid} scopes={scopes} rooms={rooms} esmOf={esmOfScope} user={user} onClose={() => setAddOpen(false)} />}
       {wirOpen && b && (
-        <InspectionFormModal kind="wir"
-          project={{ id: b.project_id, code: b.project?.code, name: b.project?.name, region: b.region || b.project?.region, client: b.project?.client }}
-          esm={null} building={{ id: b.id, code: b.code, name: b.name }} installed={installedItems}
-          material={`Work / mockup inspection at ${b.code}${b.name ? ' - ' + b.name : ''}`}
+        <InspectionFormModal kind="wir" project={b.project ? { ...b.project, region: b.region || b.project.region } : { id: b.project_id, code: b.project?.code, name: b.project?.name }}
+          esm={null} building={{ id: b.id, code: b.code, name: b.name }}
           onClose={() => setWirOpen(false)} />
       )}
     </div>

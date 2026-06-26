@@ -87,7 +87,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   // COC documents drive status — its realtime updates the KPIs the moment a COC
   // is approved (the junction tables don't change on a status edit).
   const { rows: cocDocs, refetch: rcd } = useLiveQuery('project_documents',
-    (q) => q.select('id,name,revision,status,client_reviewer_name,client_response_date,submitted_at,updated_at,storage_path').eq('project_id', projectId).eq('doc_type', 'coc'), [projectId])
+    (q) => q.select('id,name,reference_no,revision,status,client_reviewer_name,client_response_date,submitted_at,updated_at,storage_path').eq('project_id', projectId).eq('doc_type', 'coc'), [projectId])
   const { rows: installed } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
   const { rows: removed } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
 
@@ -122,7 +122,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
     setRegenId(c.id)
     const coveredB = rows.filter((b) => c.buildings.has(b.id))
     const coveredE = esms.filter((e) => c.esms.has(e.code))
-    const { error } = await buildAndAttachCocPdf({ docId: c.id, cocNo: c.name, revision: c.revision, project, buildings: coveredB, esmList: coveredE, installed, removed, userId: user.id })
+    const { error } = await buildAndAttachCocPdf({ docId: c.id, cocNo: c.name, referenceNo: c.reference_no, revision: c.revision, project, buildings: coveredB, esmList: coveredE, installed, removed, userId: user.id })
     setRegenId(null)
     if (error) toast('Regeneration failed — ' + (error.message || ''), 'err'); else { toast(`${c.name} PDF regenerated`); refresh() }
   }
