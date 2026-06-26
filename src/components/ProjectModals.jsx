@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import DateInput from './DateInput'
@@ -340,9 +340,13 @@ export function ProjectImportModal({ onClose }) {
   const [parsed, setParsed] = useState(null) // { project, buildings, scopes, materials }
   const [errors, setErrors] = useState([])
   const [importErr, setImportErr] = useState('') // server-side failure surfaced inline
+  const [fileName, setFileName] = useState('') // selected file (drives Confirm gate + label)
+  const [dlState, setDlState] = useState('idle') // idle | busy | done — download feedback
   const [busy, setBusy] = useState(false)
+  const fileRef = useRef(null)
 
   const downloadTemplate = async () => {
+    setDlState('busy')
     // prefer the app-bundled template (versioned with the deploy) then bucket fallback
     for (const url of [TEMPLATE_STATIC_URL, TEMPLATE_BUCKET_URL]) {
       try {
@@ -354,14 +358,18 @@ export function ProjectImportModal({ onClose }) {
         a.download = 'IES-Project-Template.xlsx'
         document.body.appendChild(a); a.click(); a.remove()
         URL.revokeObjectURL(a.href)
+        setDlState('done')
+        setTimeout(() => setDlState('idle'), 3000)
         return
       } catch { /* try next source */ }
     }
+    setDlState('idle')
     toast("Couldn't fetch the template — check your connection", 'err')
   }
 
   const onFile = async (e) => {
     const file = e.target.files?.[0]; if (!file) return
+    setFileName(file.name)
     setErrors([]); setParsed(null); setImportErr('')
     const wb = read(await file.arrayBuffer(), { cellDates: true })
     const pr = sheetRows(wb, 'Project')[0] || null
@@ -450,7 +458,7 @@ export function ProjectImportModal({ onClose }) {
       toast(`Import failed — ${msg}`, 'err')
       return
     }
-    toast(`Imported: 1 project, ${data.buildings} buildings, ${data.scopes} scopes, ${data.materials} materials`)
+    toast(`✓ Project ${data.project_code || s(p.code)} created — ${data.buildings} buildings, ${data.scopes} scopes, ${data.materials} materials`)
     onClose()
     if (data.project_id) navigate(`/projects/${data.project_id}`)
   }
@@ -459,11 +467,22 @@ export function ProjectImportModal({ onClose }) {
 
   return (
     <Modal open width={620} title="Import a project from Excel" onClose={onClose}
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={doImport} disabled={!parsed?.project || !!errors.length || busy}>{busy ? 'Importing…' : 'Confirm import'}</Btn></>}>
+      footer={<><Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={doImport} disabled={!fileName || !parsed?.project || !!errors.length || busy}
+          title={!fileName ? 'Upload a filled template first' : undefined}>{busy ? 'Importing…' : 'Confirm import'}</Btn></>}>
       <div style={{ fontSize: 13, marginBottom: 12 }}>Step 1 — download the template. It has 5 sheets (Instructions, Project, Buildings, Building Scopes, Materials) with colors and per-field notes. Fill them, delete the example rows, then upload.</div>
-      <Btn icon="upload" onClick={downloadTemplate} style={{ marginBottom: 14 }}>Download template (.xlsx)</Btn>
+      <Btn icon={dlState === 'done' ? 'check' : 'upload'} onClick={downloadTemplate} disabled={dlState === 'busy'} style={{ marginBottom: dlState === 'done' ? 6 : 14 }}>
+        {dlState === 'busy' ? 'Downloading…' : dlState === 'done' ? 'Downloaded ✓' : 'Download template (.xlsx)'}
+      </Btn>
+      {dlState === 'done' && <div style={{ fontSize: 12, color: '#047857', marginBottom: 12 }}>Downloaded ✓ — fill it and upload below.</div>}
       <Field label="Step 2 — upload the filled template">
-        <input lang="en" type="file" accept=".xlsx,.xls" onChange={onFile} style={{ fontSize: 13 }} />
+        <input ref={fileRef} lang="en" type="file" accept=".xlsx,.xls" onChange={onFile} style={{ display: 'none' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Btn icon="upload" onClick={() => fileRef.current?.click()}>{fileName ? 'Change file' : 'Choose Excel file'}</Btn>
+          <span style={{ fontSize: 12.5, color: fileName ? 'var(--text)' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={fileName}>
+            {fileName || 'No file chosen'}
+          </span>
+        </div>
       </Field>
       {errors.length > 0 && (
         <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12, color: '#B91C1C', marginTop: 8 }}>

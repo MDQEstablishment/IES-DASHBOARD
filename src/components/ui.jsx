@@ -95,7 +95,10 @@ export function Btn({ variant = 'secondary', icon, children, style, ...rest }) {
     danger: { background: 'var(--bad)', color: '#fff' },
     ghost: { background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--line)' },
   }
-  return <button className="ies-hover" style={{ ...base, ...variants[variant], ...style }} {...rest}>{icon && <Icon name={icon} size={15} />}{children}</button>
+  // Disabled buttons must LOOK disabled — a blue-but-inert primary button reads as
+  // clickable and trips up users (Sprint 8B #11).
+  const disabledStyle = rest.disabled ? { opacity: 0.45, cursor: 'not-allowed' } : null
+  return <button className="ies-hover" style={{ ...base, ...variants[variant], ...style, ...disabledStyle }} {...rest}>{icon && <Icon name={icon} size={15} />}{children}</button>
 }
 
 export function Modal({ open, title, onClose, children, footer, width = 520 }) {
