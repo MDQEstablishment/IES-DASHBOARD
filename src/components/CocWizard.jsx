@@ -11,12 +11,15 @@ export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, bu
   const selEsm = new Set(esmList.map((e) => e.code))
   const ins = installed.filter((i) => selEsm.has(i.esm_code))
   const data = {
-    docNo: cocNo, revision: revision || 'A', projectName: project?.name,
+    docNo: cocNo, revision: revision || 'A', projectName: project?.name, projectCode: project?.code,
+    clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
     buildingIds: buildings.map((b) => b.code).join(', '),
+    buildingList: buildings.map((b) => `${b.code}${b.name ? ' - ' + b.name : ''}`),
     region: [project?.region, project?.client].filter(Boolean).join(' / '),
     esmNo: esmList.map((e) => e.code).join('+'), esmName: esmList.map((e) => e.name || '').filter(Boolean).join(', '),
     brief: `Completion of ${esmList.map((e) => e.name || e.code).join(', ')} across ${buildings.length} building(s).`,
     totalBoqs: ins.reduce((s, i) => s + (Number(i.total_quantity) || 0), 0),
+    attachmentsChecked: ['Approved MIR', 'Approved WIR', 'BOQ Reference'],
     installed: ins, location: [project?.region, project?.client].filter(Boolean).join(' / '),
   }
   const bytes = await generateDocPdf('coc', data)
@@ -27,23 +30,29 @@ export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, bu
   return { error: upErr, path }
 }
 
-// Create a MIR/WIR inspection document (row + PDF + upload). esm = {code,name,id}.
-export async function createInspectionDoc({ kind, project, esm, building, installed, userId }) {
+// Create an MIR/WIR submittal: persists a project_documents row (so it shows in
+// the Doc Tracker + Project Documents), generates the Tarshid PDF with prefilled
+// fields and embedded photos, uploads it and links the file. status defaults to
+// 'submitted' so the engineer only has to add a wet signature and send.
+export async function createInspectionDoc({ kind, project, esm, building, installed, userId, generatedBy, material, poRef, photoFiles, status = 'submitted' }) {
   const seq = Date.now().toString().slice(-4)
   const docNo = `${project?.code || 'PRJ'}-${kind.toUpperCase()}-${seq}`
   const { data, error } = await bgInsert('project_documents', {
     project_id: project.id, building_id: building?.id || null, esm_id: esm?.id || null,
-    doc_type: kind, name: docNo, revision: 'A', version: 'A', status: 'draft', submitted_by: userId, submitted_at: new Date().toISOString(),
+    doc_type: kind, name: docNo, revision: 'A', version: 'A', status, submitted_by: userId, submitted_at: new Date().toISOString(),
   })
   if (error || !data?.[0]) return { error: error || { message: 'insert failed' } }
   const docId = data[0].id
   const ins = (installed || []).filter((i) => !esm?.code || i.esm_code === esm.code)
   const pdfData = {
-    docNo, revision: 'A', projectName: project?.name,
+    docNo, revision: 'A', projectName: project?.name, projectCode: project?.code,
+    clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
+    generatedBy: generatedBy || '', poRef: poRef || '', region: project?.region || '',
     esmNo: esm?.code || '', esmName: esm?.name || '',
-    brief: `${kind === 'mir' ? 'Material & equipment inspection' : 'Work / mockup inspection'} for ${esm?.name || esm?.code || ''}${building ? ' at ' + building.code : ''}.`,
+    brief: material || `${kind === 'mir' ? 'Material & equipment inspection' : 'Work / mockup inspection'} for ${esm?.name || esm?.code || ''}${building ? ' at ' + building.code : ''}.`,
     installed: ins, storageLocation: building?.name || project?.region || '', installationLocation: building?.name || project?.region || '',
-    expectedResubmission: '',
+    attachmentsChecked: (photoFiles && photoFiles.length) ? ['Photos'] : [],
+    photoFiles: photoFiles || [], expectedResubmission: '',
   }
   const bytes = await generateDocPdf(kind, pdfData)
   const file = new File([bytes], `${docNo}.pdf`, { type: 'application/pdf' })
