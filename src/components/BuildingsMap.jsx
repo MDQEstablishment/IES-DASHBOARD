@@ -1,7 +1,22 @@
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { useEffect } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { statusMeta } from '../lib/constants'
+
+// Fit the viewport to ALL building markers. A fixed zoom rendered every building
+// in a tight tender area (e.g. 5 sites within ~10 km) as one overlapping pin;
+// fitBounds spreads them so each numbered marker is distinct.
+function FitToMarkers({ pts }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!pts.length) return
+    if (pts.length === 1) { map.setView([Number(pts[0].location_lat), Number(pts[0].location_lng)], 14); return }
+    const bounds = L.latLngBounds(pts.map((b) => [Number(b.location_lat), Number(b.location_lng)]))
+    map.fitBounds(bounds, { padding: [44, 44], maxZoom: 15 })
+  }, [pts, map])
+  return null
+}
 
 // Real OpenStreetMap building markers (Phase 4). Numbered pin via divIcon to
 // avoid Leaflet's bundler-broken default marker images. Popup shows building
@@ -32,6 +47,7 @@ export default function BuildingsMap({ buildings = [] }) {
   return (
     <MapContainer center={center} zoom={pts.length > 1 ? 6 : 12} scrollWheelZoom={false}
       style={{ height: 360, width: '100%', borderRadius: 12, border: '1px solid var(--line)' }}>
+      <FitToMarkers pts={pts} />
       <TileLayer attribution='&copy; OpenStreetMap contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {pts.map((b, i) => {

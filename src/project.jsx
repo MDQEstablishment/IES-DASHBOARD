@@ -9,7 +9,7 @@ export function ProjectProvider({ children }) {
   const [projectId, setProjectId] = useState(() => localStorage.getItem('ies.project') || 'ALL')
 
   useEffect(() => {
-    supabase.from('projects').select('id,code,name,status').order('code')
+    supabase.from('projects').select('id,code,name,status').is('deleted_at', null).order('code')
       .then(({ data }) => setProjects(data || []))
   }, [])
 

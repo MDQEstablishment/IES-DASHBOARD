@@ -52,7 +52,7 @@ export default function ProjectDetail() {
   const canManage = can(role, MANAGERS) || role === 'admin'
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
-    q.select('*,pm:profiles!projects_pm_id_fkey(full_name),engineer:profiles!projects_engineer_id_fkey(full_name)').eq('id', id), [id])
+    q.select('*,pm:profiles!projects_pm_id_fkey(full_name),engineer:profiles!projects_engineer_id_fkey(full_name)').eq('id', id).is('deleted_at', null), [id])
   const project = projects[0]
   useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])

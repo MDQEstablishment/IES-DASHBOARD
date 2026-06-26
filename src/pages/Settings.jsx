@@ -42,7 +42,7 @@ export default function Settings() {
   const nameById = Object.fromEntries(people.map((p) => [p.id, p.full_name]))
 
   // "Currently assigned to" — project codes each user is PM/engineer for (1.7)
-  const { rows: assignProjects } = useLiveQuery('projects', (q) => q.select('code,pm_id,engineer_id,status').neq('status', 'deleted'))
+  const { rows: assignProjects } = useLiveQuery('projects', (q) => q.select('code,pm_id,engineer_id,status').neq('status', 'deleted').is('deleted_at', null))
   const assignedByUser = {}
   assignProjects.forEach((p) => {
     if (p.pm_id) (assignedByUser[p.pm_id] = assignedByUser[p.pm_id] || []).push(`${p.code} (PM)`)
