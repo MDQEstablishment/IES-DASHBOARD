@@ -137,7 +137,7 @@ async function build() {
     ['Operating hours', 'Buildings "operating_hours" = annual operating hours agreed with the client (per building, since it can vary by contract).'],
     ['Arabic source names', 'Keep all visible fields in English. If you must retain the original Arabic site name from the tender, put it in the Buildings "arabic_name" column — stored as a data identifier only and shown as a small grey subtitle.'],
     ['Language', 'Enter everything in English only — no Arabic text or numerals anywhere (the arabic_name column is the only sanctioned exception).'],
-    ['Template version', 'v2 (Sprint 8B) — Project doc-default columns, Buildings engineer + arabic_name, and the Items sheet.'],
+    ['Template version', 'v3 (Sprint 8C) — colour-coded header sections, standalone-COC default + coc_bundle_key, Building Info columns (type / electrical / responsible person / operating hours), and pm_name/engineer_name display overrides.'],
   ]
   let r = 2
   for (const [k, v] of lines) {
