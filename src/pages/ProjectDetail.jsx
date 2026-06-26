@@ -12,7 +12,7 @@ import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../com
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
-import InspectionFormModal from '../components/InspectionFormModal'
+import MaterialDeliveries from '../components/MaterialDeliveries'
 import CocMatrix from '../components/CocMatrix'
 import ProjectItems from '../components/ProjectItems'
 
@@ -29,6 +29,7 @@ const TABS = [
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
   ['items', 'Items & Replacements'],
+  ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
   ['coc', 'COC Matrix'],
   ['map', 'Map'],
@@ -76,7 +77,6 @@ export default function ProjectDetail() {
     ? pdocs.filter((d) => d.doc_type === 'coc' && cocIdsByEsm[row.code]?.has(d.id))
     : pdocs.filter((d) => d.esm_id === row.esmId && d.doc_type === k)
   const [uploadReq, setUploadReq] = useState(null)
-  const [mirOpen, setMirOpen] = useState(false)
   const [drill, setDrill] = useState(null) // { esmId, esmCode, docType } for multi-kind drilldown
   const cocByB = {}
   pdocs.forEach((d) => { if (d.doc_type === 'coc' && d.building_id && !cocByB[d.building_id]) cocByB[d.building_id] = d })
@@ -378,16 +378,16 @@ export default function ProjectDetail() {
       {/* ITEMS & REPLACEMENTS tab */}
       {tab === 'items' && <ProjectItems projectId={id} project={project} />}
 
+      {/* DELIVERIES tab (Generate MIR lives here) */}
+      {tab === 'deliveries' && <MaterialDeliveries projectId={id} buildings={buildings} />}
+
       {/* DOC TRACKER tab */}
       {tab === 'docs' && (
         <>
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>ESM Documentation Tracker</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {avgDaysCourt != null && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>Avg Days in Client Court: <strong style={{ color: avgDaysCourt > 14 ? 'var(--bad)' : 'var(--text)' }}>{avgDaysCourt}d</strong></div>}
-              {canManage && <Btn icon="plus" variant="primary" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setMirOpen(true)}>Generate MIR</Btn>}
-            </div>
+            {avgDaysCourt != null && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>Avg Days in Client Court: <strong style={{ color: avgDaysCourt > 14 ? 'var(--bad)' : 'var(--text)' }}>{avgDaysCourt}d</strong></div>}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', margin: '4px 0 12px' }}>Contractor submittals tracked through the client’s review. Single-doc kinds show a status pill; per-building/per-delivery kinds (MIR, WIR, COC) show submitted/expected.{canManage && ' Click a cell to upload or drill in.'}</div>
           {docRows.length === 0 ? (
@@ -445,7 +445,6 @@ export default function ProjectDetail() {
           )}
         </div>
         <ProjectDocuments projectId={id} uploadRequest={uploadReq} onChanged={refetchDocs} />
-        {mirOpen && <InspectionFormModal kind="mir" project={project} esm={null} building={null} onClose={() => setMirOpen(false)} onDone={refetchDocs} />}
         </>
       )}
 
