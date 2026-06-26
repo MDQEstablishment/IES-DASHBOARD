@@ -34,12 +34,16 @@ export default function ProjectItems({ projectId, project }) {
   const { rows: pEsms } = useLiveQuery('project_esms', (q) => q.select('custom_name,ordinal,esm:esms(code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
   const esms = pEsms.filter((pe) => pe.esm).map((pe) => ({ code: pe.esm.code, name: pe.custom_name || pe.esm.name }))
   const [open, setOpen] = useState({})
+  const [importErrors, setImportErrors] = useState([])
   const refreshAll = () => { refI(); refR(); refP() }
 
   const insById = Object.fromEntries(installed.map((r) => [r.id, r]))
   const remById = Object.fromEntries(removed.map((r) => [r.id, r]))
   const pairedI = new Set(pairs.map((p) => p.installed_item_id).filter(Boolean))
   const pairedR = new Set(pairs.map((p) => p.removed_item_id).filter(Boolean))
+  // Orphans = items without a pair. EPC rule: a NEW (installed) item must always
+  // be paired with an OLD (removed) one — so any unpaired item is flagged.
+  const orphanCount = installed.filter((r) => !pairedI.has(r.id)).length + removed.filter((r) => !pairedR.has(r.id)).length
 
   const saveI = async (id, patch) => { const { error } = await bgUpdate('project_installed_items', id, patch); if (!error) refI() }
   const saveR = async (id, patch) => { const { error } = await bgUpdate('project_removed_items', id, patch); if (!error) refR() }
@@ -51,9 +55,16 @@ export default function ProjectItems({ projectId, project }) {
     if (di?.[0] && dr?.[0]) await bgInsert('project_item_pairs', { project_id: projectId, esm_code: esm, installed_item_id: di[0].id, removed_item_id: dr[0].id })
     refreshAll()
   }
-  const addStandalone = async (esm, side) => {
-    if (side === 'installed') await bgInsert('project_installed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1 })
-    else await bgInsert('project_removed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1, returned_to_facility: true })
+  // Fix an existing orphan by creating its missing side and linking the pair.
+  const pairOrphan = async (row) => {
+    const esm = row.inst?.esm_code || row.rem?.esm_code || null
+    if (row.inst && !row.rem) {
+      const { data: dr } = await bgInsert('project_removed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1, returned_to_facility: true })
+      if (dr?.[0]) await bgInsert('project_item_pairs', { project_id: projectId, esm_code: esm, installed_item_id: row.inst.id, removed_item_id: dr[0].id })
+    } else if (row.rem && !row.inst) {
+      const { data: di } = await bgInsert('project_installed_items', { project_id: projectId, esm_code: esm, capacity_unit: 'kBTU', efficiency_unit: 'SEER', total_quantity: 1 })
+      if (di?.[0]) await bgInsert('project_item_pairs', { project_id: projectId, esm_code: esm, installed_item_id: di[0].id, removed_item_id: row.rem.id })
+    }
     refreshAll()
   }
   const delRow = async (row) => {
@@ -85,20 +96,75 @@ export default function ProjectItems({ projectId, project }) {
     const ws = utils.json_to_sheet(out); const wb = utils.book_new(); utils.book_append_sheet(wb, ws, 'Pairs')
     writeFileXLSX(wb, 'project-item-pairs.csv', { bookType: 'csv' })
   }
+  // Import enforces the pairing rule: every row must carry BOTH a new and an old
+  // item. Single-sided rows are rejected with a row-level message; only complete
+  // pairs are inserted (so import can never introduce an orphan).
   const importCsv = async (e) => {
     const file = e.target.files?.[0]; if (!file) return
+    setImportErrors([])
     const wb = read(await file.arrayBuffer()); const data = utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
-    let n = 0
-    for (const r of data) {
+    const errs = []; let n = 0
+    for (let idx = 0; idx < data.length; idx++) {
+      const r = data[idx]; const rowNo = idx + 2 // +1 header, +1 to 1-base
       const esm = r.esm_code || null
-      const hasI = r.installed_description || r.installed_qty, hasR = r.removed_description || r.removed_qty
-      let iId = null, rId = null
-      if (hasI) { const { data: d } = await bgInsert('project_installed_items', { project_id: projectId, esm_code: esm, item_description: r.installed_description || null, model_code: r.installed_model || null, capacity_value: numOrNull(r.installed_capacity), capacity_unit: r.installed_capacity_unit || 'kBTU', efficiency_value: numOrNull(r.installed_efficiency), efficiency_unit: r.installed_efficiency_unit || 'SEER', total_quantity: numOrNull(r.installed_qty) }); iId = d?.[0]?.id }
-      if (hasR) { const { data: d } = await bgInsert('project_removed_items', { project_id: projectId, esm_code: esm, item_description: r.removed_description || null, capacity_value: numOrNull(r.removed_capacity), capacity_unit: r.removed_capacity_unit || 'kBTU', efficiency_value: numOrNull(r.removed_efficiency), efficiency_unit: r.removed_efficiency_unit || 'SEER', total_quantity: numOrNull(r.removed_qty), returned_to_facility: ['yes', 'true', '1'].includes(String(r.removed_returned).toLowerCase()) }); rId = d?.[0]?.id }
-      if (iId && rId) await bgInsert('project_item_pairs', { project_id: projectId, esm_code: esm, installed_item_id: iId, removed_item_id: rId, notes: r.pair_note || null })
-      if (hasI || hasR) n++
+      const hasI = !!(r.installed_description || r.installed_qty), hasR = !!(r.removed_description || r.removed_qty)
+      if (!hasI && !hasR) continue // blank row
+      if (!esm) { errs.push(`Row ${rowNo}: missing esm_code`); continue }
+      if (hasI && !hasR) { errs.push(`Row ${rowNo}: missing Old item — pair every new item with the one it replaces`); continue }
+      if (hasR && !hasI) { errs.push(`Row ${rowNo}: missing New item — every removed item needs its replacement`); continue }
+      const { data: di } = await bgInsert('project_installed_items', { project_id: projectId, esm_code: esm, item_description: r.installed_description || null, model_code: r.installed_model || null, capacity_value: numOrNull(r.installed_capacity), capacity_unit: r.installed_capacity_unit || 'kBTU', efficiency_value: numOrNull(r.installed_efficiency), efficiency_unit: r.installed_efficiency_unit || 'SEER', total_quantity: numOrNull(r.installed_qty) })
+      const { data: dr } = await bgInsert('project_removed_items', { project_id: projectId, esm_code: esm, item_description: r.removed_description || null, capacity_value: numOrNull(r.removed_capacity), capacity_unit: r.removed_capacity_unit || 'kBTU', efficiency_value: numOrNull(r.removed_efficiency), efficiency_unit: r.removed_efficiency_unit || 'SEER', total_quantity: numOrNull(r.removed_qty), returned_to_facility: ['yes', 'true', '1'].includes(String(r.removed_returned).toLowerCase()) })
+      if (di?.[0] && dr?.[0]) { await bgInsert('project_item_pairs', { project_id: projectId, esm_code: esm, installed_item_id: di[0].id, removed_item_id: dr[0].id, notes: r.pair_note || null }); n++ }
     }
-    e.target.value = ''; refreshAll(); toast(`Imported ${n} row${n === 1 ? '' : 's'}`)
+    e.target.value = ''; refreshAll(); setImportErrors(errs)
+    toast(`Imported ${n} pair${n === 1 ? '' : 's'}${errs.length ? ` · ${errs.length} row(s) rejected` : ''}`, errs.length ? 'err' : undefined)
+  }
+
+  // Well-formatted .xlsx template: example pairs per ESM kind + a README sheet.
+  const downloadTemplate = () => {
+    const row = (esm, id, im, ic, icu, ie, ieu, iq, rd, rc, rcu, re, reu, rq) => ({
+      esm_code: esm, installed_description: id, installed_model: im, installed_capacity: ic, installed_capacity_unit: icu, installed_efficiency: ie, installed_efficiency_unit: ieu, installed_qty: iq,
+      removed_description: rd, removed_capacity: rc, removed_capacity_unit: rcu, removed_efficiency: re, removed_efficiency_unit: reu, removed_qty: rq, removed_returned: 'Yes', pair_note: '',
+    })
+    const rows = [
+      row('ESM1', 'LED Panel 40W', 'LP-40', 40, 'W', 125, 'lm/W', 120, 'Fluorescent Troffer 72W', 72, 'W', 60, 'lm/W', 120),
+      row('ESM1', 'LED Downlight 12W', 'DL-12', 12, 'W', 110, 'lm/W', 80, 'Halogen Downlight 50W', 50, 'W', 18, 'lm/W', 80),
+      row('ESM2', 'PIR Occupancy Sensor', 'PIR-360', '', 'W', '', 'lm/W', 60, 'Manual Wall Switch', '', 'W', '', 'lm/W', 60),
+      row('ESM2', 'Daylight Dimming Controller', 'DDC-1', '', 'W', '', 'lm/W', 24, 'Fixed On/Off Switch', '', 'W', '', 'lm/W', 24),
+      row('ESM3', 'Split Wall-Mounted Unit 18kBTU', 'WM-1.5TR', 18, 'kBTU', 16, 'SEER', 12, 'Window AC 24kBTU', 24, 'kBTU', 9, 'SEER', 12),
+      row('ESM3', 'Cassette Unit 36kBTU', 'CAS-3TR', 36, 'kBTU', 15, 'SEER', 6, 'Old Split 36kBTU', 36, 'kBTU', 8, 'SEER', 6),
+    ]
+    const ws = utils.json_to_sheet(rows)
+    ws['!cols'] = Object.keys(rows[0]).map((k) => ({ wch: Math.max(12, k.length + 2) }))
+    const readme = utils.aoa_to_sheet([
+      ['Items & Replacements — Import Template'],
+      [''],
+      ['PAIRING RULE: every NEW (installed) item MUST be paired with an OLD (removed) item.'],
+      ['Rows that have only one side are rejected on import with a row-level message.'],
+      [''],
+      ['Column', 'Meaning', 'Required'],
+      ['esm_code', 'ESM code already on the project (ESM1, ESM2, ESM3, …)', 'Yes'],
+      ['installed_description', 'New item name/description', 'Yes'],
+      ['installed_model', 'New item model/part code', 'No'],
+      ['installed_capacity', 'New item capacity value (number)', 'No'],
+      ['installed_capacity_unit', 'kBTU / kW / W / lm', 'No'],
+      ['installed_efficiency', 'New item efficiency value (number)', 'No'],
+      ['installed_efficiency_unit', 'SEER / EER / COP / lm/W', 'No'],
+      ['installed_qty', 'New item quantity (> 0)', 'Yes'],
+      ['removed_description', 'Old item name/description', 'Yes'],
+      ['removed_capacity', 'Old item capacity value (number)', 'No'],
+      ['removed_capacity_unit', 'kBTU / kW / W / lm', 'No'],
+      ['removed_efficiency', 'Old item efficiency value (number)', 'No'],
+      ['removed_efficiency_unit', 'SEER / EER / COP / lm/W', 'No'],
+      ['removed_qty', 'Old item quantity (> 0)', 'Yes'],
+      ['removed_returned', 'Was the old item returned to the facility? Yes / No', 'No'],
+      ['pair_note', 'Optional note about this replacement', 'No'],
+    ])
+    readme['!cols'] = [{ wch: 26 }, { wch: 60 }, { wch: 10 }]
+    const wb = utils.book_new()
+    utils.book_append_sheet(wb, readme, 'README')
+    utils.book_append_sheet(wb, ws, 'Pairs')
+    writeFileXLSX(wb, 'items-replacements-template.xlsx')
   }
 
   if (esms.length === 0) return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}><Empty icon="materials">Add ESMs to capture installed & removed items.</Empty></div>
@@ -114,10 +180,22 @@ export default function ProjectItems({ projectId, project }) {
           {layout && <span title={layout === 'scattered' ? 'Scattered: buildings far apart → per-building COCs' : 'Concatenated: one site → project-wide COCs'} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: '#EFF6FF', cursor: 'help' }}>Layout: {layout === 'scattered' ? 'Scattered' : 'Concatenated'} ⓘ</span>}
         </div>
         {canEdit && <div style={{ display: 'flex', gap: 8 }}>
-          <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={exportCsv}>Export CSV</Btn>
-          <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import CSV<input type="file" accept=".csv,.xlsx" onChange={importCsv} style={{ display: 'none' }} /></label>
+          <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={downloadTemplate}>Download template</Btn>
+          <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={exportCsv}>Export</Btn>
+          <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import<input type="file" accept=".csv,.xlsx" onChange={importCsv} style={{ display: 'none' }} /></label>
         </div>}
       </div>
+      {orphanCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+          <strong>{orphanCount}</strong> item(s) without a pair. Every new item must be paired with the old item it replaces — use <strong>↔ Pair</strong> on each flagged row, or delete it.
+        </div>
+      )}
+      {importErrors.length > 0 && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#B91C1C', fontWeight: 700, marginBottom: 4 }}><span>{importErrors.length} import row(s) rejected</span><button onClick={() => setImportErrors([])} style={{ color: '#B91C1C', fontWeight: 700 }}>Dismiss</button></div>
+          <ul style={{ margin: 0, paddingLeft: 16, color: '#B91C1C' }}>{importErrors.slice(0, 12).map((m, i) => <li key={i}>{m}</li>)}{importErrors.length > 12 && <li>…and {importErrors.length - 12} more</li>}</ul>
+        </div>
+      )}
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Each row is a replacement pair: installed (new) ↔ removed (old). Click any cell to edit — changes save automatically.</div>
       {esms.map((e) => {
         const rows = rowsForEsm(e.code)
@@ -129,10 +207,9 @@ export default function ProjectItems({ projectId, project }) {
               <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{rows.length} pairs/items · {isOpen ? '▲' : '▼'}</span>
             </button>
             {isOpen && <>
-              {canEdit && <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+              {canEdit && <div style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'center' }}>
                 <button onClick={() => addPair(e.code)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add Pair</button>
-                <button onClick={() => addStandalone(e.code, 'installed')} style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)' }}>+ Standalone Installed</button>
-                <button onClick={() => addStandalone(e.code, 'removed')} style={{ fontSize: 12, fontWeight: 700, color: 'var(--bad)' }}>+ Standalone Removed</button>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Each row pairs a new (installed) item with the old (removed) item it replaces.</span>
               </div>}
               <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1000 }}>
                 <thead><tr style={{ textAlign: 'left' }}>
@@ -142,8 +219,10 @@ export default function ProjectItems({ projectId, project }) {
                 </tr></thead>
                 <tbody>
                   {rows.length === 0 && <tr><td colSpan={16} style={{ padding: 10, color: 'var(--text-3)', fontSize: 12 }}>No items yet.</td></tr>}
-                  {rows.map((row) => (
-                    <tr key={row.key} style={{ borderTop: '1px solid var(--line)', background: row.inst && row.rem ? '#fff' : '#FCFCFD' }}>
+                  {rows.map((row) => {
+                    const orphan = !(row.inst && row.rem)
+                    return (
+                    <tr key={row.key} title={orphan ? 'Unpaired item — pair it with its replacement or delete it' : undefined} style={{ borderTop: '1px solid var(--line)', background: orphan ? '#FFF7F7' : '#fff', boxShadow: orphan ? 'inset 3px 0 0 #EF4444' : 'none' }}>
                       {/* installed side */}
                       <td style={{ padding: 2, minWidth: 140 }}>{row.inst ? <Cell value={row.inst.item_description} onSave={(v) => saveI(row.inst.id, { item_description: v || null })} placeholder="Installed item" /> : <span style={{ color: 'var(--text-3)', fontSize: 11, paddingLeft: 6 }}>—</span>}</td>
                       <td style={{ padding: 2 }}>{row.inst && <Cell value={row.inst.model_code} onSave={(v) => saveI(row.inst.id, { model_code: v || null })} placeholder="Model" />}</td>
@@ -162,9 +241,12 @@ export default function ProjectItems({ projectId, project }) {
                       <td style={{ padding: 2, width: 64 }}>{row.rem && <Cell value={row.rem.efficiency_unit} options={EFF_UNITS} onSave={(v) => saveR(row.rem.id, { efficiency_unit: v })} />}</td>
                       <td style={{ padding: 2, width: 50 }}>{row.rem && <Cell value={row.rem.total_quantity} type="num" align="right" onSave={(v) => numGuard('total_quantity', v) && saveR(row.rem.id, { total_quantity: numOrNull(v) })} />}</td>
                       <td style={{ padding: 2, width: 50 }}>{row.rem && <Cell value={row.rem.returned_to_facility} type="toggle" onSave={(v) => saveR(row.rem.id, { returned_to_facility: v })} />}</td>
-                      {canEdit && <td style={{ padding: 2, width: 28, textAlign: 'center' }}><button title="Delete" onClick={() => delRow(row)} style={{ color: 'var(--bad)' }}>🗑</button></td>}
+                      {canEdit && <td style={{ padding: 2, width: 60, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        {orphan && <button title="Create the missing side and pair them" onClick={() => pairOrphan(row)} style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 11, marginRight: 6 }}>↔ Pair</button>}
+                        <button title="Delete" onClick={() => delRow(row)} style={{ color: 'var(--bad)' }}>🗑</button>
+                      </td>}
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table></div>
             </>}
