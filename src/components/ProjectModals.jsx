@@ -24,6 +24,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     total_weeks: init('total_weeks'), pm_id: init('pm_id'), engineer_id: init('engineer_id'),
     location_address: init('location_address'), location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name'), contractor_phone: init('contractor_phone'), contractor_email: init('contractor_email'),
+    project_reference_no: init('project_reference_no'), beneficiary_entity: init('beneficiary_entity'),
   })
   const [buildings, setBuildings] = useState([])
   const [items, setItems] = useState([]) // optional pair drafts captured at creation
@@ -42,6 +43,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       total_weeks: num(f.total_weeks), pm_id: f.pm_id || null, engineer_id: f.engineer_id || null,
       location_address: f.location_address || null, location_lat: num(f.location_lat), location_lng: num(f.location_lng),
       contractor_name: f.contractor_name || null, contractor_phone: f.contractor_phone || null, contractor_email: f.contractor_email || null,
+      project_reference_no: f.project_reference_no || null, beneficiary_entity: f.beneficiary_entity || null,
     }
     if (mode === 'edit') {
       const { error } = await bgUpdate('projects', project.id, payload, { okMsg: 'Project updated' })
@@ -90,6 +92,12 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Ministry of Interior" /></Field>
         <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
       </Row>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>DOCUMENT DEFAULTS (TARSHID FORMS)</div>
+      <Row>
+        <Field label="Project Reference No"><input lang="en" style={inputStyle} value={f.project_reference_no} onChange={(e) => set('project_reference_no', e.target.value)} placeholder="2022005" /></Field>
+        <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Defaults to Client" /></Field>
+      </Row>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-4px 0 4px' }}>These auto-fill on every generated MIR / WIR / COC so they're entered once, not per document. Contractor comes from the Contractor section below.</div>
       <Field label="COC Layout">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
@@ -305,7 +313,8 @@ export function ProjectImportModal({ onClose }) {
   const [busy, setBusy] = useState(false)
 
   const downloadTemplate = async () => {
-    for (const url of [TEMPLATE_BUCKET_URL, TEMPLATE_STATIC_URL]) {
+    // prefer the app-bundled template (versioned with the deploy) then bucket fallback
+    for (const url of [TEMPLATE_STATIC_URL, TEMPLATE_BUCKET_URL]) {
       try {
         const res = await fetch(url)
         if (!res.ok) continue
@@ -375,6 +384,7 @@ export function ProjectImportModal({ onClose }) {
         lat: s(p.lat), lng: s(p.lng), start_date: toIso(p.start_date), end_date: toIso(p.end_date),
         status: s(p.status), total_weeks: s(p.total_weeks), pm_email: s(p.pm_email), engineer_email: s(p.engineer_email),
         contractor_name: s(p.contractor_name), contractor_phone: s(p.contractor_phone), contractor_email: s(p.contractor_email),
+        project_reference_no: s(p.project_reference_no), beneficiary_entity: s(p.beneficiary_entity),
       },
       buildings: parsed.buildings.map((b) => ({
         building_code: s(b.building_code), building_name: s(b.building_name), city: s(b.city), lat: s(b.lat), lng: s(b.lng),

@@ -117,14 +117,16 @@ export async function signedUrl(path, expires = 3600) {
 // project-templates). uploadToBucket enforces an optional client-side size cap
 // (mirror of the bucket policy) and namespaces objects by user + date.
 // ---------------------------------------------------------------------------
-export async function uploadToBucket(bucket, file, { userId = 'anon', maxBytes, prefix = '' } = {}) {
+export async function uploadToBucket(bucket, file, { userId = 'anon', maxBytes, prefix = '', label = '' } = {}) {
   if (maxBytes && file.size > maxBytes) {
     toast(`File exceeds the ${Math.round(maxBytes / 1024)} KB limit`, 'err')
     return { error: 'size' }
   }
   const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '')
   const date = new Date().toISOString().slice(0, 10)
-  const path = `${prefix ? prefix + '/' : ''}${userId}/${date}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+  // optional label (e.g. the reference number) encoded into the path for traceability
+  const stem = label ? label.replace(/[^A-Za-z0-9._-]/g, '-').slice(0, 60) + '-' : ''
+  const path = `${prefix ? prefix + '/' : ''}${userId}/${date}/${stem}${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
   const { error } = await supabase.storage.from(bucket).upload(path, file, { contentType: file.type || undefined, upsert: false })
   if (error) { toast('Upload failed — ' + error.message, 'err'); return { error } }
   return { path, size: file.size, mime: file.type }

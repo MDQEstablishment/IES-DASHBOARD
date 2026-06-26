@@ -122,6 +122,8 @@ export async function renderInspection(kind, data, assets) {
   if (logo) { const lw = 112, lh = (logo.height / logo.width) * lw; st.page.drawImage(logo, { x: A4[0] - M - lw, y: A4[1] - M - lh + 4, width: lw, height: lh }) }
   st.y = A4[1] - M - 66
 
+  if (data.referenceNo) ltr(`Ref No: ${data.referenceNo}`, A4[0] - M, st.y, { size: 8.5, f: helvB, color: GREEN, align: 'right' })
+  st.y -= 6
   titleBar(kind === 'mir' ? 'MATERIAL & EQUIPMENT INSPECTION FORM (MIR)' : 'WORK INSPECTION FORM (WIR)')
 
   // project-information block (two bordered columns)
@@ -135,25 +137,25 @@ export async function renderInspection(kind, data, assets) {
   R.forEach(([k, v]) => { ltr(`${k}:`, M + half + 6, ly, { size: 8, f: helvB }); ltr(v || '', M + half + 6 + helvB.widthOfTextAtSize(`${k}: `, 8), ly, { size: 8, f: helvI }); ly -= 11.5 })
   st.y -= boxH + 6
 
-  // description
+  // description — ESM line + multi-item table
   bar('DESCRIPTION:')
-  ensure(14); ltr(`${data.esmNo ? data.esmNo + ' - ' : ''}${data.esmName || data.brief || ''}`, M + 4, st.y, { size: 8.5, f: helvB, maxW: W - 8 }); st.y -= 14
-  const items = data.installed || []
-  if (kind === 'mir') {
-    // two-column item table: description | qty (indented like the template)
-    const tx = M + 130, tw = W - 200
-    items.forEach((it) => {
-      ensure(15)
-      rect(tx, st.y - 13, tw, 14); rect(tx + tw, st.y - 13, 60, 14)
-      ltr(`${it.item_description || ''}${it.model_code ? ' ' + it.model_code : ''}`, tx + 4, st.y - 10, { size: 8, maxW: tw - 8 })
-      ltr(String(it.total_quantity ?? ''), tx + tw + 6, st.y - 10, { size: 8 })
-      st.y -= 14
-    })
-    if (!items.length) { ensure(14); ltr('(No installed items captured)', tx + 4, st.y - 4, { size: 8, color: GREY }); st.y -= 14 }
-  } else {
-    items.forEach((it, i) => { ensure(12); ltr(`${i + 1}.  ${it.item_description || ''}${it.model_code ? ' ' + it.model_code : ''}${it.capacity_value != null ? ' (' + it.capacity_value + (it.capacity_unit || '') + ')' : ''}`, M + 10, st.y, { size: 8.5, maxW: W - 20 }); st.y -= 12 })
-    if (!items.length) { ensure(12); ltr('(No installed items captured)', M + 10, st.y, { size: 8.5, color: GREY }); st.y -= 12 }
-  }
+  if (data.esmName || data.brief || data.esmNo) { ensure(14); ltr(`${data.esmNo ? data.esmNo + ' - ' : ''}${data.esmName || data.brief || ''}`, M + 4, st.y, { size: 8.5, f: helvB, maxW: W - 8 }); st.y -= 14 }
+  // normalize items: prefer the multi-item list, fall back to installed-items
+  const items = (data.items && data.items.length)
+    ? data.items
+    : (data.installed || []).map((it) => ({ description: it.item_description, brand: it.brand || '', model: it.model_code, qty: it.total_quantity, unit: it.capacity_unit, notes: '' }))
+  // item table with header row (# / Description / Brand / Model / Qty)
+  const cols = [{ w: 24, h: '#' }, { w: W - 24 - 96 - 96 - 56, h: 'DESCRIPTION' }, { w: 96, h: 'BRAND' }, { w: 96, h: 'MODEL' }, { w: 56, h: 'QTY' }]
+  ensure(15); let hx = M
+  cols.forEach((c) => { rect(hx, st.y - 14, c.w, 14, LINE, [0.93, 0.95, 0.98]); ltr(c.h, hx + 4, st.y - 10, { size: 7, f: helvB, color: GREY }); hx += c.w })
+  st.y -= 14
+  items.forEach((it, i) => {
+    ensure(14); let cx = M
+    const vals = [String(i + 1), it.description || '', it.brand || '', it.model || '', `${it.qty ?? ''}${it.unit ? ' ' + it.unit : ''}`]
+    cols.forEach((c, ci) => { rect(cx, st.y - 13, c.w, 13); ltr(vals[ci], cx + 4, st.y - 10, { size: 7.5, maxW: c.w - 7 }); cx += c.w })
+    st.y -= 13
+  })
+  if (!items.length) { ensure(14); ltr('(No items added)', M + 4, st.y - 4, { size: 8, color: GREY }); st.y -= 14 }
   st.y -= 4
 
   // storage & installation
@@ -161,7 +163,7 @@ export async function renderInspection(kind, data, assets) {
   ensure(34); rect(M, st.y - 30, half, 32); rect(M + half, st.y - 30, half, 32)
   ltr('Storage:', M + 5, st.y - 11, { size: 8, f: helvB }); ltr(data.storageLocation || '', M + 5 + helvB.widthOfTextAtSize('Storage: ', 8), st.y - 11, { size: 8, f: helvI, maxW: half - 50 })
   ltr('Installation:', M + half + 5, st.y - 11, { size: 8, f: helvB }); ltr(data.installationLocation || '', M + half + 5, st.y - 23, { size: 8, f: helvI, maxW: half - 60 })
-  const totQty = items.reduce((s, i) => s + (Number(i.total_quantity) || 0), 0)
+  const totQty = items.reduce((s, i) => s + (Number(i.qty) || 0), 0)
   if (totQty) ltr(`Qty: ${totQty}`, M + W - 5, st.y - 23, { size: 8, f: helvB, align: 'right' })
   st.y -= 38
 
@@ -175,6 +177,27 @@ export async function renderInspection(kind, data, assets) {
     ltr(it, cx + 13, cy - 7, { size: 7, maxW: cw - 16 })
   })
   st.y -= Math.ceil(ATTACH_INSPECTION.length / perRow) * 16 + 6
+
+  // photos grid (2-up, captioned, auto-paginated)
+  const photos = data.photos || []
+  if (photos.length) {
+    bar('PHOTOS:')
+    const pcols = 2, gap = 8, cellW = (W - gap) / pcols, imgH = 124, capH = 12, cellH = imgH + capH
+    for (let i = 0; i < photos.length; i++) {
+      const p = photos[i]
+      let img = null
+      try { img = (p.type || '').includes('png') ? await pdf.embedPng(p.bytes) : await pdf.embedJpg(p.bytes) } catch { continue }
+      const cIdx = i % pcols
+      if (cIdx === 0) ensure(cellH + 4)
+      const x = M + cIdx * (cellW + gap)
+      rect(x, st.y - cellH, cellW, cellH)
+      const dim = img.scaleToFit(cellW - 8, imgH - 8)
+      st.page.drawImage(img, { x: x + (cellW - dim.width) / 2, y: st.y - capH - imgH + (imgH - dim.height) / 2, width: dim.width, height: dim.height })
+      ltr(`Photo ${i + 1} of ${photos.length}`, x + cellW / 2, st.y - cellH + 3, { size: 6.5, color: GREY, align: 'center' })
+      if (cIdx === pcols - 1) st.y -= cellH + gap
+    }
+    if (photos.length % pcols !== 0) st.y -= cellH + gap
+  }
 
   // comments
   bar("TARSHID's COMMENTS:")
@@ -207,9 +230,11 @@ export async function renderCoc(data, assets) {
 
   newPage()
   if (logo) { const lw = 112, lh = (logo.height / logo.width) * lw; st.page.drawImage(logo, { x: A4[0] - M - lw, y: A4[1] - M - lh + 4, width: lw, height: lh }) }
-  st.y = A4[1] - M - 50
+  st.y = A4[1] - M - 44
+  if (data.referenceNo) ltr(`Ref No: ${data.referenceNo}`, A4[0] - M, st.y, { size: 8.5, f: helvB, color: GREEN, align: 'right' })
+  st.y -= 8
   rtl(AR.title, A4[0] / 2 + arB.widthOfTextAtSize(reshape(AR.title).split('').reverse().join(''), 15) / 2, st.y, { size: 15, bold: true })
-  st.y -= 22
+  st.y -= 20
 
   // project information (two columns: right = project, left = building)
   bar(AR.projInfo)
