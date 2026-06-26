@@ -112,7 +112,7 @@ export async function renderInspection(kind, data, assets) {
   const { st, W, newPage, rect, ltr } = P
   const ensure = (need) => { if (st.y - need < M + 26) { footer(); newPage() } }
   const footer = () => { ltr(`Page ${st.pageNo}`, A4[0] / 2, 20, { size: 8, color: GREY, align: 'center', f: helv }); ltr('PMT-003-V1', A4[0] - M, 14, { size: 7.5, color: GREY, align: 'right' }) }
-  const bar = (label) => { ensure(22); rect(M, st.y - 16, W, 16, BAR_BLUE, BAR_BLUE, 0); ltr(label, M + 6, st.y - 12, { size: 8.5, f: helvB }); st.y -= 22 }
+  const bar = (label) => { ensure(30); rect(M, st.y - 16, W, 16, BAR_BLUE, BAR_BLUE, 0); ltr(label, M + 6, st.y - 12, { size: 8.5, f: helvB }); st.y -= 30 } // 8pt breathing room under the bar
   const titleBar = (label) => { rect(M, st.y - 22, W, 22, BAR_BLUE, BAR_BLUE, 0); rect(M, st.y - 22, W, 22, LINE); ltr(label, A4[0] / 2, st.y - 15, { size: 11, f: helvB, align: 'center' }); st.y -= 28 }
 
   newPage()
@@ -225,7 +225,7 @@ export async function renderCoc(data, assets) {
   const right = A4[0] - M
   const ensure = (need) => { if (st.y - need < M + 26) { footer(); newPage() } }
   const footer = () => { ltr(`Page ${st.pageNo}`, A4[0] / 2, 20, { size: 8, color: GREY, align: 'center' }); ltr(`${data.docNo || 'COC'}  ${data.date || ''}`, M, 20, { size: 7.5, color: GREY }) }
-  const bar = (label) => { ensure(22); rect(M, st.y - 17, W, 17, TEAL, TEAL, 0); rtl(label, right - 6, st.y - 13, { size: 9.5, bold: true, color: [1, 1, 1] }); st.y -= 23 }
+  const bar = (label) => { ensure(31); rect(M, st.y - 17, W, 17, TEAL, TEAL, 0); rtl(label, right - 6, st.y - 13, { size: 9.5, bold: true, color: [1, 1, 1] }); st.y -= 31 } // 8pt breathing room under the bar
 
   newPage()
   if (logo) { const lw = 112, lh = (logo.height / logo.width) * lw; st.page.drawImage(logo, { x: A4[0] - M - lw, y: A4[1] - M - lh + 4, width: lw, height: lh }) }
