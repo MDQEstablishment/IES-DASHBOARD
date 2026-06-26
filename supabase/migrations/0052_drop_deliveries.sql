@@ -1,0 +1,12 @@
+-- supabase/migrations/0052_drop_deliveries.sql
+-- PROPOSED — NOT APPLIED. Sprint 7 removed the Deliveries UI (Note #1) and
+-- replaced per-delivery MIRs with multi-item MIRs (Note #2), so the
+-- material_deliveries table is no longer used by the app. Dropping it also
+-- requires removing the project_documents.delivery_id FK column. Holding for
+-- explicit owner sign-off because it is destructive and irreversible.
+--
+-- Pre-drop check (run first, expect 0):
+--   select count(*) from public.project_documents where delivery_id is not null;
+--
+-- alter table public.project_documents drop column if exists delivery_id;
+-- drop table if exists public.material_deliveries cascade;
