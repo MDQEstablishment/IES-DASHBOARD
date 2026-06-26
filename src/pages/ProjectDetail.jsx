@@ -288,7 +288,6 @@ export default function ProjectDetail() {
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>CONTRACTOR</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>ENGINEER</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>PROGRESS</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Scheduled vs actual material delivery for the building">MATERIAL DELIVERY</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Date the building's Certificate of Completion (COC) was approved, and by whom. Click a date to open the approval document.">COC APPROVAL</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
                 {canManage && <th style={{ padding: '9px 8px', fontWeight: 600, width: 64 }} />}
@@ -308,10 +307,6 @@ export default function ProjectDetail() {
                         <div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: prog + '%', background: color }} /></div>
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, width: 34, textAlign: 'right' }}>{prog}%</span>
                       </div></td>
-                      <td style={{ padding: '11px 8px' }}>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{b.delivery_date ? fmtDate(b.delivery_date) : '—'}</div>
-                        <Chip status={b.delivery_status || 'pending'} />
-                      </td>
                       <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
                         {b.approval_date
                           ? <button title="Open the COC approval document" onClick={() => openCoc(b)} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}>{fmtDate(b.approval_date)}</button>
