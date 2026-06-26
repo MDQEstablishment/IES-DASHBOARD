@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useLiveQuery, signedUrlFor, bgInsert } from '../lib/db'
+import { useState, useEffect } from 'react'
+import { useLiveQuery, signedUrlFor, bgInsert, bgUpdate } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { Empty, Btn, Modal } from './ui'
@@ -26,6 +26,16 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   const [regenId, setRegenId] = useState(null)
   const [plan, setPlan] = useState(null) // { rows:[{building_ids,esm_codes}] } or null
   const [genBusy, setGenBusy] = useState(false)
+  // Local layout drives the count/grid instantly; persisted to projects.coc_layout.
+  const [layout, setLayout] = useState(project?.coc_layout || 'concatenated')
+  useEffect(() => { setLayout(project?.coc_layout || 'concatenated') }, [project?.coc_layout])
+  const setLayoutAndSave = async (v) => {
+    if (v === layout) return
+    setLayout(v)
+    const { error } = await bgUpdate('projects', projectId, { coc_layout: v })
+    if (error) toast('Could not save layout — ' + (error.message || ''), 'err')
+    else { toast(`COC layout set to ${v === 'scattered' ? 'Scattered' : 'Concatenated'}`); onChanged?.() }
+  }
 
   const openDefaults = async () => {
     const { data, error } = await supabase.rpc('default_coc_plan', { p_project_id: projectId })
@@ -58,35 +68,56 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   const rows = [...buildings].sort((a, b) => (a.code || '').localeCompare(b.code || ''))
   const bCodeById = Object.fromEntries(rows.map((b) => [b.id, b.code]))
 
+  // ESM bundle groups (coc_bundle_key) — the COLUMNS of the matrix. Rule 1 keeps
+  // ESM1+ESM2 in one bundle; ESM3 stands alone. Mirrors default_coc_plan grouping.
+  const { rows: peBundle } = useLiveQuery('project_esms',
+    (q) => q.select('coc_bundle_key,ordinal,custom_name,esm:esms(code,name)').eq('project_id', projectId).eq('archived', false).order('ordinal'), [projectId])
+  const groupMap = {}
+  peBundle.filter((pe) => pe.esm).forEach((pe) => {
+    const key = pe.coc_bundle_key || ('esm:' + pe.esm.code)
+    const g = (groupMap[key] = groupMap[key] || { key, codes: [], names: [] })
+    g.codes.push(pe.esm.code); g.names.push(pe.custom_name || pe.esm.name)
+  })
+  const groups = Object.values(groupMap).map((g) => ({ ...g, label: g.codes.join('+'), name: g.names.join(' + ') }))
+
   const { rows: cbRows, refetch: rcb } = useLiveQuery('coc_buildings',
-    (q) => q.select('coc_id,building_id,coc:project_documents!inner(id,name,revision,status,client_reviewer_name,client_response_date,submitted_at,updated_at,storage_path,project_id,doc_type)').eq('coc.project_id', projectId).eq('coc.doc_type', 'coc'), [projectId])
+    (q) => q.select('coc_id,building_id,coc:project_documents!inner(project_id,doc_type)').eq('coc.project_id', projectId).eq('coc.doc_type', 'coc'), [projectId])
   const { rows: ceRows, refetch: rce } = useLiveQuery('coc_esms',
     (q) => q.select('coc_id,esm_code,coc:project_documents!inner(project_id,doc_type)').eq('coc.project_id', projectId).eq('coc.doc_type', 'coc'), [projectId])
+  // COC documents drive status — its realtime updates the KPIs the moment a COC
+  // is approved (the junction tables don't change on a status edit).
+  const { rows: cocDocs, refetch: rcd } = useLiveQuery('project_documents',
+    (q) => q.select('id,name,revision,status,client_reviewer_name,client_response_date,submitted_at,updated_at,storage_path').eq('project_id', projectId).eq('doc_type', 'coc'), [projectId])
   const { rows: installed } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
   const { rows: removed } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
 
-  // assemble COCs with their building & esm coverage sets
+  // assemble COCs with their building & esm coverage sets (status from cocDocs)
+  const docById = Object.fromEntries(cocDocs.map((d) => [d.id, d]))
   const cocs = {}
-  cbRows.forEach((r) => { if (!r.coc) return; (cocs[r.coc_id] = cocs[r.coc_id] || { ...r.coc, buildings: new Set(), esms: new Set() }).buildings.add(r.building_id) })
+  cbRows.forEach((r) => { const d = docById[r.coc_id]; if (!d) return; (cocs[r.coc_id] = cocs[r.coc_id] || { ...d, buildings: new Set(), esms: new Set() }).buildings.add(r.building_id) })
   ceRows.forEach((r) => { if (cocs[r.coc_id]) cocs[r.coc_id].esms.add(r.esm_code) })
   const cocList = Object.values(cocs)
   const lastItemChange = Math.max(0, ...[...installed, ...removed].map((i) => new Date(i.created_at || 0).getTime()))
   const isStale = (c) => !c.storage_path || (lastItemChange > new Date(c.updated_at || c.submitted_at || 0).getTime())
 
-  const cellCocs = (bid, ecode) => cocList.filter((c) => c.buildings.has(bid) && c.esms.has(ecode))
+  // A cell covers (row × bundle): the COC must cover this building (or any, when
+  // concatenated) and touch one of the bundle's ESMs.
+  const cellCocs = (row, grp) => cocList.filter((c) => (row.all || c.buildings.has(row.id)) && grp.codes.some((code) => c.esms.has(code)))
 
-  // KPIs over (building × esm) cells
-  const expected = rows.length * esms.length
+  // Grid + KPIs follow the 4 rules: scattered = buildings × bundles, concatenated
+  // = one project-wide row × bundles. Expected = default_coc_plan output size.
+  const gridRows = layout === 'scattered' ? rows : [{ id: '__all__', code: 'All buildings', name: project?.name || '', all: true }]
+  const expected = layout === 'scattered' ? groups.length * rows.length : groups.length
   let approved = 0, pending = 0
-  const perEsmApproved = {}
-  rows.forEach((b) => esms.forEach((e) => {
-    const cs = cellCocs(b.id, e.code)
-    if (cs.some((c) => APPROVED.has(c.status))) { approved++; perEsmApproved[e.id] = (perEsmApproved[e.id] || 0) + 1 }
+  const perGroupApproved = {}
+  gridRows.forEach((row) => groups.forEach((grp) => {
+    const cs = cellCocs(row, grp)
+    if (cs.some((c) => APPROVED.has(c.status))) { approved++; perGroupApproved[grp.key] = (perGroupApproved[grp.key] || 0) + 1 }
     else if (cs.some((c) => PENDING.has(c.status))) pending++
   }))
   const pct = expected ? Math.round((approved / expected) * 100) : 0
 
-  const refresh = () => { rcb(); rce(); onChanged?.() }
+  const refresh = () => { rcb(); rce(); rcd(); onChanged?.() }
   const regenerate = async (c) => {
     setRegenId(c.id)
     const coveredB = rows.filter((b) => c.buildings.has(b.id))
@@ -99,8 +130,8 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   const scopeOf = (c) => `${c.buildings.size} bldg${c.buildings.size === 1 ? '' : 's'} · ${[...c.esms].sort().join('+')}`
   const daysCourt = (c) => { if (!c.submitted_at) return null; const end = c.client_response_date ? new Date(c.client_response_date) : new Date(); return Math.max(0, Math.round((end - new Date(c.submitted_at)) / 86400000)) }
 
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE))
-  const pageRows = rows.slice(page * PAGE, page * PAGE + PAGE)
+  const pages = Math.max(1, Math.ceil(gridRows.length / PAGE))
+  const pageRows = gridRows.slice(page * PAGE, page * PAGE + PAGE)
 
   const kpi = (label, value, sub, color) => (
     <div style={{ flex: 1, minWidth: 150, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 14 }}>
@@ -126,25 +157,44 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
         </div>
       </div>
 
+      {/* Layout decision banner — shows the active rule + admin toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12, background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+          <strong>Layout:</strong> {layout === 'scattered' ? 'Scattered (per-building)' : 'Concatenated (project-wide)'}
+          {groups.length > 0 && <> · <strong>Bundles:</strong> {groups.map((g) => g.label).join(' + ')}</>}
+          {' · '}<strong>Default plan:</strong> {expected} COC{expected === 1 ? '' : 's'}
+        </div>
+        {canManage && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            {['scattered', 'concatenated'].map((v) => (
+              <button key={v} onClick={() => setLayoutAndSave(v)} title={v === 'scattered' ? 'Buildings far apart / different managers → one COC bundle per building' : 'One area → one COC bundle for the whole project'}
+                style={{ padding: '5px 11px', fontSize: 11.5, fontWeight: 700, borderRadius: 7, cursor: 'pointer', border: '1px solid var(--line)', background: layout === v ? 'var(--accent)' : '#fff', color: layout === v ? '#fff' : 'var(--text-3)' }}>
+                {v === 'scattered' ? 'Scattered' : 'Concatenated'}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-        {kpi('Total COCs Expected', expected, `${rows.length} buildings × ${esms.length} ESMs`)}
+        {kpi('Total COCs Expected', expected, layout === 'scattered' ? `${rows.length} buildings × ${groups.length} bundle${groups.length === 1 ? '' : 's'}` : `${groups.length} project-wide bundle${groups.length === 1 ? '' : 's'}`)}
         {kpi('COCs Approved', approved, `${pct}% of expected`, '#10B981')}
         {kpi('COCs Pending Client', pending, 'submitted + under review', '#F59E0B')}
       </div>
 
-      {esms.length === 0 || rows.length === 0 ? (
+      {groups.length === 0 || rows.length === 0 ? (
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}><Empty icon="doc">Add buildings and ESMs to this project to track COCs.</Empty></div>
       ) : view === 'matrix' ? (
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>Buildings × ESMs</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>{canManage ? 'EMPTY CELL → UPLOAD/NEW · COUNT = COCS COVERING THIS PAIR' : 'COC COVERAGE PER BUILDING & ESM'}</div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{layout === 'scattered' ? 'Buildings × ESM bundles' : 'Project × ESM bundles'}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>{canManage ? 'COUNT = COCS COVERING THIS BUNDLE · CLICK TO OPEN/CREATE' : 'COC COVERAGE PER BUNDLE'}</div>
           </div>
           <div className="ies-table-wrap" style={{ maxHeight: 560, overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead><tr style={{ textAlign: 'left' }}>
-                <th style={{ ...th, left: 0, zIndex: 2, minWidth: 150 }}>BUILDING</th>
-                {esms.map((e) => <th key={e.id} style={{ ...th, textAlign: 'center' }}><div style={{ color: 'var(--accent)' }}>{e.code}</div><div style={{ fontWeight: 600, color: 'var(--text-3)', fontSize: 9 }}>{e.label}: {perEsmApproved[e.id] || 0}/{rows.length} Approved</div></th>)}
+                <th style={{ ...th, left: 0, zIndex: 2, minWidth: 150 }}>{layout === 'scattered' ? 'BUILDING' : 'SCOPE'}</th>
+                {groups.map((g) => <th key={g.key} style={{ ...th, textAlign: 'center' }}><div style={{ color: 'var(--accent)' }}>{g.label}</div><div style={{ fontWeight: 600, color: 'var(--text-3)', fontSize: 9 }}>{g.name}: {perGroupApproved[g.key] || 0}/{gridRows.length} Approved</div></th>)}
               </tr></thead>
               <tbody>
                 {pageRows.map((b) => (
@@ -153,15 +203,15 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
                       <div style={{ fontWeight: 600 }}>{b.code}</div>
                       <div style={{ fontSize: 10.5, color: 'var(--text-3)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</div>
                     </td>
-                    {esms.map((e) => {
-                      const cs = cellCocs(b.id, e.code)
+                    {groups.map((g) => {
+                      const cs = cellCocs(b, g)
                       const anyApproved = cs.some((c) => APPROVED.has(c.status))
                       const anyPending = cs.some((c) => PENDING.has(c.status))
                       const c = cs.length ? cs[0] : null
                       const color = anyApproved ? ['#10B981', '#ECFDF5'] : anyPending ? ['#F59E0B', '#FFFBEB'] : ['#94A3B8', '#F1F5F9']
                       const tip = cs.length ? `${cs.length} COC${cs.length === 1 ? '' : 's'}: ${cs.map((x) => `${x.name} (Rev ${x.revision || 'A'}, ${(docStatusMeta(x.status)[0])})`).join('; ')}` : 'No COC — click to create'
                       return (
-                        <td key={e.id} style={{ padding: 8, textAlign: 'center' }}>
+                        <td key={g.key} style={{ padding: 8, textAlign: 'center' }}>
                           <button title={tip} onClick={() => (c ? (c.storage_path ? openCoc(c) : setView('list')) : (canManage && setWiz(true)))}
                             style={{ background: color[1], border: 'none', cursor: 'pointer', padding: '4px 9px', borderRadius: 6, minWidth: 34 }}>
                             <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: color[0] }}>{cs.length || '—'}</span>
