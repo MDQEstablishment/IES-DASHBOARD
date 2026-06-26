@@ -376,6 +376,7 @@ export function ProjectImportModal({ onClose }) {
     const buildings = sheetRows(wb, 'Buildings')
     const scopes = sheetRows(wb, 'Building Scopes')
     const materials = sheetRows(wb, 'Materials')
+    const items = sheetRows(wb, 'Items')
 
     const errs = []
     if (!pr) errs.push('The Project sheet has no data row.')
@@ -406,9 +407,15 @@ export function ProjectImportModal({ onClose }) {
       if (!s(m.material_code)) errs.push(`${ln}: material_code is required.`)
       if (!ESMS.includes(s(m.esm).toUpperCase())) errs.push(`${ln}: esm must be ESM1/ESM2/ESM3.`)
     })
+    items.forEach((it, i) => {
+      const ln = `Items row ${i + 1}`
+      if (!ESMS.includes(s(it.esm).toUpperCase())) errs.push(`${ln}: esm must be ESM1/ESM2/ESM3.`)
+      if (s(it.old_qty) && !isNum(it.old_qty)) errs.push(`${ln}: old_qty must be a number.`)
+      if (s(it.new_qty) && !isNum(it.new_qty)) errs.push(`${ln}: new_qty must be a number.`)
+    })
 
     setErrors(errs)
-    setParsed({ project: pr, buildings, scopes, materials })
+    setParsed({ project: pr, buildings, scopes, materials, items })
   }
 
   const toIso = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : s(v) || null)
@@ -429,11 +436,14 @@ export function ProjectImportModal({ onClose }) {
         status: s(p.status), total_weeks: s(p.total_weeks), pm_email: s(p.pm_email), engineer_email: s(p.engineer_email),
         contractor_name: s(p.contractor_name), contractor_phone: s(p.contractor_phone), contractor_email: s(p.contractor_email),
         project_reference_no: s(p.project_reference_no), beneficiary_entity: s(p.beneficiary_entity),
+        doc_rev: s(p.doc_rev), contract_sign_date: toIso(p.contract_sign_date), works_end_date: toIso(p.works_end_date),
+        energy_services_company: s(p.energy_services_company), subcontractor: s(p.subcontractor), coc_layout: s(p.coc_layout),
       },
       buildings: parsed.buildings.map((b) => ({
         building_code: s(b.building_code), building_name: s(b.building_name), city: s(b.city), lat: s(b.lat), lng: s(b.lng),
         floors: s(b.floors), area_sqm: s(b.area_sqm), contractor_name: s(b.contractor_name), contractor_phone: s(b.contractor_phone),
         status: s(b.status), remarks: s(b.remarks),
+        assigned_engineer_email: s(b.assigned_engineer_email), arabic_name: s(b.arabic_name),
       })),
       scopes: parsed.scopes.map((c) => ({
         building_code: s(c.building_code), esm: s(c.esm).toUpperCase(), material_code: s(c.material_code),
@@ -442,6 +452,12 @@ export function ProjectImportModal({ onClose }) {
       materials: parsed.materials.map((m) => ({
         material_code: s(m.material_code), description: s(m.description), esm: s(m.esm).toUpperCase(),
         unit: s(m.unit), threshold: s(m.threshold), supplier: s(m.supplier),
+      })),
+      items: (parsed.items || []).map((it) => ({
+        building_code: s(it.building_code), esm: s(it.esm).toUpperCase(),
+        old_code: s(it.old_code), old_description: s(it.old_description), old_qty: s(it.old_qty),
+        new_code: s(it.new_code), new_description: s(it.new_description), new_qty: s(it.new_qty),
+        unit: s(it.unit), notes: s(it.notes),
       })),
     }
     let data, error
@@ -458,19 +474,19 @@ export function ProjectImportModal({ onClose }) {
       toast(`Import failed — ${msg}`, 'err')
       return
     }
-    toast(`✓ Project ${data.project_code || s(p.code)} created — ${data.buildings} buildings, ${data.scopes} scopes, ${data.materials} materials`)
+    toast(`✓ Project ${data.project_code || s(p.code)} created — ${data.buildings} buildings, ${data.scopes} scopes, ${data.materials} materials${data.pairs ? `, ${data.pairs} item pairs` : ''}`)
     onClose()
     if (data.project_id) navigate(`/projects/${data.project_id}`)
   }
 
-  const counts = parsed && { p: parsed.project ? 1 : 0, b: parsed.buildings.length, c: parsed.scopes.length, m: parsed.materials.length }
+  const counts = parsed && { p: parsed.project ? 1 : 0, b: parsed.buildings.length, c: parsed.scopes.length, m: parsed.materials.length, i: (parsed.items || []).length }
 
   return (
     <Modal open width={620} title="Import a project from Excel" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn>
         <Btn variant="primary" onClick={doImport} disabled={!fileName || !parsed?.project || !!errors.length || busy}
           title={!fileName ? 'Upload a filled template first' : undefined}>{busy ? 'Importing…' : 'Confirm import'}</Btn></>}>
-      <div style={{ fontSize: 13, marginBottom: 12 }}>Step 1 — download the template. It has 5 sheets (Instructions, Project, Buildings, Building Scopes, Materials) with colors and per-field notes. Fill them, delete the example rows, then upload.</div>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>Step 1 — download the template. It has 6 sheets (Instructions, Project, Buildings, Building Scopes, Materials, Items) with colors and per-field notes. Fill them, delete the example rows, then upload.</div>
       <Btn icon={dlState === 'done' ? 'check' : 'upload'} onClick={downloadTemplate} disabled={dlState === 'busy'} style={{ marginBottom: dlState === 'done' ? 6 : 14 }}>
         {dlState === 'busy' ? 'Downloading…' : dlState === 'done' ? 'Downloaded ✓' : 'Download template (.xlsx)'}
       </Btn>
@@ -493,7 +509,7 @@ export function ProjectImportModal({ onClose }) {
       {parsed && !errors.length && (
         <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: 12, fontSize: 13, color: '#065F46', marginTop: 10 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Ready to import — please confirm:</div>
-          <div><strong>{counts.p}</strong> project (<span style={{ fontFamily: 'var(--mono)' }}>{s(parsed.project.code)}</span>), <strong>{counts.b}</strong> buildings, <strong>{counts.c}</strong> scopes, <strong>{counts.m}</strong> materials will be created.</div>
+          <div><strong>{counts.p}</strong> project (<span style={{ fontFamily: 'var(--mono)' }}>{s(parsed.project.code)}</span>), <strong>{counts.b}</strong> buildings, <strong>{counts.c}</strong> scopes, <strong>{counts.m}</strong> materials{counts.i > 0 && <>, <strong>{counts.i}</strong> item pairs</>} will be created.</div>
           <div style={{ fontSize: 11.5, marginTop: 4, color: '#047857' }}>Everything is created in a single transaction — all or nothing.</div>
         </div>
       )}
