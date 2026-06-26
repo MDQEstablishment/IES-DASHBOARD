@@ -10,17 +10,23 @@ import { generateDocPdf } from '../lib/docPdf'
 export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, buildings, esmList, installed, removed, userId }) {
   const selEsm = new Set(esmList.map((e) => e.code))
   const ins = installed.filter((i) => selEsm.has(i.esm_code))
+  const b0 = buildings[0] || {}
   const data = {
     docNo: cocNo, revision: revision || 'A', projectName: project?.name, projectCode: project?.code,
-    clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
+    clientName: project?.client || project?.beneficiary_entity || 'Tarshid', date: new Date().toISOString().slice(0, 10),
     buildingIds: buildings.map((b) => b.code).join(', '),
     buildingList: buildings.map((b) => `${b.code}${b.name ? ' - ' + b.name : ''}`),
-    region: [project?.region, project?.client].filter(Boolean).join(' / '),
+    region: project?.region || '', city: project?.city || b0.city || '',
+    buildingType: project?.building_type || b0.building_type || '',
+    coords: (b0.location_lat != null && b0.location_lng != null) ? `${b0.location_lat}, ${b0.location_lng}` : '',
+    contractDate: project?.contract_sign_date || '', endDate: project?.works_end_date || '',
+    esco: project?.energy_services_company || 'Tarshid', subcontractor: project?.subcontractor || '-',
+    meterNo: b0.elec_meter_no || '', subscriptionNo: b0.elec_subscription_no || '', accountNo: b0.elec_account_no || '',
     esmNo: esmList.map((e) => e.code).join('+'), esmName: esmList.map((e) => e.name || '').filter(Boolean).join(', '),
     brief: `Completion of ${esmList.map((e) => e.name || e.code).join(', ')} across ${buildings.length} building(s).`,
     totalBoqs: ins.reduce((s, i) => s + (Number(i.total_quantity) || 0), 0),
-    attachmentsChecked: ['Approved MIR', 'Approved WIR', 'BOQ Reference'],
-    installed: ins, location: [project?.region, project?.client].filter(Boolean).join(' / '),
+    attachmentsChecked: ['boq', 'testReport'],
+    installed: ins, removed: removed || [], location: [project?.region, project?.client].filter(Boolean).join(' / '),
   }
   const bytes = await generateDocPdf('coc', data)
   const file = new File([bytes], `${cocNo}.pdf`, { type: 'application/pdf' })
@@ -34,7 +40,7 @@ export async function buildAndAttachCocPdf({ docId, cocNo, revision, project, bu
 // the Doc Tracker + Project Documents), generates the Tarshid PDF with prefilled
 // fields and embedded photos, uploads it and links the file. status defaults to
 // 'submitted' so the engineer only has to add a wet signature and send.
-export async function createInspectionDoc({ kind, project, esm, building, installed, userId, generatedBy, material, poRef, photoFiles, status = 'submitted' }) {
+export async function createInspectionDoc({ kind, project, esm, building, installed, userId, generatedBy, material, poRef, photoFiles, extra = {}, status = 'submitted' }) {
   const seq = Date.now().toString().slice(-4)
   const docNo = `${project?.code || 'PRJ'}-${kind.toUpperCase()}-${seq}`
   const { data, error } = await bgInsert('project_documents', {
@@ -48,10 +54,15 @@ export async function createInspectionDoc({ kind, project, esm, building, instal
     docNo, revision: 'A', projectName: project?.name, projectCode: project?.code,
     clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
     generatedBy: generatedBy || '', poRef: poRef || '', region: project?.region || '',
+    // official-template fields (project columns where present, else modal overrides)
+    rev: extra.rev || project?.doc_rev || '00', revDate: extra.revDate || new Date().toISOString().slice(0, 10),
+    projectRef: extra.projectRef || project?.project_reference_no || '',
+    beneficiary: extra.beneficiary || project?.beneficiary_entity || project?.client || '',
+    contractor: extra.contractor || project?.contractor_name || '',
     esmNo: esm?.code || '', esmName: esm?.name || '',
     brief: material || `${kind === 'mir' ? 'Material & equipment inspection' : 'Work / mockup inspection'} for ${esm?.name || esm?.code || ''}${building ? ' at ' + building.code : ''}.`,
     installed: ins, storageLocation: building?.name || project?.region || '', installationLocation: building?.name || project?.region || '',
-    attachmentsChecked: (photoFiles && photoFiles.length) ? ['Photos'] : [],
+    attachmentsChecked: (photoFiles && photoFiles.length) ? ['Pictures'] : [],
     photoFiles: photoFiles || [], expectedResubmission: '',
   }
   const bytes = await generateDocPdf(kind, pdfData)
