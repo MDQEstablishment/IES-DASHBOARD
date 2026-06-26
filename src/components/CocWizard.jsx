@@ -37,11 +37,13 @@ export async function buildAndAttachCocPdf({ docId, cocNo, revision, referenceNo
 }
 
 // ── MIR/WIR generation: build-for-preview, then commit-on-download ──────────
-export const slugify = (s) => String(s || '').trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'document'
-// {PROJECT_CODE}_{KIND}-{YYYY-SEQ}_{slug}.pdf  (KIND/CODE already in refNo prefix)
-export function smartFilename({ projectCode, kind, referenceNo, title }) {
+export const slugify = (s) => String(s || '').trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 25)
+// {PROJECT_CODE}_{KIND}-{YYYY-SEQ}[_slug][_R{N}].pdf  — no random suffix
+export function smartFilename({ projectCode, kind, referenceNo, title, revNo = 0 }) {
   const tail = String(referenceNo || '').split('-').slice(-2).join('-') || Date.now().toString().slice(-4)
-  return `${projectCode || 'PRJ'}_${kind.toUpperCase()}-${tail}_${slugify(title)}.pdf`
+  const slug = slugify(title) ? '_' + slugify(title) : ''
+  const rev = revNo > 0 ? '_R' + revNo : ''
+  return `${projectCode || 'PRJ'}_${kind.toUpperCase()}-${tail}${slug}${rev}.pdf`
 }
 
 // Assemble the PDF data object from project defaults + the modal's items/photos.
@@ -70,22 +72,25 @@ export async function buildInspectionPdf(opts) {
 
 // Commit: persist the project_documents row (reference_no explicit so it matches
 // the previewed PDF), upload the bytes under a traceable path, link storage_path.
-export async function commitInspectionDoc({ kind, project, esm, building, userId, referenceNo, title, storage, installation, bytes, status = 'submitted' }) {
+export async function commitInspectionDoc({ kind, project, esm, building, userId, referenceNo, revNo = 0, title, storage, installation, bytes, status = 'submitted' }) {
   const { data, error } = await bgInsert('project_documents', {
     project_id: project.id, building_id: building?.id || null, esm_id: esm?.id || null,
-    doc_type: kind, name: title || referenceNo, reference_no: referenceNo || null,
+    doc_type: kind, name: title || referenceNo, reference_no: referenceNo || null, rev_no: revNo,
     storage_location: storage || null, installation_areas: installation || null,
     revision: 'A', version: 'A', status, submitted_by: userId, submitted_at: new Date().toISOString(),
   })
   if (error || !data?.[0]) return { error: error || { message: 'insert failed' } }
   const docId = data[0].id
   const refNo = data[0].reference_no || referenceNo
-  const filename = smartFilename({ projectCode: project?.code, kind, referenceNo: refNo, title })
+  const filename = smartFilename({ projectCode: project?.code, kind, referenceNo: refNo, title, revNo })
   const file = new File([bytes], filename, { type: 'application/pdf' })
-  const { path, error: upErr } = await uploadToBucket('project-docs', file, { userId, prefix: project.id, label: refNo })
+  // deterministic, random-free storage key (unique per reference + revision)
+  const safeRef = String(refNo || 'doc').replace(/[^A-Za-z0-9._-]/g, '-')
+  const key = `${project.id}/${kind}/${safeRef}${revNo > 0 ? '-R' + revNo : ''}.pdf`
+  const { path, error: upErr } = await uploadToBucket('project-docs', file, { userId, key })
   if (upErr) return { error: upErr, docId }
   await bgUpdate('project_documents', docId, { storage_path: path })
-  return { docId, path, filename, referenceNo: refNo }
+  return { docId, path, filename, referenceNo: refNo, revNo }
 }
 
 export default function CocWizard({ projectId, project, onClose, onDone }) {
