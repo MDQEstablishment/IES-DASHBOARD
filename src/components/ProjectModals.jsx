@@ -310,6 +310,7 @@ export function ProjectImportModal({ onClose }) {
   const navigate = useNavigate()
   const [parsed, setParsed] = useState(null) // { project, buildings, scopes, materials }
   const [errors, setErrors] = useState([])
+  const [importErr, setImportErr] = useState('') // server-side failure surfaced inline
   const [busy, setBusy] = useState(false)
 
   const downloadTemplate = async () => {
@@ -332,7 +333,7 @@ export function ProjectImportModal({ onClose }) {
 
   const onFile = async (e) => {
     const file = e.target.files?.[0]; if (!file) return
-    setErrors([]); setParsed(null)
+    setErrors([]); setParsed(null); setImportErr('')
     const wb = read(await file.arrayBuffer(), { cellDates: true })
     const pr = sheetRows(wb, 'Project')[0] || null
     const buildings = sheetRows(wb, 'Buildings')
@@ -375,7 +376,13 @@ export function ProjectImportModal({ onClose }) {
 
   const toIso = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : s(v) || null)
   const doImport = async () => {
-    if (!parsed?.project || errors.length) return
+    // Visible on every click so a future dead-button report can be diagnosed from the console.
+    console.log('[IES] import: Confirm clicked', { project: parsed?.project?.code, errors: errors.length, busy })
+    if (!parsed?.project || errors.length) {
+      setImportErr('Nothing to import — fix the validation errors above first.')
+      return
+    }
+    setImportErr('')
     setBusy(true)
     const p = parsed.project
     const payload = {
@@ -400,9 +407,20 @@ export function ProjectImportModal({ onClose }) {
         unit: s(m.unit), threshold: s(m.threshold), supplier: s(m.supplier),
       })),
     }
-    const { data, error } = await supabase.rpc('import_project_bundle', { p: payload })
+    let data, error
+    try {
+      ({ data, error } = await supabase.rpc('import_project_bundle', { p: payload }))
+    } catch (ex) {
+      error = ex
+    }
     setBusy(false)
-    if (error) { toast(`Import failed — ${error.message}`, 'err'); return }
+    if (error) {
+      const msg = error.message || 'Unknown error'
+      console.error('[IES] import_project_bundle failed', error)
+      setImportErr(`Import failed — ${msg}`)
+      toast(`Import failed — ${msg}`, 'err')
+      return
+    }
     toast(`Imported: 1 project, ${data.buildings} buildings, ${data.scopes} scopes, ${data.materials} materials`)
     onClose()
     if (data.project_id) navigate(`/projects/${data.project_id}`)
@@ -429,6 +447,11 @@ export function ProjectImportModal({ onClose }) {
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Ready to import — please confirm:</div>
           <div><strong>{counts.p}</strong> project (<span style={{ fontFamily: 'var(--mono)' }}>{s(parsed.project.code)}</span>), <strong>{counts.b}</strong> buildings, <strong>{counts.c}</strong> scopes, <strong>{counts.m}</strong> materials will be created.</div>
           <div style={{ fontSize: 11.5, marginTop: 4, color: '#047857' }}>Everything is created in a single transaction — all or nothing.</div>
+        </div>
+      )}
+      {importErr && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginTop: 10 }}>
+          {importErr}
         </div>
       )}
     </Modal>
