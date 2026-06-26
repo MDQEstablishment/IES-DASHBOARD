@@ -68,8 +68,9 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   const rows = [...buildings].sort((a, b) => (a.code || '').localeCompare(b.code || ''))
   const bCodeById = Object.fromEntries(rows.map((b) => [b.id, b.code]))
 
-  // ESM bundle groups (coc_bundle_key) — the COLUMNS of the matrix. Rule 1 keeps
-  // ESM1+ESM2 in one bundle; ESM3 stands alone. Mirrors default_coc_plan grouping.
+  // ESM bundle groups (coc_bundle_key) — the COLUMNS of the matrix. Each ESM is
+  // its own bundle by default (standalone COC); a shared coc_bundle_key groups
+  // ESMs (e.g. ESM1+ESM2 lighting) only when set. Mirrors default_coc_plan.
   const { rows: peBundle } = useLiveQuery('project_esms',
     (q) => q.select('coc_bundle_key,ordinal,custom_name,esm:esms(code,name)').eq('project_id', projectId).eq('archived', false).order('ordinal'), [projectId])
   const groupMap = {}

@@ -36,6 +36,7 @@ export default function BuildingDetail() {
   const canInstall = can(role, CAN_INSTALL)
   const [addOpen, setAddOpen] = useState(false)
   const [esmFilter, setEsmFilter] = useState('')
+  const [infoOpen, setInfoOpen] = useState(false)
 
   const base = `/projects/${id}/buildings/${bid}`
   const tail = loc.pathname.slice(loc.pathname.indexOf(base) + base.length).replace(/^\//, '')
@@ -109,6 +110,28 @@ export default function BuildingDetail() {
             <div style={{ height: 8, borderRadius: 5, background: '#EFF2F6', overflow: 'hidden', marginTop: 12 }}>
               <div style={{ height: '100%', width: prog + '%', background: prog >= 100 ? '#10B981' : 'var(--accent)' }} />
             </div>
+          </div>
+
+          {/* Building Info — collapsed section (Sprint 8C #2/#3/#5). Lives ABOVE the
+              tabs; does not touch Daily Progress / Rooms / Materials / Documents. */}
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 14, overflow: 'hidden' }}>
+            <button onClick={() => setInfoOpen((o) => !o)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'none', cursor: 'pointer' }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>Building Info</span>
+              <span style={{ display: 'inline-flex', transform: infoOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}><Icon name="chevron" size={16} /></span>
+            </button>
+            {infoOpen && (
+              <div style={{ borderTop: '1px solid var(--line)', padding: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+                <Meta k="Building type" v={b.building_type || '—'} />
+                <Meta k="Operating hours / yr" v={b.operating_hours ?? '—'} />
+                <Meta k="Electricity meter no" v={b.elec_meter_no || '—'} />
+                <Meta k="Subscription no" v={b.elec_subscription_no || '—'} />
+                <Meta k="Account no" v={b.elec_account_no || '—'} />
+                <Meta k="Responsible person" v={b.responsible_person_name || '—'} />
+                <Meta k="Responsible phone" v={b.responsible_person_phone || '—'} />
+                {b.name_ar && <Meta k="Arabic name (source)" v={b.name_ar} />}
+              </div>
+            )}
           </div>
 
           {/* nested sub-tab menu */}

@@ -321,8 +321,8 @@ export function AssignEngineerModal({ project, onClose }) {
 // ── Excel import (multi-sheet template → atomic RPC) ────────────────────────
 const BSTATUSES = ['pending', 'in_progress', 'signed', 'on_hold', 'blocked']
 const ESMS = ['ESM1', 'ESM2', 'ESM3']
-const TEMPLATE_BUCKET_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/project-templates/IES-Project-Template.xlsx`
-const TEMPLATE_STATIC_URL = `${import.meta.env.BASE_URL}templates/IES-Project-Template.xlsx`
+const TEMPLATE_BUCKET_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/project-templates/IES-Project-Template-v3.xlsx`
+const TEMPLATE_STATIC_URL = `${import.meta.env.BASE_URL}templates/IES-Project-Template-v3.xlsx`
 
 const isExampleRow = (row) => Object.values(row).some((v) => String(v).trim() === 'DELETE-BEFORE-UPLOAD')
 const sheetRows = (wb, name) => {
@@ -355,7 +355,7 @@ export function ProjectImportModal({ onClose }) {
         const blob = await res.blob()
         const a = document.createElement('a')
         a.href = URL.createObjectURL(blob)
-        a.download = 'IES-Project-Template.xlsx'
+        a.download = 'IES-Project-Template-v3.xlsx'
         document.body.appendChild(a); a.click(); a.remove()
         URL.revokeObjectURL(a.href)
         setDlState('done')
@@ -394,6 +394,7 @@ export function ProjectImportModal({ onClose }) {
       if (s(b.lat) && (!isNum(b.lat) || Math.abs(Number(b.lat)) > 90)) errs.push(`${ln}: lat out of range.`)
       if (s(b.lng) && (!isNum(b.lng) || Math.abs(Number(b.lng)) > 180)) errs.push(`${ln}: lng out of range.`)
       if (s(b.status) && !BSTATUSES.includes(s(b.status))) errs.push(`${ln}: invalid status "${s(b.status)}".`)
+      if (s(b.operating_hours) && !isNum(b.operating_hours)) errs.push(`${ln}: operating_hours must be a number.`)
     })
     scopes.forEach((c, i) => {
       const ln = `Scopes row ${i + 1}`
@@ -438,12 +439,16 @@ export function ProjectImportModal({ onClose }) {
         project_reference_no: s(p.project_reference_no), beneficiary_entity: s(p.beneficiary_entity),
         doc_rev: s(p.doc_rev), contract_sign_date: toIso(p.contract_sign_date), works_end_date: toIso(p.works_end_date),
         energy_services_company: s(p.energy_services_company), subcontractor: s(p.subcontractor), coc_layout: s(p.coc_layout),
+        pm_name: s(p.pm_name), engineer_name: s(p.engineer_name), coc_bundle_key: s(p.coc_bundle_key),
       },
       buildings: parsed.buildings.map((b) => ({
         building_code: s(b.building_code), building_name: s(b.building_name), city: s(b.city), lat: s(b.lat), lng: s(b.lng),
         floors: s(b.floors), area_sqm: s(b.area_sqm), contractor_name: s(b.contractor_name), contractor_phone: s(b.contractor_phone),
         status: s(b.status), remarks: s(b.remarks),
         assigned_engineer_email: s(b.assigned_engineer_email), arabic_name: s(b.arabic_name),
+        building_type: s(b.building_type), elec_meter_no: s(b.elec_meter_no), elec_subscription_no: s(b.elec_subscription_no),
+        elec_account_no: s(b.elec_account_no), responsible_person_name: s(b.responsible_person_name),
+        responsible_person_phone: s(b.responsible_person_phone), operating_hours: s(b.operating_hours),
       })),
       scopes: parsed.scopes.map((c) => ({
         building_code: s(c.building_code), esm: s(c.esm).toUpperCase(), material_code: s(c.material_code),

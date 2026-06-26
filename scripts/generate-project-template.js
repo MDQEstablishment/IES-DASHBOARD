@@ -23,8 +23,8 @@ import { mkdirSync, readFileSync } from 'node:fs'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const OUT_DIR = join(ROOT, 'public', 'templates')
-const OUT_FILE = join(OUT_DIR, 'IES-Project-Template.xlsx')
-export const TEMPLATE_OBJECT_PATH = 'IES-Project-Template.xlsx'
+const OUT_FILE = join(OUT_DIR, 'IES-Project-Template-v3.xlsx')
+export const TEMPLATE_OBJECT_PATH = 'IES-Project-Template-v3.xlsx'
 
 // ── palette ──────────────────────────────────────────────────────────────────
 const BLUE = 'FF2563EB', YELLOW = 'FFFEF9C3', GREEN = 'FFDCFCE7', GRAY = 'FFF1F5F9', WHITE = 'FFFFFFFF'
@@ -36,19 +36,38 @@ const BORDER = { top: thin, left: thin, bottom: thin, right: thin }
 const tintFor = (req) => (req === 'req' ? YELLOW : req === 'auto' ? GRAY : GREEN)
 const INPUT_ROWS = 24
 
-// cols: [key, width, req] where req ∈ 'req'|'opt'|'auto'. header text == key.
+// Section header colours — group related fields visually (Sprint 8C). The header
+// fill encodes the SECTION; the input-cell tint below still encodes required
+// (yellow) vs optional (green). header text == the exact machine key.
+const SECTION = {
+  id:         'FF2563EB', // Identity            (blue)
+  dates:      'FF0D9488', // Dates / schedule    (teal)
+  people:     'FF4F46E5', // People (PM/Engineer)(indigo)
+  contractor: 'FFD97706', // Contractor          (amber)
+  location:   'FF475569', // Location            (slate)
+  defaults:   'FF7C3AED', // Document defaults    (purple)
+  elec:       'FF0EA5E9', // Electrical / meter  (sky)
+}
+const SECTION_LEGEND = [
+  ['Identity', SECTION.id], ['Dates', SECTION.dates], ['People', SECTION.people],
+  ['Contractor', SECTION.contractor], ['Location', SECTION.location],
+  ['Document defaults', SECTION.defaults], ['Electrical / building info', SECTION.elec],
+]
+
+// cols: [key, width, req, section?] where req ∈ 'req'|'opt'|'auto'; section keys SECTION.
 function headerRow(ws, cols) {
   ws.columns = cols.map((c) => ({ key: c[0], width: c[1] || 16 }))
   const row = ws.getRow(1)
   cols.forEach((c, i) => {
     const cell = row.getCell(i + 1)
     cell.value = c[0]
-    cell.fill = fill(BLUE)
+    cell.fill = fill(SECTION[c[3]] || BLUE)
     cell.font = HEADER_FONT
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
     cell.border = BORDER
-    cell.note = c[2] === 'req' ? 'Required' : c[2] === 'auto' ? 'Auto / informational' : 'Optional'
-    // tint the input cells below the header by category
+    cell.note = (c[2] === 'req' ? 'Required' : c[2] === 'auto' ? 'Auto / informational' : 'Optional')
+      + (c[3] ? ` · ${c[3]} section` : '')
+    // tint the input cells below the header by requirement
     for (let r = 2; r <= 1 + INPUT_ROWS; r++) {
       const inp = ws.getRow(r).getCell(i + 1)
       inp.fill = fill(tintFor(c[2]))
@@ -98,23 +117,25 @@ async function build() {
   const lines = [
     ['', ''],
     ['How to use', 'Fill the sheets below, then upload this file in Projects → Import Excel. A preview shows exactly what will be created before anything is saved.'],
-    ['Order of sheets', '1) Project  2) Buildings  3) Building Scopes  4) Materials. Only the Project sheet is mandatory; the rest are optional but recommended.'],
+    ['Order of sheets', '1) Project  2) Buildings  3) Building Scopes  4) Materials  5) Items. Only the Project sheet is mandatory; the rest are optional but recommended.'],
     ['Example rows', 'Gray italic rows marked DELETE-BEFORE-UPLOAD are samples. Delete them, or leave them — the importer skips any row marked DELETE-BEFORE-UPLOAD.'],
-    ['Color legend', 'Hover a header for its note. Input cells are tinted by type:'],
-    ['  Yellow = required', 'These columns must be filled.'],
-    ['  Green = optional', 'Fill if you have the data; safe to leave blank.'],
-    ['  Gray = example', 'Sample rows to delete or overwrite.'],
+    ['Cell colours', 'Two cues per column. The HEADER colour groups related fields into sections; the cell tint below shows whether it is required or optional:'],
+    ['  Yellow cell = required', 'These columns must be filled.'],
+    ['  Green cell = optional', 'Fill if you have the data; safe to leave blank.'],
+    ['  Gray row = example', 'Sample rows to delete or overwrite.'],
+    ['Header sections', 'Identity (blue) · Dates (teal) · People (indigo) · Contractor (amber) · Location (slate) · Document defaults (purple) · Electrical / building info (sky). Hover any header for its note.'],
     ['', ''],
-    ['Sheet: Project', 'One row. code + name required. status ∈ active / draft / on_hold / closed. pm_email / engineer_email must match a user email. lat/lng are decimal degrees.'],
-    ['Sheet: Buildings', 'One row per building. project_code must match the Project sheet code. status ∈ pending / in_progress / signed / on_hold / blocked.'],
-    ['Sheet: Building Scopes', 'One row per planned work item so buildings show progress immediately. building_code links a building; esm ∈ ESM1 / ESM2 / ESM3; planned_qty is the target.'],
-    ['Sheet: Materials', 'Optional catalog rows. material_code must be unique; esm ∈ ESM1 / ESM2 / ESM3. Existing material codes are skipped (never overwritten).'],
-    ['Sheet: Items', 'Optional Old↔New replacement pairs. One row = one old item + one new item for an ESM. Creates a removed + installed item linked as a pair (the in-app "Pair" action).'],
+    ['Sheet: Project — fill', 'One row. Identity (code + name required) → Dates → People → Contractor → Location → Document defaults. pm_email/engineer_email must match a user; pm_name/engineer_name are optional display overrides.'],
+    ['Sheet: Buildings — fill', 'One row per building. project_code must match the Project code. Includes the Building Info block (building_type, electrical meter / subscription / account, responsible person, operating_hours) shown on the building page.'],
+    ['Sheet: Building Scopes — fill', 'One row per planned work item so buildings show progress immediately. building_code links a building; esm ∈ ESM1 / ESM2 / ESM3; planned_qty is the target.'],
+    ['Sheet: Materials — fill', 'Optional catalog rows. material_code must be unique; esm ∈ ESM1 / ESM2 / ESM3. Existing codes are skipped (never overwritten).'],
+    ['Sheet: Items — fill', 'Optional Old↔New replacement pairs. One row = one old + one new item for an ESM. Creates a removed + installed item linked as a pair (the in-app "Pair" action).'],
     ['', ''],
     ['ESM key', 'ESM1 = Lighting / Fixtures · ESM2 = Lighting Control / Sensors · ESM3 = AC Units.'],
-    ['COC bundling', 'COC certification bundles ESM1 + ESM2 together by default; ESM3 gets its own certificate. Per-building override is editable in the COC Matrix after import.'],
+    ['COC bundling', 'Each ESM gets its OWN COC by default (ESM1, ESM2 and ESM3 are separate certificates). To group ESM1 + ESM2 (lighting) under one COC, put any label in the Project "coc_bundle_key" column — blank = standalone.'],
     ['Engineer per building', 'Set assigned_engineer_email on the Buildings sheet to bind an engineer to each building at import (falls back to the project engineer_email). The name shows next to each building immediately.'],
-    ['Arabic source names', 'Keep all visible fields in English. If you must retain the original Arabic site name from the tender, put it in the Buildings "arabic_name" column — it is stored as a data identifier only and shown as a small grey subtitle.'],
+    ['Operating hours', 'Buildings "operating_hours" = annual operating hours agreed with the client (per building, since it can vary by contract).'],
+    ['Arabic source names', 'Keep all visible fields in English. If you must retain the original Arabic site name from the tender, put it in the Buildings "arabic_name" column — stored as a data identifier only and shown as a small grey subtitle.'],
     ['Language', 'Enter everything in English only — no Arabic text or numerals anywhere (the arabic_name column is the only sanctioned exception).'],
     ['Template version', 'v2 (Sprint 8B) — Project doc-default columns, Buildings engineer + arabic_name, and the Items sheet.'],
   ]
@@ -132,42 +153,72 @@ async function build() {
     row.height = 26
     r++
   }
+  // Visual section swatch legend — a coloured chip per header section.
+  r++
+  ins.getRow(r).getCell(1).value = 'Section swatches'
+  ins.getRow(r).getCell(1).font = { bold: true, size: 11, color: { argb: 'FF0F172A' } }
+  r++
+  for (const [label, argb] of SECTION_LEGEND) {
+    const row = ins.getRow(r)
+    const chip = row.getCell(1)
+    chip.fill = fill(argb)
+    chip.value = ''
+    chip.border = BORDER
+    row.getCell(2).value = label
+    row.getCell(2).font = { size: 11, color: { argb: 'FF334155' } }
+    row.height = 20
+    r++
+  }
 
   // ── Sheet 2: Project (single row) ──────────────────────────────────────────
   const proj = wb.addWorksheet('Project', { properties: { tabColor: { argb: BLUE } } })
   headerRow(proj, [
-    ['code', 16, 'req'], ['name', 28, 'req'], ['client', 22, 'opt'], ['region', 16, 'opt'],
-    ['address', 28, 'opt'], ['lat', 12, 'opt'], ['lng', 12, 'opt'], ['start_date', 14, 'opt'],
-    ['end_date', 14, 'opt'], ['status', 12, 'opt'], ['total_weeks', 12, 'opt'], ['pm_email', 26, 'opt'],
-    ['engineer_email', 26, 'opt'], ['contractor_name', 22, 'opt'], ['contractor_phone', 18, 'opt'], ['contractor_email', 24, 'opt'],
-    // Sprint 8 #5/#8 — document-default columns the MIR/WIR/COC generators consume.
-    ['project_reference_no', 20, 'opt'], ['beneficiary_entity', 22, 'opt'], ['doc_rev', 10, 'opt'],
-    ['contract_sign_date', 16, 'opt'], ['works_end_date', 16, 'opt'], ['energy_services_company', 22, 'opt'],
-    ['subcontractor', 20, 'opt'], ['coc_layout', 16, 'opt'], ['remarks', 22, 'opt'],
+    // Identity
+    ['code', 16, 'req', 'id'], ['name', 28, 'req', 'id'], ['client', 22, 'opt', 'id'], ['region', 16, 'opt', 'id'],
+    // Dates / schedule
+    ['start_date', 14, 'opt', 'dates'], ['end_date', 14, 'opt', 'dates'], ['total_weeks', 12, 'opt', 'dates'], ['status', 12, 'opt', 'dates'],
+    // People (email = identity/permission; name = optional display override)
+    ['pm_email', 26, 'opt', 'people'], ['engineer_email', 26, 'opt', 'people'], ['pm_name', 20, 'opt', 'people'], ['engineer_name', 20, 'opt', 'people'],
+    // Contractor
+    ['contractor_name', 22, 'opt', 'contractor'], ['contractor_phone', 18, 'opt', 'contractor'], ['contractor_email', 24, 'opt', 'contractor'],
+    // Location
+    ['address', 28, 'opt', 'location'], ['lat', 12, 'opt', 'location'], ['lng', 12, 'opt', 'location'],
+    // Document defaults (MIR/WIR/COC)
+    ['project_reference_no', 20, 'opt', 'defaults'], ['beneficiary_entity', 22, 'opt', 'defaults'], ['doc_rev', 10, 'opt', 'defaults'],
+    ['contract_sign_date', 16, 'opt', 'defaults'], ['works_end_date', 16, 'opt', 'defaults'], ['energy_services_company', 22, 'opt', 'defaults'],
+    ['subcontractor', 20, 'opt', 'defaults'], ['coc_layout', 16, 'opt', 'defaults'], ['coc_bundle_key', 16, 'opt', 'defaults'], ['remarks', 22, 'opt', 'id'],
   ])
-  exampleRow(proj, 2, ['MOI-ASIR', 'MOI — Asir Region', 'Ministry of Interior', 'Asir', 'Abha, Asir', 18.2164, 42.5053,
-    '2025-09-01', '2027-01-01', 'active', 64, 'majed.alqahtani@ies.demo.local', 'yousef.almaliki@ies.demo.local',
+  exampleRow(proj, 2, ['MOI-ASIR', 'MOI — Asir Region', 'Ministry of Interior', 'Asir',
+    '2025-09-01', '2027-01-01', 64, 'active',
+    'majed.alqahtani@ies.demo.local', 'yousef.almaliki@ies.demo.local', '', '',
     'Al-Faisal HVAC', '+966 50 000 0000', 'ops@alfaisal.example',
-    'MOI-ASIR-2025', 'Ministry of Interior', '00', '2025-08-15', '2027-01-15', 'Tarshid', '', 'concatenated',
+    'Abha, Asir', 18.2164, 42.5053,
+    'MOI-ASIR-2025', 'Ministry of Interior', '00', '2025-08-15', '2027-01-15', 'Tarshid', '', 'concatenated', '',
     'DELETE-BEFORE-UPLOAD'])
-  addDropdown(proj, 'J', ['active', 'draft', 'on_hold', 'closed'])
-  addDropdown(proj, 'X', ['concatenated', 'scattered']) // coc_layout
+  addDropdown(proj, 'H', ['active', 'draft', 'on_hold', 'closed']) // status (col 8)
+  addDropdown(proj, 'Z', ['concatenated', 'scattered'])            // coc_layout (col 26)
   proj.getColumn('lat').numFmt = '0.000000'
   proj.getColumn('lng').numFmt = '0.000000'
 
   // ── Sheet 3: Buildings ─────────────────────────────────────────────────────
   const blds = wb.addWorksheet('Buildings', { properties: { tabColor: { argb: BLUE } } })
   headerRow(blds, [
-    ['project_code', 16, 'req'], ['building_code', 16, 'req'], ['building_name', 26, 'req'], ['city', 16, 'opt'],
-    ['lat', 12, 'opt'], ['lng', 12, 'opt'], ['floors', 10, 'opt'], ['area_sqm', 12, 'opt'],
-    ['contractor_name', 22, 'opt'], ['contractor_phone', 18, 'opt'], ['status', 14, 'opt'], ['remarks', 24, 'opt'],
+    ['project_code', 16, 'req', 'id'], ['building_code', 16, 'req', 'id'], ['building_name', 26, 'req', 'id'], ['city', 16, 'opt', 'location'],
+    ['lat', 12, 'opt', 'location'], ['lng', 12, 'opt', 'location'], ['floors', 10, 'opt', 'id'], ['area_sqm', 12, 'opt', 'id'],
+    ['contractor_name', 22, 'opt', 'contractor'], ['contractor_phone', 18, 'opt', 'contractor'], ['status', 14, 'opt', 'dates'], ['remarks', 24, 'opt', 'id'],
     // Sprint 8B #18/#19/#22 — engineer bound at import; #21 Arabic name passthrough.
-    ['assigned_engineer_email', 26, 'opt'], ['arabic_name', 22, 'opt'],
+    ['assigned_engineer_email', 26, 'opt', 'people'], ['arabic_name', 22, 'opt', 'id'],
+    // Sprint 8C #2/#3/#5 — Building Info (shown in the new collapsed section on the building page).
+    ['building_type', 18, 'opt', 'elec'], ['elec_meter_no', 16, 'opt', 'elec'], ['elec_subscription_no', 18, 'opt', 'elec'],
+    ['elec_account_no', 16, 'opt', 'elec'], ['responsible_person_name', 22, 'opt', 'contractor'], ['responsible_person_phone', 20, 'opt', 'contractor'],
+    ['operating_hours', 16, 'opt', 'dates'],
   ])
   exampleRow(blds, 2, ['MOI-ASIR', 'MOI-001', 'Police HQ — Abha', 'Abha', 18.2164, 42.5053, 3, 4200,
-    'Al-Faisal HVAC', '+966 50 000 0000', 'in_progress', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', ''])
+    'Al-Faisal HVAC', '+966 50 000 0000', 'in_progress', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', '',
+    'Police Station', 'MTR-001', 'SUB-1001', 'ACC-77001', 'Capt. Saad', '+966 50 111 2222', 3120])
   exampleRow(blds, 3, ['MOI-ASIR', 'MOI-002', 'Civil Defense — Khamis', 'Khamis Mushait', 18.3, 42.73, 2, 2600,
-    'Najd Technical Co.', '+966 55 222 3333', 'pending', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', ''])
+    'Najd Technical Co.', '+966 55 222 3333', 'pending', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', '',
+    'Civil Defense', 'MTR-002', 'SUB-1002', 'ACC-77002', 'Maj. Nasser', '+966 55 333 4444', 3120])
   addDropdown(blds, 'K', ['pending', 'in_progress', 'signed', 'on_hold', 'blocked'])
   blds.getColumn('lat').numFmt = '0.000000'
   blds.getColumn('lng').numFmt = '0.000000'

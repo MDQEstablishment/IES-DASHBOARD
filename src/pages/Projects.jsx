@@ -146,7 +146,7 @@ export default function Projects() {
                       <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: pillColor, background: pillBg }}>{pillLabel}</span>
                     </div>
                     <div style={{ fontWeight: 700, fontSize: 15.5, marginTop: 3, letterSpacing: '-.2px' }}>{p.name}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>🏛 {p.client || '—'} · 📍 {p.region || '—'} · 👷 {p.pm?.full_name || '—'}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>🏛 {p.client || '—'} · 📍 {p.region || '—'} · 👷 {p.pm_name || p.pm?.full_name || '—'}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 18, alignItems: 'center', flex: 'none' }}>
                     <div style={{ textAlign: 'center', minWidth: 58 }}>

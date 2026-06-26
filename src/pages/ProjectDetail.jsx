@@ -209,9 +209,9 @@ export default function ProjectDetail() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 12.5, color: '#CBD5E1' }}>
                 <span>🏛 {project.client || '—'}</span>
                 <span>📍 {project.region || '—'}</span>
-                <span>👷 PM {project.pm?.full_name || '—'}</span>
+                <span>👷 PM {project.pm_name || project.pm?.full_name || '—'}</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  🛠 Eng {project.engineer?.full_name || 'Unassigned'}
+                  🛠 Eng {project.engineer_name || project.engineer?.full_name || 'Unassigned'}
                   {canManage && (
                     <button title="Change project engineer" onClick={() => setEngOpen(true)} className="ies-hover"
                       style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 6, color: '#CBD5E1', background: 'rgba(255,255,255,.08)' }}>
