@@ -15,6 +15,9 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
   const today = new Date().toISOString().slice(0, 10)
   const [desc, setDesc] = useState(material || '')
   const [poRef, setPoRef] = useState('')
+  const [projectRef, setProjectRef] = useState(project?.project_reference_no || '')
+  const [beneficiary, setBeneficiary] = useState(project?.beneficiary_entity || project?.client || '')
+  const [contractor, setContractor] = useState(project?.contractor_name || '')
   const [photos, setPhotos] = useState([]) // File[]
   const [busy, setBusy] = useState(false)
   const [esmId, setEsmId] = useState(esm?.id || '')
@@ -43,6 +46,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     const res = await createInspectionDoc({
       kind, project, esm: chosenEsm, building, installed, userId: user.id,
       generatedBy, material: desc.trim() || undefined, poRef: poRef.trim() || undefined, photoFiles,
+      extra: { projectRef: projectRef.trim(), beneficiary: beneficiary.trim(), contractor: contractor.trim() },
     })
     setBusy(false)
     if (res?.error) { toast(`${kind.toUpperCase()} generation failed — ${res.error.message || ''}`, 'err'); return }
@@ -76,7 +80,12 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
         </Field>
       </div>
       <Field label="Material / equipment description"><textarea style={{ ...inputStyle, minHeight: 54, resize: 'vertical' }} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What is being inspected" /></Field>
-      <Field label="PO / Contract reference (optional)"><input lang="en" style={inputStyle} value={poRef} onChange={(e) => setPoRef(e.target.value)} placeholder="e.g. PO-2026-00417" /></Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <Field label="Project Reference No"><input lang="en" style={inputStyle} value={projectRef} onChange={(e) => setProjectRef(e.target.value)} placeholder="e.g. 2022005" /></Field>
+        <Field label="Contractor"><input lang="en" style={inputStyle} value={contractor} onChange={(e) => setContractor(e.target.value)} placeholder="Contractor name" /></Field>
+        <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} placeholder="Beneficiary entity" /></Field>
+        <Field label="PO / Contract reference (optional)"><input lang="en" style={inputStyle} value={poRef} onChange={(e) => setPoRef(e.target.value)} placeholder="e.g. PO-2026-00417" /></Field>
+      </div>
       <Field label={`Photos (${photos.length}) — embedded in the PDF`}>
         <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: '1px dashed var(--line)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           + Add photos<input type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: 'none' }} />
