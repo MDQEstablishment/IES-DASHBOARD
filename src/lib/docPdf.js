@@ -135,7 +135,7 @@ export async function renderInspection(kind, data, assets) {
   L.forEach(([k, v]) => { ltr(`${k}:`, M + 6, ly, { size: 8, f: helvB }); ltr(v || '', M + 6 + helvB.widthOfTextAtSize(`${k}: `, 8), ly, { size: 8, f: helvI, maxW: half - 12 - helvB.widthOfTextAtSize(`${k}: `, 8) }); ly -= 11.5 })
   ly = st.y - 13
   R.forEach(([k, v]) => { ltr(`${k}:`, M + half + 6, ly, { size: 8, f: helvB }); ltr(v || '', M + half + 6 + helvB.widthOfTextAtSize(`${k}: `, 8), ly, { size: 8, f: helvI }); ly -= 11.5 })
-  st.y -= boxH + 6
+  st.y -= boxH + 16 // clear gap so the title block doesn't kiss the DESCRIPTION bar
 
   // description — ESM line + multi-item table
   bar('DESCRIPTION:')
@@ -178,30 +178,29 @@ export async function renderInspection(kind, data, assets) {
   })
   st.y -= Math.ceil(ATTACH_INSPECTION.length / perRow) * 16 + 6
 
-  // photos grid (2-up, captioned, auto-paginated)
-  const photos = data.photos || []
-  if (photos.length) {
-    bar('PHOTOS:')
-    const pcols = 2, gap = 8, cellW = (W - gap) / pcols, imgH = 124, capH = 12, cellH = imgH + capH
-    for (let i = 0; i < photos.length; i++) {
-      const p = photos[i]
-      let img = null
-      try { img = (p.type || '').includes('png') ? await pdf.embedPng(p.bytes) : await pdf.embedJpg(p.bytes) } catch { continue }
-      const cIdx = i % pcols
-      if (cIdx === 0) ensure(cellH + 4)
-      const x = M + cIdx * (cellW + gap)
-      rect(x, st.y - cellH, cellW, cellH)
-      const dim = img.scaleToFit(cellW - 8, imgH - 8)
-      st.page.drawImage(img, { x: x + (cellW - dim.width) / 2, y: st.y - capH - imgH + (imgH - dim.height) / 2, width: dim.width, height: dim.height })
-      ltr(`Photo ${i + 1} of ${photos.length}`, x + cellW / 2, st.y - cellH + 3, { size: 6.5, color: GREY, align: 'center' })
-      if (cIdx === pcols - 1) st.y -= cellH + gap
-    }
-    if (photos.length % pcols !== 0) st.y -= cellH + gap
-  }
-
-  // comments
+  // comments — BEFORE the photos (photos are the final pages)
   bar("TARSHID's COMMENTS:")
   ensure(40); rect(M, st.y - 38, W, 40); st.y -= 46
+
+  // photos — on their own LAST page(s): 2 per page, stacked vertically and large
+  const photos = data.photos || []
+  const gap = 12, capH = 12
+  let pageTop = 0, cellH = 0
+  for (let i = 0; i < photos.length; i++) {
+    const p = photos[i]
+    let img = null
+    try { img = (p.type || '').includes('png') ? await pdf.embedPng(p.bytes) : await pdf.embedJpg(p.bytes) } catch { continue }
+    if (i % 2 === 0) { // start each pair on a fresh page
+      footer(); newPage(); bar('PHOTOS:')
+      pageTop = st.y
+      cellH = (pageTop - (M + 30) - gap) / 2
+    }
+    const cellTop = pageTop - (i % 2) * (cellH + gap)
+    rect(M, cellTop - cellH, W, cellH)
+    const dim = img.scaleToFit(W - 14, cellH - capH - 10)
+    st.page.drawImage(img, { x: M + (W - dim.width) / 2, y: cellTop - cellH + capH + ((cellH - capH - dim.height) / 2), width: dim.width, height: dim.height })
+    ltr(`Photo ${i + 1} of ${photos.length}`, M + W / 2, cellTop - cellH + 3, { size: 7, color: GREY, align: 'center' })
+  }
 
   footer()
   return await pdf.save()
