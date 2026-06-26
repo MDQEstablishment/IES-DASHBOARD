@@ -45,7 +45,7 @@ export function smartFilename({ projectCode, kind, referenceNo, title }) {
 }
 
 // Assemble the PDF data object from project defaults + the modal's items/photos.
-function inspectionPdfData({ kind, project, esm, building, items, photoFiles, title, generatedBy, referenceNo }) {
+function inspectionPdfData({ kind, project, esm, building, items, photoFiles, title, generatedBy, referenceNo, storage, installation }) {
   return {
     referenceNo, projectName: project?.name, projectCode: project?.code,
     clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
@@ -56,7 +56,8 @@ function inspectionPdfData({ kind, project, esm, building, items, photoFiles, ti
     contractor: project?.contractor_name || '',
     esmNo: esm?.code || '', esmName: title || esm?.name || '',
     items: items || [],
-    storageLocation: building?.name || project?.region || '', installationLocation: building?.name || project?.region || '',
+    storageLocation: storage || building?.name || project?.region || '',
+    installationLocation: installation || building?.name || project?.region || '',
     attachmentsChecked: (photoFiles && photoFiles.length) ? ['Pictures'] : [],
     photoFiles: photoFiles || [],
   }
@@ -69,10 +70,11 @@ export async function buildInspectionPdf(opts) {
 
 // Commit: persist the project_documents row (reference_no explicit so it matches
 // the previewed PDF), upload the bytes under a traceable path, link storage_path.
-export async function commitInspectionDoc({ kind, project, esm, building, userId, referenceNo, title, bytes, status = 'submitted' }) {
+export async function commitInspectionDoc({ kind, project, esm, building, userId, referenceNo, title, storage, installation, bytes, status = 'submitted' }) {
   const { data, error } = await bgInsert('project_documents', {
     project_id: project.id, building_id: building?.id || null, esm_id: esm?.id || null,
     doc_type: kind, name: title || referenceNo, reference_no: referenceNo || null,
+    storage_location: storage || null, installation_areas: installation || null,
     revision: 'A', version: 'A', status, submitted_by: userId, submitted_at: new Date().toISOString(),
   })
   if (error || !data?.[0]) return { error: error || { message: 'insert failed' } }
