@@ -300,8 +300,8 @@ export default function ProjectDetail() {
                   return (
                     <tr key={b.id} onClick={() => navigate(`/projects/${id}/buildings/${b.id}`)} className="ies-trow" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
                       <td style={{ padding: '11px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</td>
-                      <td style={{ padding: '11px 8px' }}><div style={{ fontWeight: 600 }}>{b.name}</div><div style={{ fontSize: 11, color: 'var(--text-3)' }}>{b.region || '—'}</div></td>
-                      <td style={{ padding: '11px 8px', color: 'var(--text-3)' }}>{b.contractor || '—'}</td>
+                      <td style={{ padding: '11px 8px', maxWidth: 240 }}><div className="ies-ellipsis" title={b.name} style={{ fontWeight: 600 }}>{b.name}</div><div className="ies-ellipsis" style={{ fontSize: 11, color: 'var(--text-3)' }}>{b.region || '—'}</div></td>
+                      <td style={{ padding: '11px 8px', color: 'var(--text-3)', maxWidth: 180 }}><span className="ies-ellipsis" title={b.contractor || ''}>{b.contractor || '—'}</span></td>
                       <td style={{ padding: '11px 8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={b.engineer_name} size={22} /><span style={{ color: 'var(--text-3)' }}>{b.engineer_name || '—'}</span></div></td>
                       <td style={{ padding: '11px 8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: prog + '%', background: color }} /></div>
@@ -444,7 +444,7 @@ export default function ProjectDetail() {
             </table></div>
           )}
         </div>
-        <ProjectDocuments projectId={id} uploadRequest={uploadReq} onChanged={refetchDocs} />
+        <ProjectDocuments projectId={id} project={project} uploadRequest={uploadReq} onChanged={refetchDocs} />
         </>
       )}
 
