@@ -78,7 +78,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                 const [lbl, col, bg] = DSTATUS[r.status] || DSTATUS.pending
                 return (
                   <tr key={r.id} style={{ borderTop: '1px solid var(--line)' }}>
-                    <td style={{ padding: '9px 8px', fontWeight: 600 }}>{r.material_name}</td>
+                    <td style={{ padding: '9px 8px', fontWeight: 600, maxWidth: 240 }}><span className="ies-ellipsis" title={r.material_name}>{r.material_name}</span></td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{r.building?.code || '—'}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{r.scheduled_date ? fmtDate(r.scheduled_date) : '—'}</td>
                     <td style={{ padding: '9px 8px' }}>
@@ -91,7 +91,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                         ? <select title={DDESC[r.status] || ''} value={r.status} onChange={(e) => patchRow(r.id, { status: e.target.value })} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, color: col, background: bg, border: `1px solid ${col}33` }}>{Object.keys(DSTATUS).map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select>
                         : <span title={DDESC[r.status] || ''} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span>}
                     </td>
-                    <td style={{ padding: '9px 8px', color: 'var(--text-3)', fontSize: 11.5, maxWidth: 200 }}>{r.notes || '—'}</td>
+                    <td style={{ padding: '9px 8px', color: 'var(--text-3)', fontSize: 11.5, maxWidth: 200 }}><span className="ies-clamp2" title={r.notes || ''}>{r.notes || '—'}</span></td>
                     {canWrite && <td style={{ padding: '9px 8px', whiteSpace: 'nowrap' }}>
                       <button onClick={() => removeRow(r.id)} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
                     </td>}

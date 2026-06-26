@@ -67,3 +67,7 @@ h1,h2,h3,p{margin:0}
 .ies-tbl th{text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.5px;color:#64748B;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;text-transform:uppercase}
 .ies-tbl td{padding:11px 14px;border-bottom:1px solid #F1F5F9;font-size:13px;vertical-align:middle}
 .ies-tbl tr:last-child td{border-bottom:none}
+/* Sprint 7.6 Fix #2 — global long-text guards for table cells & lists */
+.ies-ellipsis{display:inline-block;max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.ies-ellipsis-sm{display:inline-block;max-width:20ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.ies-clamp2{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
