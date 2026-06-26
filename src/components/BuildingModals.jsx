@@ -17,7 +17,7 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
     code: init('code'), name: init('name'), region: init('region', projectRegion),
     location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name') || init('contractor'), contractor_phone: init('contractor_phone'),
-    engineer_name: init('engineer_name'), floors: init('floors'), area_sqm: init('area_sqm'),
+    assigned_engineer_id: init('assigned_engineer_id'), floors: init('floors'), area_sqm: init('area_sqm'),
     remarks: init('remarks'),
   })
   const [busy, setBusy] = useState(false)
@@ -29,11 +29,13 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
     if (lat != null && (lat < -90 || lat > 90)) { toast('Latitude must be between -90 and 90', 'err'); return }
     if (lng != null && (lng < -180 || lng > 180)) { toast('Longitude must be between -180 and 180', 'err'); return }
     setBusy(true)
+    const eng = engineers.find((p) => p.id === f.assigned_engineer_id)
     const payload = {
       code: f.code.trim(), name: f.name.trim(), region: f.region || null,
       location_lat: lat, location_lng: lng,
       contractor: f.contractor_name || null, contractor_name: f.contractor_name || null,
-      contractor_phone: f.contractor_phone || null, engineer_name: f.engineer_name || null,
+      contractor_phone: f.contractor_phone || null,
+      assigned_engineer_id: f.assigned_engineer_id || null, engineer_name: eng?.full_name || null,
       floors: numOrNull(f.floors), area_sqm: numOrNull(f.area_sqm), remarks: f.remarks || null,
     }
     if (mode === 'edit') {
@@ -59,9 +61,9 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
         <Field label="Contractor phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
       </Row>
       <Field label="Site engineer (optional)">
-        <select style={inputStyle} value={f.engineer_name} onChange={(e) => set('engineer_name', e.target.value)}>
+        <select style={inputStyle} value={f.assigned_engineer_id} onChange={(e) => set('assigned_engineer_id', e.target.value)}>
           <option value="">Unassigned</option>
-          {engineers.map((p) => <option key={p.id} value={p.full_name}>{p.full_name}</option>)}
+          {engineers.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
         </select>
       </Field>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>

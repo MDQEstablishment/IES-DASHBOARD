@@ -304,7 +304,7 @@ export default function ProjectDetail() {
                   return (
                     <tr key={b.id} onClick={() => navigate(`/projects/${id}/buildings/${b.id}`)} className="ies-trow" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
                       <td style={{ padding: '11px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</td>
-                      <td style={{ padding: '11px 8px', maxWidth: 240 }}><div className="ies-ellipsis" title={b.name} style={{ display: 'block', fontWeight: 600 }}>{b.name}</div><div className="ies-ellipsis" style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>{b.region || '—'}</div></td>
+                      <td style={{ padding: '11px 8px', maxWidth: 240 }}><div className="ies-ellipsis" title={b.name} style={{ display: 'block', fontWeight: 600 }}>{b.name}</div><div className="ies-ellipsis" style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>{b.region || '—'}</div>{b.name_ar && <div className="ies-ellipsis" dir="rtl" title={b.name_ar} style={{ display: 'block', fontSize: 11, color: 'var(--text-3)', opacity: 0.7 }}>{b.name_ar}</div>}</td>
                       <td style={{ padding: '11px 8px', color: 'var(--text-3)', maxWidth: 180 }}><span className="ies-ellipsis" title={b.contractor || ''}>{b.contractor || '—'}</span></td>
                       <td style={{ padding: '11px 8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={b.engineer_name} size={22} /><span style={{ color: 'var(--text-3)' }}>{b.engineer_name || '—'}</span></div></td>
                       <td style={{ padding: '11px 8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -109,9 +109,14 @@ async function build() {
     ['Sheet: Buildings', 'One row per building. project_code must match the Project sheet code. status ∈ pending / in_progress / signed / on_hold / blocked.'],
     ['Sheet: Building Scopes', 'One row per planned work item so buildings show progress immediately. building_code links a building; esm ∈ ESM1 / ESM2 / ESM3; planned_qty is the target.'],
     ['Sheet: Materials', 'Optional catalog rows. material_code must be unique; esm ∈ ESM1 / ESM2 / ESM3. Existing material codes are skipped (never overwritten).'],
+    ['Sheet: Items', 'Optional Old↔New replacement pairs. One row = one old item + one new item for an ESM. Creates a removed + installed item linked as a pair (the in-app "Pair" action).'],
     ['', ''],
     ['ESM key', 'ESM1 = Lighting / Fixtures · ESM2 = Lighting Control / Sensors · ESM3 = AC Units.'],
-    ['Language', 'Enter everything in English only — no Arabic text or numerals anywhere.'],
+    ['COC bundling', 'COC certification bundles ESM1 + ESM2 together by default; ESM3 gets its own certificate. Per-building override is editable in the COC Matrix after import.'],
+    ['Engineer per building', 'Set assigned_engineer_email on the Buildings sheet to bind an engineer to each building at import (falls back to the project engineer_email). The name shows next to each building immediately.'],
+    ['Arabic source names', 'Keep all visible fields in English. If you must retain the original Arabic site name from the tender, put it in the Buildings "arabic_name" column — it is stored as a data identifier only and shown as a small grey subtitle.'],
+    ['Language', 'Enter everything in English only — no Arabic text or numerals anywhere (the arabic_name column is the only sanctioned exception).'],
+    ['Template version', 'v2 (Sprint 8B) — Project doc-default columns, Buildings engineer + arabic_name, and the Items sheet.'],
   ]
   let r = 2
   for (const [k, v] of lines) {
@@ -135,11 +140,20 @@ async function build() {
     ['address', 28, 'opt'], ['lat', 12, 'opt'], ['lng', 12, 'opt'], ['start_date', 14, 'opt'],
     ['end_date', 14, 'opt'], ['status', 12, 'opt'], ['total_weeks', 12, 'opt'], ['pm_email', 26, 'opt'],
     ['engineer_email', 26, 'opt'], ['contractor_name', 22, 'opt'], ['contractor_phone', 18, 'opt'], ['contractor_email', 24, 'opt'],
+    // Sprint 8 #5/#8 — document-default columns the MIR/WIR/COC generators consume.
+    ['project_reference_no', 20, 'opt'], ['beneficiary_entity', 22, 'opt'], ['doc_rev', 10, 'opt'],
+    ['contract_sign_date', 16, 'opt'], ['works_end_date', 16, 'opt'], ['energy_services_company', 22, 'opt'],
+    ['subcontractor', 20, 'opt'], ['coc_layout', 16, 'opt'], ['remarks', 22, 'opt'],
   ])
   exampleRow(proj, 2, ['MOI-ASIR', 'MOI — Asir Region', 'Ministry of Interior', 'Asir', 'Abha, Asir', 18.2164, 42.5053,
     '2025-09-01', '2027-01-01', 'active', 64, 'majed.alqahtani@ies.demo.local', 'yousef.almaliki@ies.demo.local',
-    'Al-Faisal HVAC', '+966 50 000 0000', 'ops@alfaisal.example'])
+    'Al-Faisal HVAC', '+966 50 000 0000', 'ops@alfaisal.example',
+    'MOI-ASIR-2025', 'Ministry of Interior', '00', '2025-08-15', '2027-01-15', 'Tarshid', '', 'concatenated',
+    'DELETE-BEFORE-UPLOAD'])
   addDropdown(proj, 'J', ['active', 'draft', 'on_hold', 'closed'])
+  addDropdown(proj, 'X', ['concatenated', 'scattered']) // coc_layout
+  proj.getColumn('lat').numFmt = '0.000000'
+  proj.getColumn('lng').numFmt = '0.000000'
 
   // ── Sheet 3: Buildings ─────────────────────────────────────────────────────
   const blds = wb.addWorksheet('Buildings', { properties: { tabColor: { argb: BLUE } } })
@@ -147,12 +161,16 @@ async function build() {
     ['project_code', 16, 'req'], ['building_code', 16, 'req'], ['building_name', 26, 'req'], ['city', 16, 'opt'],
     ['lat', 12, 'opt'], ['lng', 12, 'opt'], ['floors', 10, 'opt'], ['area_sqm', 12, 'opt'],
     ['contractor_name', 22, 'opt'], ['contractor_phone', 18, 'opt'], ['status', 14, 'opt'], ['remarks', 24, 'opt'],
+    // Sprint 8B #18/#19/#22 — engineer bound at import; #21 Arabic name passthrough.
+    ['assigned_engineer_email', 26, 'opt'], ['arabic_name', 22, 'opt'],
   ])
   exampleRow(blds, 2, ['MOI-ASIR', 'MOI-001', 'Police HQ — Abha', 'Abha', 18.2164, 42.5053, 3, 4200,
-    'Al-Faisal HVAC', '+966 50 000 0000', 'in_progress', 'DELETE-BEFORE-UPLOAD'])
+    'Al-Faisal HVAC', '+966 50 000 0000', 'in_progress', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', ''])
   exampleRow(blds, 3, ['MOI-ASIR', 'MOI-002', 'Civil Defense — Khamis', 'Khamis Mushait', 18.3, 42.73, 2, 2600,
-    'Najd Technical Co.', '+966 55 222 3333', 'pending', 'DELETE-BEFORE-UPLOAD'])
+    'Najd Technical Co.', '+966 55 222 3333', 'pending', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', ''])
   addDropdown(blds, 'K', ['pending', 'in_progress', 'signed', 'on_hold', 'blocked'])
+  blds.getColumn('lat').numFmt = '0.000000'
+  blds.getColumn('lng').numFmt = '0.000000'
 
   // ── Sheet 4: Building Scopes ───────────────────────────────────────────────
   const scopes = wb.addWorksheet('Building Scopes', { properties: { tabColor: { argb: BLUE } } })
@@ -173,6 +191,19 @@ async function build() {
   exampleRow(mats, 2, ['LED-40W', 'LED 40W Ceiling Panel', 'ESM1', 'fixtures', 1000, 'Philips'])
   exampleRow(mats, 3, ['AC-S15', 'Split WM 1.5 TR', 'ESM3', 'units', 200, 'Trane'])
   addDropdown(mats, 'C', ['ESM1', 'ESM2', 'ESM3'])
+
+  // ── Sheet 6: Items (Old↔New replacement pairs) ─────────────────────────────
+  // Sprint 8B #25/#4 — each row pairs one removed (old) item with one installed
+  // (new) item per ESM, mirroring the in-app Items & Replacements "Pair" action.
+  const items = wb.addWorksheet('Items', { properties: { tabColor: { argb: BLUE } } })
+  headerRow(items, [
+    ['building_code', 16, 'opt'], ['esm', 10, 'req'], ['old_code', 16, 'opt'], ['old_description', 26, 'req'],
+    ['old_qty', 10, 'opt'], ['new_code', 16, 'opt'], ['new_description', 26, 'req'], ['new_qty', 10, 'opt'],
+    ['unit', 12, 'opt'], ['notes', 22, 'opt'],
+  ])
+  exampleRow(items, 2, ['MOI-001', 'ESM3', 'OLD-AC-2T', 'Old window AC 2 TR', 4, 'AC-S15', 'Split inverter 1.5 TR', 4, 'units', 'DELETE-BEFORE-UPLOAD'])
+  exampleRow(items, 3, ['MOI-001', 'ESM1', 'OLD-FL-40', 'Old fluorescent 40W', 120, 'LED-40W', 'LED panel 40W', 120, 'fixtures', 'DELETE-BEFORE-UPLOAD'])
+  addDropdown(items, 'B', ['ESM1', 'ESM2', 'ESM3'])
 
   mkdirSync(OUT_DIR, { recursive: true })
   await wb.xlsx.writeFile(OUT_FILE)
