@@ -13,17 +13,18 @@ import { buildInspectionPdf, commitInspectionDoc } from './CocWizard'
 // Download commits to Doc Tracker + Project Documents; Cancel persists nothing.
 const emptyRow = () => ({ description: '', brand: '', model: '', qty: '', unit: 'pcs' })
 
-export default function InspectionFormModal({ kind, project, esm = null, building = null, onClose, onDone }) {
+export default function InspectionFormModal({ kind, project, esm = null, building = null, onClose, onDone, replaceOf = null }) {
   const { user, profile } = useAuth()
   const today = new Date().toISOString().slice(0, 10)
   const generatedBy = profile?.full_name || user?.email || ''
-  const heading = kind === 'mir' ? 'Generate MIR' : 'Generate WIR'
+  const revNo = replaceOf ? (replaceOf.revNo || 0) : 0
+  const heading = (replaceOf ? `Replace ${kind.toUpperCase()}` : (kind === 'mir' ? 'Generate MIR' : 'Generate WIR')) + (revNo > 0 ? ` · R${revNo}` : '')
 
-  const [docTitle, setDocTitle] = useState('')
+  const [docTitle, setDocTitle] = useState(replaceOf?.title || '')
   const [rows, setRows] = useState([emptyRow()])
-  const [esmId, setEsmId] = useState(esm?.id || '')
-  const [storage, setStorage] = useState('')
-  const [installation, setInstallation] = useState('')
+  const [esmId, setEsmId] = useState(replaceOf?.esm_id || esm?.id || '')
+  const [storage, setStorage] = useState(replaceOf?.storageLocation || '')
+  const [installation, setInstallation] = useState(replaceOf?.installationAreas || '')
   const [photos, setPhotos] = useState([]) // [{ orig, preview, url }]
   const [refNo, setRefNo] = useState('')
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -42,12 +43,14 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
   const validRows = rows.filter((r) => r.description.trim())
   const itemsForPdf = validRows.map((r) => ({ description: r.description.trim(), brand: r.brand.trim(), model: r.model.trim(), qty: r.qty, unit: r.unit }))
 
-  // peek the reference number once; reused by every preview build + the commit
+  // peek the reference number once; reused by every preview build + the commit.
+  // When replacing, keep the original reference (a revision shares it).
   useEffect(() => {
+    if (replaceOf?.referenceNo) { setRefNo(replaceOf.referenceNo); return }
     let live = true
     ;(async () => { try { const { data } = await supabase.rpc('next_doc_reference', { p_project_id: project.id, p_doc_type: kind }); if (live) setRefNo(data || '') } catch { /* keep blank */ } })()
     return () => { live = false }
-  }, [project?.id, kind])
+  }, [project?.id, kind, replaceOf?.referenceNo])
 
   // live preview — debounced rebuild on any content change, cancelling in-flight
   useEffect(() => {
@@ -103,7 +106,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     try {
       bytes = await buildInspectionPdf({ kind, project, esm: chosenEsm, building, items: itemsForPdf, photoFiles: finalFiles, title: docTitle.trim(), generatedBy, referenceNo: refNo, storage: storage.trim(), installation: installation.trim() })
     } catch (e) { setBusy(false); toast('Could not build the PDF — ' + (e?.message || ''), 'err'); return }
-    const res = await commitInspectionDoc({ kind, project, esm: chosenEsm, building, userId: user.id, referenceNo: refNo, title: docTitle.trim() || (chosenEsm ? chosenEsm.code : kind.toUpperCase()), storage: storage.trim(), installation: installation.trim(), bytes })
+    const res = await commitInspectionDoc({ kind, project, esm: chosenEsm, building, userId: user.id, referenceNo: refNo, revNo, title: docTitle.trim() || (chosenEsm ? chosenEsm.code : kind.toUpperCase()), storage: storage.trim(), installation: installation.trim(), bytes })
     setBusy(false)
     if (res?.error) { toast(`${kind.toUpperCase()} save failed — ${res.error.message || ''}`, 'err'); return }
     const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
@@ -137,7 +140,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
               </select>
             </Field>
           </div>
-          <Field label="Title (used in the filename & document name)"><input lang="en" style={inputStyle} value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="e.g. Lighting Batch A" /></Field>
+          <Field label="Description (used in the filename & document name)"><input lang="en" style={inputStyle} value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="e.g. Lighting Batch A" /></Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Field label="Storage location"><input lang="en" style={inputStyle} value={storage} onChange={(e) => setStorage(e.target.value)} placeholder="e.g. Warehouse A, MOI-001 basement" /></Field>
             <Field label="Installation areas"><input lang="en" style={inputStyle} value={installation} onChange={(e) => setInstallation(e.target.value)} placeholder="e.g. all floors, exterior facade, parking" /></Field>

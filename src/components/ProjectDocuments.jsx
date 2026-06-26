@@ -6,6 +6,7 @@ import Icon from './Icon'
 import { Empty, Btn, Modal, Field, inputStyle, Drawer } from './ui'
 import { compressImage } from '../lib/image'
 import { toast } from '../lib/toast'
+import InspectionFormModal from './InspectionFormModal'
 
 // One vocabulary, shared with the ESM Documentation Tracker matrix.
 export const DOC_TYPES = [
@@ -70,7 +71,7 @@ const daysInCourt = (d) => {
   return { days: Math.max(0, Math.round((end - new Date(d.submitted_at)) / 86400000)), pending: !d.client_response_date }
 }
 
-export default function ProjectDocuments({ projectId, buildingId = null, title = 'Project Documents', uploadRequest = null, onChanged, headerExtra = null }) {
+export default function ProjectDocuments({ projectId, project = null, buildingId = null, title = 'Project Documents', uploadRequest = null, onChanged, headerExtra = null }) {
   const { role } = useAuth()
   const canWrite = WRITE_ROLES.includes(role)
   const canReview = REVIEW_ROLES.includes(role)
@@ -78,6 +79,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
   const [prefill, setPrefill] = useState(null)
   const [statusDoc, setStatusDoc] = useState(null)
   const [historyDoc, setHistoryDoc] = useState(null)
+  const [replaceDoc, setReplaceDoc] = useState(null) // Option-A revision: re-submit inheriting the reference no
   // Project Documents lists EVERY submittal for the project (building-scoped ones
   // too); the building-scoped variant filters to one building. Ordering is
   // approved-first then most-recently-updated (Airtable-style).
@@ -132,7 +134,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
               <th style={{ padding: 8, fontWeight: 600 }}>CLIENT REVIEWER</th><th style={{ padding: 8, fontWeight: 600 }}>RESPONDED</th>
               <th style={{ padding: 8, fontWeight: 600 }} title="Days the submittal has spent with the client (response date − submitted, or days pending)">DAYS IN COURT</th>
               <th style={{ padding: 8, fontWeight: 600 }}>NOTES</th>
-              {canReview && <th style={{ padding: 8, fontWeight: 600 }} />}
+              {(canWrite || canReview) && <th style={{ padding: 8, fontWeight: 600 }} />}
             </tr></thead>
             <tbody>
               {sortedRows.map((d) => {
@@ -142,12 +144,12 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
                   <tr key={d.id} style={{ borderTop: '1px solid var(--line)' }}>
                     <td style={{ padding: '9px 8px', fontWeight: 600 }}>
                       {d.storage_path
-                        ? <button onClick={() => openDoc(d)} title="Open file" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 12.5, padding: 0, textDecoration: 'underline' }}><Icon name="doc" size={13} />{d.name}</button>
-                        : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)' }}><Icon name="doc" size={13} />{d.name}</span>}
+                        ? <button onClick={() => openDoc(d)} title={`Open file — ${d.name}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: 320, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 12.5, padding: 0, textDecoration: 'underline' }}><Icon name="doc" size={13} /><span className="ies-ellipsis" title={d.name}>{d.name}</span></button>
+                        : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: 320, color: 'var(--text-3)' }}><Icon name="doc" size={13} /><span className="ies-ellipsis" title={d.name}>{d.name}</span></span>}
                       {bldgCodeById[d.building_id] && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>· {bldgCodeById[d.building_id]}</span>}
                       <button title="View submission history" onClick={() => setHistoryDoc(d)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>⌚</button>
                     </td>
-                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>{d.reference_no || '—'}</td>
+                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{d.reference_no || '—'}{d.rev_no > 0 && <span title={`Revision ${d.rev_no}`} style={{ marginLeft: 5, fontSize: 9.5, color: '#fff', background: 'var(--accent)', padding: '1px 5px', borderRadius: 5 }}>R{d.rev_no}</span>}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{esmCodeById[d.esm_id] || '—'}</td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{typeLabel}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontWeight: 700 }}>{d.revision || 'A'}</td>
@@ -157,9 +159,10 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{fmtIso(d.client_response_date)}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)' }}>{(() => { const x = daysInCourt(d); if (!x) return <span style={{ color: 'var(--text-3)' }}>—</span>; const warn = x.pending && x.days > 14; return <span title={x.pending ? 'Still awaiting client response' : 'Client response turnaround'} style={{ color: warn ? 'var(--bad)' : 'var(--text-3)', fontWeight: warn ? 700 : 400 }}>{x.days}d{x.pending ? '*' : ''}</span> })()}</td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.response_notes || ''}>{d.response_notes || '—'}</td>
-                    {canReview && (
+                    {(canWrite || canReview) && (
                       <td style={{ padding: '9px 8px', whiteSpace: 'nowrap' }}>
-                        <button onClick={() => setStatusDoc(d)} className="ies-hover" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 7, padding: '4px 9px', background: '#fff', cursor: 'pointer' }}>Update Status</button>
+                        {canWrite && <button onClick={() => setReplaceDoc(d)} className="ies-hover" title="Re-submit a new revision keeping this reference number" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--line)', borderRadius: 7, padding: '4px 9px', background: '#fff', cursor: 'pointer', marginRight: 8 }}>Replace</button>}
+                        {canReview && <button onClick={() => setStatusDoc(d)} className="ies-hover" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 7, padding: '4px 9px', background: '#fff', cursor: 'pointer' }}>Update Status</button>}
                       </td>
                     )}
                   </tr>
@@ -173,6 +176,19 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
         onClose={() => { setUp(false); setPrefill(null) }} onDone={afterChange} />}
       {statusDoc && <UpdateStatusModal doc={statusDoc} onClose={() => setStatusDoc(null)} onDone={afterChange} />}
       {historyDoc && <DocHistoryDrawer doc={historyDoc} onClose={() => setHistoryDoc(null)} />}
+      {/* Replace (Option-A revision): MIR/WIR re-generate, other kinds re-upload */}
+      {replaceDoc && ['mir', 'wir'].includes(replaceDoc.doc_type) && project && (
+        <InspectionFormModal kind={replaceDoc.doc_type} project={project}
+          esm={replaceDoc.esm_id ? { id: replaceDoc.esm_id } : null}
+          building={replaceDoc.building_id ? { id: replaceDoc.building_id } : null}
+          replaceOf={{ referenceNo: replaceDoc.reference_no, revNo: (replaceDoc.rev_no || 0) + 1, title: replaceDoc.name, storageLocation: replaceDoc.storage_location, installationAreas: replaceDoc.installation_areas, esm_id: replaceDoc.esm_id }}
+          onClose={() => setReplaceDoc(null)} onDone={afterChange} />
+      )}
+      {replaceDoc && !(['mir', 'wir'].includes(replaceDoc.doc_type) && project) && (
+        <UploadModal projectId={projectId} buildingId={buildingId} esmOpts={esmOpts} bldgOpts={bldgOpts} rows={rows}
+          prefill={{ esmId: replaceDoc.esm_id, docType: replaceDoc.doc_type, buildingId: replaceDoc.building_id }} replaceOf={replaceDoc}
+          onClose={() => setReplaceDoc(null)} onDone={afterChange} />
+      )}
     </div>
   )
 }
@@ -289,13 +305,13 @@ export function DocHistoryDrawer({ doc, onClose }) {
   )
 }
 
-function UploadModal({ projectId, buildingId, esmOpts, bldgOpts, rows, prefill, onClose, onDone }) {
+function UploadModal({ projectId, buildingId, esmOpts, bldgOpts, rows, prefill, replaceOf = null, onClose, onDone }) {
   const { user } = useAuth()
   const suggestRev = (eid, dt, bid) => String.fromCharCode(65 + rows.filter((r) => r.esm_id === eid && r.doc_type === dt && (r.building_id || null) === (bid || null)).length)
   const [esmId, setEsmId] = useState(prefill?.esmId || esmOpts[0]?.id || '')
   const [bldgId, setBldgId] = useState(prefill?.buildingId || buildingId || '')
   const [type, setType] = useState(prefill?.docType || 'material_submittal')
-  const [name, setName] = useState('')
+  const [name, setName] = useState(replaceOf?.name || '')
   const [custom, setCustom] = useState('')
   const [revision, setRevision] = useState('A')
   const [file, setFile] = useState(null)
@@ -327,13 +343,15 @@ function UploadModal({ projectId, buildingId, esmOpts, bldgOpts, rows, prefill, 
       custom_type_label: type === 'other' ? (custom || null) : null,
       name: name.trim(), revision: revision || 'A', version: revision || 'A', status: 'submitted', submitted_by: user.id,
       submitted_at: new Date().toISOString(), storage_path, file_size_bytes, mime_type,
-    }, { okMsg: 'Document submitted' })
+      // Replace (Option A): inherit the reference number, bump the numeric revision
+      ...(replaceOf ? { reference_no: replaceOf.reference_no, rev_no: (replaceOf.rev_no || 0) + 1 } : {}),
+    }, { okMsg: replaceOf ? `Revision R${(replaceOf.rev_no || 0) + 1} submitted` : 'Document submitted' })
     setBusy(false); if (!error) { onDone?.(); onClose() }
   }
 
   const perBuilding = MULTI_KINDS.has(type)
   return (
-    <Modal open width={560} title="Upload / submit document" onClose={onClose}
+    <Modal open width={560} title={replaceOf ? `Replace document · ${replaceOf.reference_no || ''} R${(replaceOf.rev_no || 0) + 1}` : 'Upload / submit document'} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !name.trim() || !esmId}>{busy ? 'Uploading…' : 'Submit'}</Btn></>}>
       <Field label="Document name"><input lang="en" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. COC — Police HQ ESM1" /></Field>
       <div style={{ display: 'flex', gap: 12 }}>
