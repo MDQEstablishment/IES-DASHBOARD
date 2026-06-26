@@ -57,7 +57,7 @@ export default function ProjectDetail() {
   useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
-  const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
+  const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty,project_esm_id'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) =>
     q.select('id,project_id,custom_name,ordinal,esm:esms(id,code,name)').eq('project_id', id).order('ordinal'), [id])
@@ -101,6 +101,12 @@ export default function ProjectDetail() {
   const insByScope = {}
   install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
 
+  // Map each scope's project_esm_id → its ESM code, so the BOQ rollup buckets by
+  // the scope's REAL ESM (not by guessing from material_code, which fails for
+  // imported codes like LED-T8-120-14W that don't start with "ESM1/2/3").
+  const peCode = {}
+  projectEsms.forEach((pe) => { peCode[pe.id] = (pe.esm?.code || '').toUpperCase() })
+
   const perB = {}
   let planned = 0, installed = 0, acP = 0, acI = 0
   // rollup keyed by esm code: planned vs installed
@@ -114,11 +120,12 @@ export default function ProjectDetail() {
     perB[s.building_id] = perB[s.building_id] || { planned: 0, installed: 0 }
     perB[s.building_id].planned += s.planned_qty || 0
     perB[s.building_id].installed += ins
-    // group rollup by material_code prefix's ESM mapping isn't available on scope;
-    // bucket by material_code so ESM rollup reflects real planned/installed.
-    rollup[code] = rollup[code] || { planned: 0, installed: 0 }
-    rollup[code].planned += s.planned_qty || 0
-    rollup[code].installed += ins
+    // Bucket by the scope's real ESM (via project_esm_id); fall back to the
+    // material_code only for legacy rows with no project_esm_id.
+    const esmKey = peCode[s.project_esm_id] || code
+    rollup[esmKey] = rollup[esmKey] || { planned: 0, installed: 0 }
+    rollup[esmKey].planned += s.planned_qty || 0
+    rollup[esmKey].installed += ins
   })
 
   const overall = planned ? Math.round((installed / planned) * 100) : 0
@@ -143,11 +150,8 @@ export default function ProjectDetail() {
     ? projectEsms.map((pe, i) => {
         const code = pe.esm?.code || `ESM${i + 1}`
         const name = pe.custom_name || pe.esm?.name || code
-        // best-effort: match scopes whose material_code starts with the esm code
-        const key = (pe.esm?.code || '').toUpperCase()
-        const bucket = Object.entries(rollup)
-          .filter(([mc]) => key && mc.startsWith(key))
-          .reduce((a, [, v]) => ({ planned: a.planned + v.planned, installed: a.installed + v.installed }), { planned: 0, installed: 0 })
+        // Direct lookup by ESM code — rollup is now keyed by the scope's real ESM.
+        const bucket = rollup[(pe.esm?.code || '').toUpperCase()] || { planned: 0, installed: 0 }
         return { code, name, ...bucket }
       })
     : []
