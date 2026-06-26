@@ -63,7 +63,7 @@ export default function ProjectDetail() {
   // Single source of truth for the ESM Documentation Tracker + the COC click-through:
   // all project_documents for this project (matrix uses project-level esm-tagged rows).
   const { rows: pdocs, refetch: refetchPdocs } = useLiveQuery('project_documents', (q) =>
-    q.select('id,esm_id,building_id,doc_type,status,name,revision,storage_path,version,submitted_at,client_reviewer_name,client_response_date').eq('project_id', id), [id])
+    q.select('id,esm_id,building_id,doc_type,status,name,reference_no,revision,storage_path,version,submitted_at,client_reviewer_name,client_response_date').eq('project_id', id), [id])
   // COC↔ESM coverage so the COC cell's attachment count resolves bundle COCs.
   const { rows: cocLinks, refetch: refetchCocLinks } = useLiveQuery('coc_esms', (q) =>
     q.select('coc_id,esm_code,coc:project_documents!inner(project_id)').eq('coc.project_id', id), [id])

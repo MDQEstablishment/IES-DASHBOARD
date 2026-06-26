@@ -48,7 +48,7 @@ export function AttachmentChip({ docs = [], onOpen }) {
             {withFiles.map((d) => (
               <button key={d.id} className="ies-hover" onClick={() => { setOpen(false); onOpen?.(d) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 600, borderRadius: 6 }}>
-                <Paperclip size={11} />{d.name || 'Document'}{d.revision ? ` (Rev ${d.revision})` : ''}
+                <Paperclip size={11} />{d.reference_no || d.name || 'Document'}{d.revision ? ` (Rev ${d.revision})` : ''}
               </button>
             ))}
           </div>
@@ -81,9 +81,11 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
   // Project Documents lists EVERY submittal for the project (building-scoped ones
   // too); the building-scoped variant filters to one building. Ordering is
   // approved-first then most-recently-updated (Airtable-style).
+  // Embed-free query (PostgREST joins were returning nothing in the client) —
+  // resolve esm/building codes via separate maps, exactly like the Doc Tracker.
   const { rows, refetch } = useLiveQuery('project_documents',
     (q) => {
-      let b = q.select('*,esm:esms(code),building:buildings(code)').eq('project_id', projectId)
+      let b = q.select('*').eq('project_id', projectId)
       if (buildingId) b = b.eq('building_id', buildingId)
       return b.order('updated_at', { ascending: false, nullsFirst: false })
     }, [projectId, buildingId])
@@ -93,6 +95,8 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
     (q) => q.select('id,code,name,status_override').eq('project_id', projectId).order('code'), [projectId])
   const { rows: profs } = useLiveQuery('profiles', (q) => q.select('id,full_name'), [])
   const nameById = Object.fromEntries(profs.map((p) => [p.id, p.full_name]))
+  const esmCodeById = Object.fromEntries(pEsms.filter((pe) => pe.esm).map((pe) => [pe.esm.id, pe.esm.code]))
+  const bldgCodeById = Object.fromEntries(bldgs.map((b) => [b.id, b.code]))
   const APPROVED_SET = new Set(['approved', 'approved_with_comments'])
   const sortedRows = [...rows].sort((a, b) => {
     const aa = APPROVED_SET.has(a.status) ? 0 : 1, bb = APPROVED_SET.has(b.status) ? 0 : 1
@@ -123,7 +127,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
         <div className="ies-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 860 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              <th style={{ padding: 8, fontWeight: 600 }}>NAME</th><th style={{ padding: 8, fontWeight: 600 }}>ESM</th><th style={{ padding: 8, fontWeight: 600 }}>TYPE</th>
+              <th style={{ padding: 8, fontWeight: 600 }}>NAME</th><th style={{ padding: 8, fontWeight: 600 }}>REFERENCE</th><th style={{ padding: 8, fontWeight: 600 }}>ESM</th><th style={{ padding: 8, fontWeight: 600 }}>TYPE</th>
               <th style={{ padding: 8, fontWeight: 600 }}>REV</th><th style={{ padding: 8, fontWeight: 600 }}>STATUS</th><th style={{ padding: 8, fontWeight: 600 }}>SUBMITTED</th>
               <th style={{ padding: 8, fontWeight: 600 }}>CLIENT REVIEWER</th><th style={{ padding: 8, fontWeight: 600 }}>RESPONDED</th>
               <th style={{ padding: 8, fontWeight: 600 }} title="Days the submittal has spent with the client (response date − submitted, or days pending)">DAYS IN COURT</th>
@@ -140,10 +144,11 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
                       {d.storage_path
                         ? <button onClick={() => openDoc(d)} title="Open file" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 12.5, padding: 0, textDecoration: 'underline' }}><Icon name="doc" size={13} />{d.name}</button>
                         : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-3)' }}><Icon name="doc" size={13} />{d.name}</span>}
-                      {d.building?.code && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>· {d.building.code}</span>}
+                      {bldgCodeById[d.building_id] && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>· {bldgCodeById[d.building_id]}</span>}
                       <button title="View submission history" onClick={() => setHistoryDoc(d)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>⌚</button>
                     </td>
-                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{d.esm?.code || '—'}</td>
+                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>{d.reference_no || '—'}</td>
+                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{esmCodeById[d.esm_id] || '—'}</td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{typeLabel}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontWeight: 700 }}>{d.revision || 'A'}</td>
                     <td style={{ padding: '9px 8px' }}><span title={tip} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span></td>
