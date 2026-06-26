@@ -33,7 +33,7 @@ const ESM_META = {
 
 export default function Dashboard() {
   const [help, setHelp] = useState(false)
-  const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code,name,status,client,region'))
+  const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code,name,status,client,region').is('deleted_at', null))
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('id,project_id,status_override'))
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))

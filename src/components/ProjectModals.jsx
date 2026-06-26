@@ -29,6 +29,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const [buildings, setBuildings] = useState([])
   const [items, setItems] = useState([]) // optional pair drafts captured at creation
   const [showItems, setShowItems] = useState(false)
+  const [showDelete, setShowDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
   const setItem = (i, k, v) => setItems((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
@@ -77,7 +78,12 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
 
   return (
     <Modal open width={640} title={mode === 'edit' ? `Edit project · ${project.code}` : 'Add project'} onClose={onClose}
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Create project'}</Btn></>}>
+      footer={<>
+        {mode === 'edit' && <Btn variant="danger" onClick={() => setShowDelete(true)} style={{ marginRight: 'auto' }}>Delete project</Btn>}
+        <Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Create project'}</Btn>
+        {showDelete && <DeleteProjectModal project={project} onClose={() => { setShowDelete(false); onClose() }} />}
+      </>}>
       {mode === 'add' && (
         <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 9, padding: '10px 12px', fontSize: 12, color: '#1E40AF', marginBottom: 16 }}>
           After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later.
@@ -208,16 +214,27 @@ export function StatusChangeModal({ project, onClose }) {
   const [status, setStatus] = useState(project.status)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
   const reasonRequired = status === 'on_hold' || status === 'closed'
 
   const save = async () => {
     if (status === project.status) { onClose(); return }
     if (reasonRequired && !reason.trim()) { toast('A reason is required for on-hold / closed', 'err'); return }
+    setErr('')
     setBusy(true)
-    const { error } = await bgUpdate('projects', project.id, {
+    console.log('[IES] status change', { project: project.code, from: project.status, to: status })
+    const { data, error } = await bgUpdate('projects', project.id, {
       status, status_changed_by: user.id, status_changed_at: new Date().toISOString(), status_change_reason: reason || null,
     }, { okMsg: `Status → ${statusLabel(status)}` })
-    setBusy(false); if (!error) onClose()
+    setBusy(false)
+    if (error) { setErr(error.message); return }
+    // RLS can match 0 rows and return no error — that's a silent no-op, not success.
+    if (!data || !data.length) {
+      setErr('Status did not persist — you may not have permission to change this project (PMO only).')
+      console.warn('[IES] status change affected 0 rows (RLS?)', project.id)
+      return
+    }
+    onClose()
   }
 
   return (
@@ -232,6 +249,7 @@ export function StatusChangeModal({ project, onClose }) {
         <textarea style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is the status changing?" />
       </Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Recorded in the project status history with your name and the time.</div>
+      {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }
@@ -243,20 +261,31 @@ export function DeleteProjectModal({ project, onClose }) {
   const [busy, setBusy] = useState(false)
   const ok = confirm.trim() === project.code
 
+  const [err, setErr] = useState('')
+  const navigate = useNavigate()
+
   const del = async () => {
     if (!ok) return
+    setErr('')
     setBusy(true)
-    const { error } = await bgUpdate('projects', project.id, {
-      status: 'deleted', status_changed_by: user.id, status_changed_at: new Date().toISOString(), status_change_reason: 'Soft-deleted',
+    console.log('[IES] delete project', project.code)
+    const { data, error } = await bgUpdate('projects', project.id, {
+      deleted_at: new Date().toISOString(), status_changed_by: user.id, status_changed_at: new Date().toISOString(), status_change_reason: 'Soft-deleted',
     }, { okMsg: 'Project deleted' })
-    setBusy(false); if (!error) onClose()
+    setBusy(false)
+    if (error) { setErr(error.message); return }
+    if (!data || !data.length) { setErr('Delete did not persist — you may not have permission (PMO only).'); return }
+    onClose()
+    navigate('/projects')
   }
 
   return (
     <Modal open title={`Delete project · ${project.code}`} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="danger" onClick={del} disabled={!ok || busy}>{busy ? 'Deleting…' : 'Delete project'}</Btn></>}>
-      <div style={{ fontSize: 13, marginBottom: 12 }}>This soft-deletes the project — it disappears from the default list but is retained. Type <strong style={{ fontFamily: 'var(--mono)' }}>{project.code}</strong> to confirm.</div>
+      <div style={{ fontSize: 13, marginBottom: 6 }}>This will delete the project and hide its buildings, scopes, items, deliveries, and documents from every list. It is soft-deleted and recoverable for 30 days.</div>
+      <div style={{ fontSize: 13, marginBottom: 12 }}>Type <strong style={{ fontFamily: 'var(--mono)' }}>{project.code}</strong> to confirm.</div>
       <input lang="en" style={inputStyle} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={project.code} />
+      {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }

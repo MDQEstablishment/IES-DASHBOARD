@@ -30,7 +30,7 @@ export default function Projects() {
   const [delProj, setDelProj] = useState(null)
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
-    q.select('*, pm:profiles!projects_pm_id_fkey(full_name)').order('code'))
+    q.select('*, pm:profiles!projects_pm_id_fkey(full_name)').is('deleted_at', null).order('code'))
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,project_id'))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
