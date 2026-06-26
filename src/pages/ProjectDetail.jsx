@@ -11,7 +11,6 @@ import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../components/ProjectModals'
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
-import MaterialDeliveries from '../components/MaterialDeliveries'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
 import CocMatrix from '../components/CocMatrix'
 import ProjectItems from '../components/ProjectItems'
@@ -27,9 +26,8 @@ const DOC_COLS = [
 
 const TABS = [
   ['buildings', 'Buildings'],
-  ['rollup', 'ESM Rollup'],
+  ['rollup', 'BOQ'],
   ['items', 'Items & Replacements'],
-  ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
   ['coc', 'COC Matrix'],
   ['map', 'Map'],
@@ -344,7 +342,7 @@ export default function ProjectDetail() {
       {tab === 'rollup' && (
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>ESM Rollup</div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>BOQ — Bill of Quantities</div>
             {canManage && <Btn icon="settings" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setEsmPanel(true)}>Manage ESMs</Btn>}
           </div>
           {esmRows.length === 0 ? (
@@ -382,9 +380,6 @@ export default function ProjectDetail() {
 
       {/* ITEMS & REPLACEMENTS tab */}
       {tab === 'items' && <ProjectItems projectId={id} project={project} />}
-
-      {/* DELIVERIES tab */}
-      {tab === 'deliveries' && <MaterialDeliveries projectId={id} buildings={buildings} />}
 
       {/* DOC TRACKER tab */}
       {tab === 'docs' && (
