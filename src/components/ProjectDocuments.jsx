@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Paperclip } from 'lucide-react'
 import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor } from '../lib/db'
 import { useAuth } from '../rbac'
 import Icon from './Icon'
@@ -28,6 +29,35 @@ export const DOC_STATUS = {
 }
 export const docStatusMeta = (s) => DOC_STATUS[s] || DOC_STATUS.submitted
 
+// Attachment affordance for a Doc Tracker cell: a paperclip + count of the
+// cell's documents that carry a file. Click opens a popover of direct links.
+export function AttachmentChip({ docs = [], onOpen }) {
+  const [open, setOpen] = useState(false)
+  const withFiles = docs.filter((d) => d.storage_path)
+  if (!withFiles.length) return null
+  return (
+    <span style={{ position: 'relative', display: 'inline-block' }}>
+      <button onClick={(e) => { e.stopPropagation(); setOpen((o) => !o) }} title={`${withFiles.length} attached file(s)`}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--text-3)', fontSize: 10.5, fontWeight: 700, cursor: 'pointer' }}>
+        <Paperclip size={12} />{withFiles.length}
+      </button>
+      {open && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', zIndex: 31, top: '100%', left: 0, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 8px 24px rgba(15,23,42,.14)', padding: 6, minWidth: 190 }}>
+            {withFiles.map((d) => (
+              <button key={d.id} className="ies-hover" onClick={() => { setOpen(false); onOpen?.(d) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 600, borderRadius: 6 }}>
+                <Paperclip size={11} />{d.name || 'Document'}{d.revision ? ` (Rev ${d.revision})` : ''}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </span>
+  )
+}
+
 const WRITE_ROLES = ['admin', 'pmo', 'projm', 'progm', 'proje']
 const REVIEW_ROLES = ['admin', 'pmo', 'projm']
 const HARD_CAP = 25 * 1024 * 1024
@@ -48,16 +78,27 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
   const [prefill, setPrefill] = useState(null)
   const [statusDoc, setStatusDoc] = useState(null)
   const [historyDoc, setHistoryDoc] = useState(null)
+  // Project Documents lists EVERY submittal for the project (building-scoped ones
+  // too); the building-scoped variant filters to one building. Ordering is
+  // approved-first then most-recently-updated (Airtable-style).
   const { rows, refetch } = useLiveQuery('project_documents',
     (q) => {
       let b = q.select('*,esm:esms(code),building:buildings(code)').eq('project_id', projectId)
-      b = buildingId ? b.eq('building_id', buildingId) : b.is('building_id', null)
-      return b.order('submitted_at', { ascending: false, nullsFirst: false })
+      if (buildingId) b = b.eq('building_id', buildingId)
+      return b.order('updated_at', { ascending: false, nullsFirst: false })
     }, [projectId, buildingId])
   const { rows: pEsms } = useLiveQuery('project_esms',
     (q) => q.select('custom_name,ordinal,esm:esms(id,code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
   const { rows: bldgs } = useLiveQuery('buildings',
     (q) => q.select('id,code,name,status_override').eq('project_id', projectId).order('code'), [projectId])
+  const { rows: profs } = useLiveQuery('profiles', (q) => q.select('id,full_name'), [])
+  const nameById = Object.fromEntries(profs.map((p) => [p.id, p.full_name]))
+  const APPROVED_SET = new Set(['approved', 'approved_with_comments'])
+  const sortedRows = [...rows].sort((a, b) => {
+    const aa = APPROVED_SET.has(a.status) ? 0 : 1, bb = APPROVED_SET.has(b.status) ? 0 : 1
+    if (aa !== bb) return aa - bb
+    return new Date(b.updated_at || b.submitted_at || 0) - new Date(a.updated_at || a.submitted_at || 0)
+  })
   const esmOpts = pEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, label: pe.custom_name || pe.esm.name }))
   const bldgOpts = bldgs.filter((b) => b.status_override !== 'archived').map((b) => ({ id: b.id, code: b.code, label: b.name }))
 
@@ -77,8 +118,8 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
         <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{headerExtra}{canWrite && <Btn icon="upload" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => { setPrefill(null); setUp(true) }}>Upload document</Btn>}</div>
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Contractor submittals reviewed by the client’s technical team. Sorted by latest activity.</div>
-      {rows.length === 0 ? <Empty icon="doc">No documents submitted yet.</Empty> : (
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Every submittal for this project — MIR, WIR, COC, material submittals and method statements. Approved first, then most recently updated. Open any file directly.</div>
+      {sortedRows.length === 0 ? <Empty icon="doc">No documents submitted yet.</Empty> : (
         <div className="ies-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 860 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
@@ -90,7 +131,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
               {canReview && <th style={{ padding: 8, fontWeight: 600 }} />}
             </tr></thead>
             <tbody>
-              {rows.map((d) => {
+              {sortedRows.map((d) => {
                 const [lbl, col, bg, tip] = docStatusMeta(d.status)
                 const typeLabel = d.doc_type === 'other' ? (d.custom_type_label || 'Other') : (TYPE_LABEL[d.doc_type] || d.doc_type)
                 return (
@@ -106,7 +147,7 @@ export default function ProjectDocuments({ projectId, buildingId = null, title =
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{typeLabel}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontWeight: 700 }}>{d.revision || 'A'}</td>
                     <td style={{ padding: '9px 8px' }}><span title={tip} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span></td>
-                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{fmtIso(d.submitted_at)}</td>
+                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{fmtIso(d.submitted_at)}{nameById[d.submitted_by] && <div style={{ fontFamily: 'var(--font)', fontSize: 10 }}>by {nameById[d.submitted_by]}</div>}</td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{d.client_reviewer_name || '—'}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{fmtIso(d.client_response_date)}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)' }}>{(() => { const x = daysInCourt(d); if (!x) return <span style={{ color: 'var(--text-3)' }}>—</span>; const warn = x.pending && x.days > 14; return <span title={x.pending ? 'Still awaiting client response' : 'Client response turnaround'} style={{ color: warn ? 'var(--bad)' : 'var(--text-3)', fontWeight: warn ? 700 : 400 }}>{x.days}d{x.pending ? '*' : ''}</span> })()}</td>

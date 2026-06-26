@@ -12,7 +12,7 @@ import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../com
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import MaterialDeliveries from '../components/MaterialDeliveries'
-import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL } from '../components/ProjectDocuments'
+import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
 import CocMatrix from '../components/CocMatrix'
 import ProjectItems from '../components/ProjectItems'
 
@@ -65,9 +65,17 @@ export default function ProjectDetail() {
   // all project_documents for this project (matrix uses project-level esm-tagged rows).
   const { rows: pdocs, refetch: refetchPdocs } = useLiveQuery('project_documents', (q) =>
     q.select('id,esm_id,building_id,doc_type,status,name,revision,storage_path,version,submitted_at,client_reviewer_name,client_response_date').eq('project_id', id), [id])
-  // Smart-matrix counts by cardinality (see migration 0040 view).
+  // COC↔ESM coverage so the COC cell's attachment count resolves bundle COCs.
+  const { rows: cocLinks, refetch: refetchCocLinks } = useLiveQuery('coc_esms', (q) =>
+    q.select('coc_id,esm_code,coc:project_documents!inner(project_id)').eq('coc.project_id', id), [id])
+  // Smart-matrix counts by cardinality (see migration 0046 view).
   const { rows: docProg, refetch: refetchProg } = useLiveQuery('v_project_doc_progress', (q) => q.select('*').eq('project_id', id), [id])
-  const refetchDocs = () => { refetchPdocs(); refetchProg() }
+  const refetchDocs = () => { refetchPdocs(); refetchProg(); refetchCocLinks() }
+  const cocIdsByEsm = {}
+  cocLinks.forEach((l) => { (cocIdsByEsm[l.esm_code] = cocIdsByEsm[l.esm_code] || new Set()).add(l.coc_id) })
+  const cellDocs = (row, k) => k === 'coc'
+    ? pdocs.filter((d) => d.doc_type === 'coc' && cocIdsByEsm[row.code]?.has(d.id))
+    : pdocs.filter((d) => d.esm_id === row.esmId && d.doc_type === k)
   const [uploadReq, setUploadReq] = useState(null)
   const [drill, setDrill] = useState(null) // { esmId, esmCode, docType } for multi-kind drilldown
   const cocByB = {}
@@ -402,22 +410,31 @@ export default function ProjectDetail() {
                     {DOC_COLS.map(([k]) => {
                       if (MULTI_KINDS.has(k)) {
                         const p = progByKey[`${row.code}|${k}`] || {}
+                        const uncapped = p.expected_count == null // MIR/WIR are open-ended
                         const exp = p.expected_count || 0, sub = p.submitted_count || 0, app = p.approved_count || 0
                         const subPct = exp ? Math.min(100, (sub / exp) * 100) : 0
                         const appPct = exp ? Math.min(100, (app / exp) * 100) : 0
+                        const files = cellDocs(row, k)
                         return (
-                          <td key={k} onClick={() => setDrill({ esmId: row.esmId, esmCode: row.code, docType: k })} title={`${sub} submitted · ${app} approved of ${exp} expected — click for details`}
-                            style={{ padding: 8, cursor: 'pointer', minWidth: 92 }}>
-                            <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700 }}>{sub}/{exp}</div>
-                            <div style={{ height: 5, borderRadius: 3, background: '#EFF2F6', overflow: 'hidden', marginTop: 3, position: 'relative' }}>
-                              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: subPct + '%', background: '#BFDBFE' }} />
-                              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: appPct + '%', background: '#10B981' }} />
+                          <td key={k} title={uncapped ? `${sub} submitted · ${app} approved — click for details` : `${sub} submitted · ${app} approved of ${exp} planned — click for details`}
+                            style={{ padding: 8, minWidth: 92 }}>
+                            <div onClick={() => setDrill({ esmId: row.esmId, esmCode: row.code, docType: k })} style={{ cursor: 'pointer' }}>
+                              {uncapped ? (
+                                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700 }}>{sub}<span style={{ color: 'var(--text-3)', fontWeight: 600 }}> submitted{app ? ` · ${app} appr` : ''}</span></div>
+                              ) : (<>
+                                <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700 }}>{sub}/{exp}</div>
+                                <div style={{ height: 5, borderRadius: 3, background: '#EFF2F6', overflow: 'hidden', marginTop: 3, position: 'relative' }}>
+                                  <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: subPct + '%', background: '#BFDBFE' }} />
+                                  <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: appPct + '%', background: '#10B981' }} />
+                                </div>
+                              </>)}
                             </div>
+                            <div style={{ marginTop: 3 }}><AttachmentChip docs={files} onOpen={openFile} /></div>
                           </td>
                         )
                       }
                       const doc = cellByKey[`${row.esmId}|${k}`]
-                      if (doc) { const [lbl, c, bg, tip] = docStatusMeta(doc.status); return <td key={k} onClick={() => openFile(doc)} title={`${tip} — click to open file`} style={{ padding: 8, cursor: 'pointer' }}><Chip label={lbl} color={c} bg={bg} /></td> }
+                      if (doc) { const [lbl, c, bg, tip] = docStatusMeta(doc.status); return <td key={k} title={`${tip} — click to open file`} style={{ padding: 8 }}><span onClick={() => openFile(doc)} style={{ cursor: 'pointer' }}><Chip label={lbl} color={c} bg={bg} /></span><div style={{ marginTop: 3 }}><AttachmentChip docs={cellDocs(row, k)} onOpen={openFile} /></div></td> }
                       return (
                         <td key={k} style={{ padding: 8 }}>
                           {canManage
