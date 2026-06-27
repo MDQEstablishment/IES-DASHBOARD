@@ -4,6 +4,7 @@ import { useBreadcrumb } from '../breadcrumbs'
 import Icon from '../components/Icon'
 import { Avatar, Chip, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import DateInput from '../components/DateInput'
+import BuildingMaterialsPlan from '../components/BuildingMaterialsPlan'
 import InspectionFormModal from '../components/InspectionFormModal'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgUpdate, bgInsert, bgDelete, uploadToBucket } from '../lib/db'
@@ -232,10 +233,11 @@ export default function BuildingDetail() {
           {activeTab === 'rooms' && <RoomsTab buildingId={bid} rooms={rooms} scopes={scopes} canEdit={canInstall} user={user} />}
 
           {/* MATERIALS */}
-          {activeTab === 'materials' && (
+          {activeTab === 'materials' && (<>
+            <BuildingMaterialsPlan buildingId={bid} projectId={id} />
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>Materials Used vs Planned</div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Sub-type detail (per scope)</div>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Planned is editable; Used is derived from the install log (append-only) and feeds the Materials Consumption report.</div>
               {scopes.length === 0 ? <Empty icon="materials">No material scope on this building.</Empty> : (
@@ -266,7 +268,7 @@ export default function BuildingDetail() {
                 </table></div>
               )}
             </div>
-          )}
+          </>)}
 
           {/* DOCUMENTS */}
           {activeTab === 'documents' && b.project && <ProjectDocuments projectId={b.project_id} buildingId={bid} title="Building Documents" />}

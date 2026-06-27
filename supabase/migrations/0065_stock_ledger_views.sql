@@ -160,3 +160,8 @@ join public.building_item_scope bis on bis.id = il.scope_id
 join public.buildings b on b.id = bis.building_id
 join public.materials m on m.code = bis.material_code
 where il.qa_status = 'approved' and coalesce(il.qty,0) <> 0;
+
+-- PostgREST API grants (RLS still governs row visibility).
+grant select on public.material_categories, public.stock_ledger, public.project_warehouse_stock,
+  public.main_warehouse_stock, public.building_material_plan, public.project_category_stock to anon, authenticated;
+grant insert, update, delete on public.material_categories, public.stock_ledger to authenticated;
