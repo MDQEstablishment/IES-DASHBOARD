@@ -57,11 +57,10 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
               <th style={{ padding: 8, fontWeight: 600 }}>MATERIAL</th><th style={{ padding: 8, fontWeight: 600 }}>ACTUAL DATE</th>
-              <th style={{ padding: 8, fontWeight: 600 }}>STATUS</th><th style={{ padding: 8, fontWeight: 600 }}>NOTES</th>{canWrite && <th />}
+              <th style={{ padding: 8, fontWeight: 600 }}>NOTES</th>{canWrite && <th />}
             </tr></thead>
             <tbody>
               {rows.map((r) => {
-                const [lbl, col, bg] = DSTATUS[r.status] || DSTATUS.pending
                 const isPdf = r.source === 'pdf'
                 return (
                   <tr key={r.id} style={{ borderTop: '1px solid var(--line)' }}>
@@ -73,11 +72,6 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                       {canWrite
                         ? <DateInput value={r.actual_date || ''} onChange={(e) => e.target.value !== (r.actual_date || '') && patchRow(r.id, { actual_date: e.target.value || null })} style={{ ...inp, padding: '4px 6px' }} />
                         : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{r.actual_date ? fmtDate(r.actual_date) : '—'}</span>}
-                    </td>
-                    <td style={{ padding: '9px 8px' }}>
-                      {canWrite
-                        ? <select title={DDESC[r.status] || ''} value={r.status} onChange={(e) => patchRow(r.id, { status: e.target.value })} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 6, color: col, background: bg, border: `1px solid ${col}33` }}>{['pending', 'in_transit', 'delivered', 'rejected'].map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select>
-                        : <span title={DDESC[r.status] || ''} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span>}
                     </td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)', fontSize: 11.5, maxWidth: 220 }}>
                       <span className="ies-clamp2" title={r.notes || ''}>{r.notes || '—'}</span>
