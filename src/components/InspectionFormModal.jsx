@@ -40,6 +40,18 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     (q) => q.select('id,item_description,model_code,capacity_value,capacity_unit,total_quantity,esm_code').eq('project_id', project?.id), [project?.id])
 
   const missing = ['project_reference_no', 'contractor_name', 'beneficiary_entity'].filter((k) => !project?.[k])
+  // MIR item picker (Sprint 8E #6): group items by ESM — the selected ESM first
+  // (labelled "selected"), then the rest in ascending ESM order; within a group
+  // sort by description then model.
+  const ESM_RANK = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
+  const groupedItems = (() => {
+    const byEsm = {}
+    items.forEach((it) => { (byEsm[it.esm_code] = byEsm[it.esm_code] || []).push(it) })
+    const sel = chosenEsm?.code
+    return Object.keys(byEsm)
+      .sort((a, b) => (a === sel ? -1 : b === sel ? 1 : 0) || ESM_RANK(a) - ESM_RANK(b))
+      .map((code) => ({ code, selected: code === sel, items: byEsm[code].slice().sort((x, y) => (x.item_description || '').localeCompare(y.item_description || '') || (x.model_code || '').localeCompare(y.model_code || '')) }))
+  })()
   const validRows = rows.filter((r) => r.description.trim())
   const itemsForPdf = validRows.map((r) => ({ description: r.description.trim(), brand: r.brand.trim(), model: r.model.trim(), qty: r.qty, unit: r.unit }))
 
@@ -151,7 +163,11 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <select value="" onChange={(e) => addFromItem(e.target.value)} style={{ ...cell, width: 'auto', fontWeight: 600 }}>
                 <option value="">+ Add from Items &amp; Replacements…</option>
-                {items.map((it) => <option key={it.id} value={it.id}>{it.esm_code} · {it.item_description || '(unnamed)'} {it.model_code ? '· ' + it.model_code : ''}</option>)}
+                {groupedItems.map((g) => (
+                  <optgroup key={g.code} label={`${g.code}${g.selected ? ' — selected' : ''}`}>
+                    {g.items.map((it) => <option key={it.id} value={it.id}>{it.item_description || '(unnamed)'}{it.model_code ? ' · ' + it.model_code : ''}</option>)}
+                  </optgroup>
+                ))}
               </select>
               <button onClick={addBlank} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add blank row</button>
             </div>
