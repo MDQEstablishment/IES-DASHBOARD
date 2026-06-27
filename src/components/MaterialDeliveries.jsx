@@ -160,57 +160,87 @@ function AddDeliveryModal({ projectId, buildings, userId, onClose, onSaved }) {
   )
 }
 
-// ── Manual tab (the previous inline-add fields) ──────────────────────────────
+// ── Manual tab (multi-building, free-text material) ──────────────────────────
 function ManualTab({ projectId, buildings, userId, onSaved }) {
-  const [f, setF] = useState({ material_name: '', building_id: '', scheduled_date: '', status: 'pending', notes: '' })
+  const [f, setF] = useState({ material_name: '', quantity: '', scheduled_date: '', status: 'pending', notes: '' })
+  const [buildingIds, setBuildingIds] = useState([])
   const [busy, setBusy] = useState(false)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  const toggleB = (id) => setBuildingIds((a) => a.includes(id) ? a.filter((x) => x !== id) : [...a, id])
+  const allSel = buildings.length > 0 && buildingIds.length === buildings.length
   const save = async () => {
     if (!f.material_name.trim()) { toast('Material is required', 'err'); return }
+    if (buildingIds.length === 0) { toast('Pick at least one building', 'err'); return }
     setBusy(true)
-    const { error } = await bgInsert('material_deliveries', {
-      project_id: projectId, material_name: f.material_name.trim(), building_id: f.building_id || null,
+    const dist = splitEqually(f.quantity, buildingIds)
+    const batchId = crypto.randomUUID()
+    const rows = buildingIds.map((bId) => ({
+      project_id: projectId, material_name: f.material_name.trim(), building_id: bId,
+      quantity: Math.max(0, Math.round(Number(dist[bId]) || 0)), delivery_batch_id: batchId,
       scheduled_date: f.scheduled_date || null, status: f.status, notes: f.notes || null, source: 'manual', created_by: userId,
-    }, { okMsg: 'Delivery added' })
+    }))
+    const { error } = await bgInsert('material_deliveries', rows, { okMsg: `${rows.length} delivery row(s) added` })
     setBusy(false); if (!error) onSaved()
   }
   return (
     <div>
       <Field label="Material"><input lang="en" style={inputStyle} value={f.material_name} onChange={(e) => set('material_name', e.target.value)} placeholder="Material name" /></Field>
-      <Field label="Building"><select style={inputStyle} value={f.building_id} onChange={(e) => set('building_id', e.target.value)}><option value="">All / —</option>{buildings.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}</select></Field>
+      <Field label="Buildings receiving this delivery (required)">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <button onClick={() => setBuildingIds(allSel ? [] : buildings.map((b) => b.id))} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 700, border: '1px solid var(--accent)', background: allSel ? 'var(--accent)' : '#fff', color: allSel ? '#fff' : 'var(--accent)' }}>{allSel ? '✓ All' : 'Select all'}</button>
+          {buildings.map((b) => { const on = buildingIds.includes(b.id); return <button key={b.id} onClick={() => toggleB(b.id)} title={b.name} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--line)'), background: on ? '#EFF6FF' : '#fff', color: on ? 'var(--accent)' : 'var(--text-3)' }}>{on ? '✓ ' : ''}{b.code}</button> })}
+        </div>
+      </Field>
+      <Field label="Quantity (split equally across selected buildings)"><input lang="en" style={inputStyle} value={f.quantity} onChange={(e) => set('quantity', e.target.value)} placeholder="e.g. 120" /></Field>
       <Field label="Scheduled date"><DateInput style={inputStyle} value={f.scheduled_date} onChange={(e) => set('scheduled_date', e.target.value)} /></Field>
       <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{['pending', 'in_transit', 'delivered', 'rejected'].map((s) => <option key={s} value={s}>{DSTATUS[s][0]}</option>)}</select></Field>
       <Field label="Notes"><input lang="en" style={inputStyle} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Optional" /></Field>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Add delivery'}</Btn></div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}><Btn variant="primary" onClick={save} disabled={busy || buildingIds.length === 0}>{busy ? 'Saving…' : 'Add delivery'}</Btn></div>
     </div>
   )
 }
 
-// ── PDF tab — upload → AI extract → review → save as pending_approval ─────────
+// equal split: floor(total/n) each + remainder to the first building
+const splitEqually = (total, ids) => {
+  const n = ids.length, t = Math.max(0, Math.round(Number(total) || 0))
+  if (!n) return {}
+  const base = Math.floor(t / n), rem = t - base * n
+  const out = {}; ids.forEach((id, i) => { out[id] = base + (i === 0 ? rem : 0) }); return out
+}
+const ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif'
+const OK_EXT = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif']
+
+// ── PDF/image tab — upload → AI extract → review → save batch of pending rows ──
 function PdfTab({ projectId, buildings, userId, onClose, onSaved }) {
-  const { rows: materials } = useLiveQuery('materials', (q) => q.select('id,code,name,unit,esm_id').order('code'))
+  const { rows: materials } = useLiveQuery('materials', (q) => q.select('id,code,name,unit,esm_id,category_id,brand').order('code'))
   const [file, setFile] = useState(null)
-  const [buildingId, setBuildingId] = useState('')
+  const [buildingIds, setBuildingIds] = useState([])
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [pdfPath, setPdfPath] = useState('')
-  const [header, setHeader] = useState(null) // { supplier, po_ref, invoice_no, delivery_date, dateDefaulted }
+  const [header, setHeader] = useState(null) // { supplier, po_ref, delivery_note_no, delivery_date, dateDefaulted }
   const [lines, setLines] = useState(null)
   const [saving, setSaving] = useState(false)
   const fileRef = useRef(null)
 
+  const toggleB = (id) => setBuildingIds((a) => a.includes(id) ? a.filter((x) => x !== id) : [...a, id])
+  const allSelected = buildings.length > 0 && buildingIds.length === buildings.length
+  const selectAll = () => setBuildingIds(allSelected ? [] : buildings.map((b) => b.id))
+
   const onFile = (e) => {
     const f = e.target.files?.[0]; if (!f) return
-    if (f.type !== 'application/pdf') { setErr('Please choose a PDF file.'); return }
-    if (f.size > 5 * 1024 * 1024) { setErr('PDF exceeds the 5 MB limit.'); return }
+    const ext = (f.name.split('.').pop() || '').toLowerCase()
+    if (!OK_EXT.includes(ext)) { setErr('Choose a PDF or image (JPG, PNG, WEBP).'); return }
+    if (f.size > 5 * 1024 * 1024) { setErr('File exceeds the 5 MB limit.'); return }
     setErr(''); setFile(f); setHeader(null); setLines(null)
   }
 
   const extract = async () => {
     if (!file) return
     setErr(''); setBusy(true)
-    const path = `${projectId}/${crypto.randomUUID()}.pdf`
-    const up = await supabase.storage.from('delivery-notes').upload(path, file, { contentType: 'application/pdf', upsert: false })
+    const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
+    const path = `${projectId}/${crypto.randomUUID()}.${ext}`
+    const up = await supabase.storage.from('delivery-notes').upload(path, file, { contentType: file.type || undefined, upsert: false })
     if (up.error) { setBusy(false); setErr('Upload failed — ' + up.error.message); return }
     setPdfPath(path)
     const { data, error } = await supabase.functions.invoke('extract-delivery-pdf', { body: { project_id: projectId, pdf_path: path } })
@@ -221,60 +251,91 @@ function PdfTab({ projectId, buildings, userId, onClose, onSaved }) {
       setErr(msg); return
     }
     const e = data.extracted || {}
-    const dateDefaulted = !e.delivery_date
-    setHeader({ supplier: e.supplier || '', po_ref: e.po_ref || '', invoice_no: e.invoice_no || '', delivery_date: e.delivery_date || today(), dateDefaulted })
+    setHeader({ supplier: e.supplier || '', po_ref: e.po_ref || '', delivery_note_no: e.invoice_no || '', delivery_date: e.delivery_date || today(), dateDefaulted: !e.delivery_date })
     setLines((data.lines_with_matches || []).map((l) => ({
       material_id: l.material_id || '', material_description: l.material_description || '',
       qty: l.qty ?? '', unit: l.unit || l.catalog_unit || '', raw_text: l.raw_text || '',
-      catalog_name: l.catalog_name || '', match_type: l.match_type, showRaw: false,
+      match_type: l.match_type, showRaw: false, dist: null,
+      // category hint + create-variant inline form
+      matched_category_id: l.matched_category_id || '', matched_category_code: l.matched_category_code || '',
+      matched_category_name: l.matched_category_name || '', esm_id: l.esm_id || null,
+      creating: false, brand: l.suggested_brand || '', supplier: e.supplier || '', part_number: '',
     })))
   }
 
   const setLine = (i, patch) => setLines((arr) => arr.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const allMatched = lines && lines.every((l) => !!l.material_id)
-  const canSave = !!buildingId && allMatched && !saving
+  const canSave = buildingIds.length > 0 && allMatched && !saving
+
+  const createVariant = async (i) => {
+    const l = lines[i]
+    if (!l.matched_category_id) { toast('No category to attach this to — pick from catalog instead', 'err'); return }
+    if (!l.brand.trim()) { toast('Brand is required to create a variant', 'err'); return }
+    const slug = (s) => (s || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toUpperCase().slice(0, 14)
+    const code = `${l.matched_category_code || 'VAR'}-${slug(l.brand) || 'NEW'}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
+    const { data, error } = await bgInsert('materials', {
+      code, name: `${l.matched_category_name || l.material_description} — ${l.brand.trim()}`,
+      esm_id: l.esm_id || null, category_id: l.matched_category_id, brand: l.brand.trim(),
+      supplier: l.supplier?.trim() || null, part_number: l.part_number?.trim() || null,
+      unit: l.unit || null, planned: 0,
+    }, { okMsg: 'Variant added to catalog' })
+    if (!error && data?.[0]) setLine(i, { material_id: data[0].id, creating: false })
+  }
 
   const save = async () => {
     if (!canSave) return
     setSaving(true)
     const matById = Object.fromEntries(materials.map((m) => [m.id, m]))
-    const rows = lines.map((l) => {
+    const batchId = crypto.randomUUID()
+    const rows = []
+    for (const l of lines) {
       const m = matById[l.material_id]
-      const note = [l.qty !== '' ? `Qty ${l.qty}${l.unit ? ' ' + l.unit : ''}` : '', l.raw_text].filter(Boolean).join(' · ')
-      return {
-        project_id: projectId, building_id: buildingId, material_id: l.material_id,
-        material_name: m?.name || l.material_description, esm_id: m?.esm_id || null,
-        scheduled_date: header.delivery_date || null, status: 'pending_approval', source: 'pdf',
-        pdf_path: pdfPath, notes: note || null, created_by: userId,
-        extracted_metadata: { header, line: { ...l, showRaw: undefined } },
+      const dist = l.dist || splitEqually(l.qty, buildingIds)
+      for (const bId of buildingIds) {
+        const q = Math.max(0, Math.round(Number(dist[bId]) || 0))
+        const note = [q ? `Qty ${q}${l.unit ? ' ' + l.unit : ''}` : '', l.raw_text].filter(Boolean).join(' · ')
+        rows.push({
+          project_id: projectId, building_id: bId, material_id: l.material_id || null,
+          material_name: m?.name || l.material_description, esm_id: m?.esm_id || l.esm_id || null,
+          quantity: q, delivery_batch_id: batchId, delivery_note_no: header.delivery_note_no || null,
+          scheduled_date: header.delivery_date || null, status: 'pending_approval', source: 'pdf',
+          pdf_path: pdfPath, notes: note || null, created_by: userId,
+          extracted_metadata: { header, line: { material_description: l.material_description, qty: l.qty, unit: l.unit, raw_text: l.raw_text } },
+        })
       }
-    })
+    }
     const { error } = await bgInsert('material_deliveries', rows)
     setSaving(false)
     if (!error) { toast(`✓ ${rows.length} deliver${rows.length === 1 ? 'y' : 'ies'} created, awaiting engineer approval`); onSaved() }
   }
 
-  // ----- preview not loaded yet: upload form -----
+  const BuildingPicker = () => (
+    <Field label="Buildings receiving this delivery (required)">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+        <button onClick={selectAll} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 700, border: '1px solid var(--accent)', background: allSelected ? 'var(--accent)' : '#fff', color: allSelected ? '#fff' : 'var(--accent)' }}>{allSelected ? '✓ All' : 'Select all'}</button>
+        {buildings.map((b) => {
+          const on = buildingIds.includes(b.id)
+          return <button key={b.id} onClick={() => toggleB(b.id)} title={b.name} style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--line)'), background: on ? '#EFF6FF' : '#fff', color: on ? 'var(--accent)' : 'var(--text-3)' }}>{on ? '✓ ' : ''}{b.code}</button>
+        })}
+      </div>
+    </Field>
+  )
+
+  // ----- upload form -----
   if (!lines) {
     return (
       <div>
-        <Field label="Building (required — every line lands on this building)">
-          <select style={{ ...inputStyle, borderColor: buildingId ? 'var(--line)' : '#FCA5A5' }} value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
-            <option value="">Choose a building…</option>
-            {buildings.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}
-          </select>
-        </Field>
-        <Field label="Delivery-note PDF (max 5 MB)">
-          <input ref={fileRef} type="file" accept="application/pdf" onChange={onFile} style={{ display: 'none' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Btn icon="upload" onClick={() => fileRef.current?.click()}>{file ? 'Change PDF' : 'Choose PDF'}</Btn>
-            <span style={{ fontSize: 12.5, color: file ? 'var(--text)' : 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={file?.name}>{file?.name || 'No file chosen'}</span>
+        <BuildingPicker />
+        <Field label="Delivery note — PDF or image (max 5 MB)">
+          <input ref={fileRef} type="file" accept={ACCEPT} onChange={onFile} style={{ display: 'none' }} />
+          <div onClick={() => fileRef.current?.click()} style={{ border: '1.5px dashed var(--line)', borderRadius: 10, padding: 16, textAlign: 'center', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12.5 }}>
+            {file ? <span style={{ color: 'var(--text)', fontWeight: 600 }}>{file.name}</span> : 'Drop a delivery note (PDF or image) or click to browse'}
           </div>
         </Field>
         {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginBottom: 10 }}>{err}</div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Btn onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" onClick={extract} disabled={!file || !buildingId || busy} title={!buildingId ? 'Pick a building first' : (!file ? 'Choose a PDF first' : undefined)}>{busy ? 'Reading delivery note… 5–15s' : 'Extract delivery'}</Btn>
+          <Btn variant="primary" onClick={extract} disabled={!file || buildingIds.length === 0 || busy} title={buildingIds.length === 0 ? 'Pick at least one building' : (!file ? 'Choose a file first' : undefined)}>{busy ? 'Reading delivery note… 5–15s' : 'Extract delivery'}</Btn>
         </div>
       </div>
     )
@@ -283,53 +344,71 @@ function PdfTab({ projectId, buildings, userId, onClose, onSaved }) {
   // ----- review preview -----
   return (
     <div>
+      <BuildingPicker />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
         <Field label="Supplier"><input lang="en" style={inputStyle} value={header.supplier} onChange={(e) => setHeader({ ...header, supplier: e.target.value })} /></Field>
         <Field label="PO ref"><input lang="en" style={inputStyle} value={header.po_ref} onChange={(e) => setHeader({ ...header, po_ref: e.target.value })} /></Field>
-        <Field label="Invoice no"><input lang="en" style={inputStyle} value={header.invoice_no} onChange={(e) => setHeader({ ...header, invoice_no: e.target.value })} /></Field>
+        <Field label="Delivery Note No"><input lang="en" style={inputStyle} value={header.delivery_note_no} onChange={(e) => setHeader({ ...header, delivery_note_no: e.target.value })} /></Field>
         <Field label="Delivery date">
           <DateInput style={inputStyle} value={header.delivery_date} onChange={(e) => setHeader({ ...header, delivery_date: e.target.value, dateDefaulted: false })} />
-          {header.dateDefaulted && <div style={{ fontSize: 11, color: '#D97706', marginTop: 3 }}>ⓘ defaulted to today (none found in PDF)</div>}
+          {header.dateDefaulted && <div style={{ fontSize: 11, color: '#D97706', marginTop: 3 }}>ⓘ defaulted to today (none found)</div>}
         </Field>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>Review each line. Unmatched codes (⚠) must be linked to a catalog material before saving.</div>
-      <div className="ies-table-wrap" style={{ maxHeight: 320, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 8 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>Review each line. Unmatched lines (⚠) must be linked to a catalog material — or create a new variant — before saving. Qty splits equally across the selected buildings.</div>
+      <div className="ies-table-wrap" style={{ maxHeight: 300, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 8 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)', position: 'sticky', top: 0, background: '#F8FAFC' }}>
-            <th style={{ padding: 7 }} /><th style={{ padding: 7 }}>MATERIAL</th><th style={{ padding: 7, width: 64 }}>QTY</th><th style={{ padding: 7, width: 80 }}>UNIT</th><th style={{ padding: 7, width: 40 }} />
+            <th style={{ padding: 7 }} /><th style={{ padding: 7 }}>MATERIAL</th><th style={{ padding: 7, width: 56 }}>QTY</th><th style={{ padding: 7, width: 66 }}>UNIT</th><th style={{ padding: 7, width: 36 }} />
           </tr></thead>
           <tbody>
             {lines.map((l, i) => {
               const matched = !!l.material_id
               return (
-                <tr key={i} style={{ borderTop: '1px solid var(--line)' }}>
-                  <td style={{ padding: '6px 7px', textAlign: 'center' }} title={matched ? 'Matched to catalog' : 'Not in catalog — pick a material'}>{matched ? <span style={{ color: '#10B981' }}>✓</span> : <span style={{ color: '#D97706' }}>⚠</span>}</td>
+                <tr key={i} style={{ borderTop: '1px solid var(--line)', verticalAlign: 'top' }}>
+                  <td style={{ padding: '6px 7px', textAlign: 'center' }} title={matched ? 'Matched' : 'Not in catalog'}>{matched ? <span style={{ color: '#10B981' }}>✓</span> : <span style={{ color: '#D97706' }}>⚠</span>}</td>
                   <td style={{ padding: '6px 7px' }}>
-                    <select value={l.material_id} onChange={(e) => setLine(i, { material_id: e.target.value })}
-                      style={{ ...inp, width: '100%', borderColor: matched ? 'var(--line)' : '#FCA5A5' }}>
-                      <option value="">{`⚠ Pick from catalog — "${(l.material_description || '').slice(0, 40)}"`}</option>
+                    <select value={l.material_id} onChange={(e) => setLine(i, { material_id: e.target.value })} style={{ ...inp, width: '100%', borderColor: matched ? 'var(--line)' : '#FCA5A5' }}>
+                      <option value="">{`⚠ Pick from catalog — "${(l.material_description || '').slice(0, 36)}"`}</option>
                       {materials.map((m) => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}
                     </select>
-                    {!matched && <div style={{ fontSize: 10.5, color: '#B91C1C', marginTop: 2 }}>Not in catalog — pick an existing material (or add it in Materials first).</div>}
+                    {!matched && !l.creating && (
+                      <div style={{ fontSize: 10.5, marginTop: 3 }}>
+                        {l.matched_category_id
+                          ? <button onClick={() => setLine(i, { creating: true })} style={{ color: 'var(--accent)', fontWeight: 700 }}>+ Link to “{l.matched_category_name}” (create variant)</button>
+                          : <span style={{ color: '#B91C1C' }}>Pick an existing material, or add it in the Materials catalog first.</span>}
+                      </div>
+                    )}
+                    {!matched && l.creating && (
+                      <div style={{ marginTop: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 8, background: '#F8FAFC', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        <div style={{ gridColumn: '1 / -1', fontSize: 11, fontWeight: 700 }}>New variant under {l.matched_category_name}</div>
+                        <input style={inp} placeholder="Brand" value={l.brand} onChange={(e) => setLine(i, { brand: e.target.value })} />
+                        <input style={inp} placeholder="Supplier" value={l.supplier} onChange={(e) => setLine(i, { supplier: e.target.value })} />
+                        <input style={inp} placeholder="Part number" value={l.part_number} onChange={(e) => setLine(i, { part_number: e.target.value })} />
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <Btn variant="primary" style={{ padding: '6px 10px', fontSize: 12 }} onClick={() => createVariant(i)}>Create & link</Btn>
+                          <button onClick={() => setLine(i, { creating: false })} style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
                   </td>
-                  <td style={{ padding: '6px 7px' }}><input style={{ ...inp, width: 56 }} value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} /></td>
-                  <td style={{ padding: '6px 7px' }}><input style={{ ...inp, width: 70 }} value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} /></td>
-                  <td style={{ padding: '6px 7px', textAlign: 'center' }}><button title="Show raw extracted text" onClick={() => setLine(i, { showRaw: !l.showRaw })} style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.showRaw ? '▲' : '▼'}</button></td>
+                  <td style={{ padding: '6px 7px' }}><input style={{ ...inp, width: 50 }} value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value, dist: null })} /></td>
+                  <td style={{ padding: '6px 7px' }}><input style={{ ...inp, width: 58 }} value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} /></td>
+                  <td style={{ padding: '6px 7px', textAlign: 'center' }}><button title="Raw text" onClick={() => setLine(i, { showRaw: !l.showRaw })} style={{ fontSize: 11, color: 'var(--text-3)' }}>{l.showRaw ? '▲' : '▼'}</button></td>
                 </tr>
               )
             })}
             {lines.map((l, i) => l.showRaw ? (
-              <tr key={'raw' + i}><td /><td colSpan={4} style={{ padding: '4px 7px', fontSize: 11, color: 'var(--text-3)' }} dir="auto"><strong>Raw:</strong> {l.raw_text || '—'}</td></tr>
+              <tr key={'raw' + i}><td /><td colSpan={4} style={{ padding: '4px 7px', fontSize: 11, color: 'var(--text-3)' }} dir="auto"><strong>Raw:</strong> {l.raw_text || '—'} · <em>splits {buildingIds.length > 0 ? buildingIds.map((b) => splitEqually(l.qty, buildingIds)[b]).join(' / ') : '—'} across selected buildings</em></td></tr>
             ) : null)}
           </tbody>
         </table>
       </div>
       {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginTop: 10 }}>{err}</div>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-        <span style={{ fontSize: 11.5, color: allMatched ? '#047857' : '#B45309' }}>{allMatched ? 'All lines matched.' : 'Some lines are unmatched — resolve them to enable Save.'}</span>
+        <span style={{ fontSize: 11.5, color: allMatched ? '#047857' : '#B45309' }}>{allMatched ? `Ready — ${lines.length} line(s) × ${buildingIds.length} building(s).` : 'Some lines are unmatched — resolve them to enable Save.'}</span>
         <div style={{ display: 'flex', gap: 8 }}>
           <Btn onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" onClick={save} disabled={!canSave} title={!buildingId ? 'Pick a building' : (!allMatched ? 'Resolve unmatched lines' : undefined)}>{saving ? 'Saving…' : 'Save as pending'}</Btn>
+          <Btn variant="primary" onClick={save} disabled={!canSave} title={buildingIds.length === 0 ? 'Pick at least one building' : (!allMatched ? 'Resolve unmatched lines' : undefined)}>{saving ? 'Saving…' : 'Save as pending'}</Btn>
         </div>
       </div>
     </div>
