@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import Icon from '../components/Icon'
 import { Avatar, Chip, Card, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import { useAuth, can } from '../rbac'
@@ -24,7 +24,8 @@ export default function ManageEsms() {
   const canMove = can(role, CAN_MOVE_MATERIAL)
 
   const { rows: esms } = useLiveQuery('esms', (q) => q.select('*').order('code'))
-  const { rows: materials, loading } = useLiveQuery('materials', (q) => q.select('*,esm:esms(code,name)').order('code'))
+  const { rows: activeCats } = useLiveQuery('material_categories', (q) => q.select('id,code,name_en,esm_id,is_active').eq('is_active', true).order('code'))
+  const { rows: materials, loading } = useLiveQuery('materials', (q) => q.select('*,esm:esms(code,name),category:material_categories(id,code,name_en,is_active)').order('code'))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,material_code'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty'))
   const { rows: moves } = useLiveQuery('material_movements', (q) =>
@@ -45,7 +46,30 @@ export default function ManageEsms() {
 
   const decorated = materials.map(decorate)
   const lowCount = decorated.filter((m) => m.inStock < m.threshold).length
-  const groups = esms.map((e) => ({ no: e.code, name: e.name, items: decorated.filter((m) => m.esm_id === e.id) }))
+
+  // Sprint 8H — group each ESM's variants by category (Main + Accessories pair,
+  // active only) and then by display name; brands of the same name collapse into
+  // one row with a brand picker.
+  const isAcc = (code) => /-ACC$/i.test(code || '')
+  const groups = esms.map((e) => {
+    const items = decorated.filter((m) => m.esm_id === e.id)
+    const byCat = {}
+    items.forEach((m) => {
+      const c = m.category
+      if (!c || c.is_active === false) return
+      const g = byCat[c.id] || (byCat[c.id] = { cat: c, names: {} })
+      ;(g.names[m.name] = g.names[m.name] || []).push(m)
+    })
+    const cats = Object.values(byCat)
+      .sort((a, b) => (isAcc(a.cat.code) ? 1 : 0) - (isAcc(b.cat.code) ? 1 : 0) || (a.cat.code || '').localeCompare(b.cat.code || ''))
+      .map((g) => ({
+        cat: g.cat,
+        nameGroups: Object.entries(g.names)
+          .map(([name, variants]) => ({ name, variants: variants.sort((x, y) => (x.brand || '').localeCompare(y.brand || '')) }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+    return { no: e.code, name: e.name, cats }
+  })
 
   const onThresh = (m, val) => {
     const n = parseInt(val, 10)
@@ -95,28 +119,13 @@ export default function ManageEsms() {
                     </tr>
                   </thead>
                   <tbody>
-                    {g.items.length === 0 ? (
+                    {g.cats.length === 0 ? (
                       <tr><td colSpan={8} style={{ padding: '14px 8px', color: 'var(--text-3)' }}>No materials in this ESM.</td></tr>
-                    ) : g.items.map((m) => (
-                      <tr key={m.id} style={{ borderTop: '1px solid var(--line)' }}>
-                        <td style={{ padding: '10px 8px' }}>
-                          <div style={{ fontWeight: 600 }}>{m.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{[m.brand_spec, m.unit].filter(Boolean).join(' · ') || '—'}</div>
-                        </td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(m.requested)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(m.received)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, color: m.shortage > 0 ? '#EF4444' : 'var(--text-3)' }}>{num(m.shortage)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.consumed)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(m.inStock)}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                          {canMove
-                            ? <input lang="en" defaultValue={m.threshold} onBlur={(e) => onThresh(m, e.target.value)} style={{ width: 60, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'center' }} />
-                            : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.threshold)}</span>}
-                        </td>
-                        <td style={{ padding: '10px 8px' }}>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: m.st.color, background: m.st.bg }}>{m.st.label}</span>
-                        </td>
-                      </tr>
+                    ) : g.cats.map((c) => (
+                      <Fragment key={c.cat.id}>
+                        <tr><td colSpan={8} style={{ padding: '7px 8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', background: '#F8FAFC', borderTop: '1px solid var(--line)' }}>{c.cat.name_en}</td></tr>
+                        {c.nameGroups.map((ng) => <CatalogNameRow key={c.cat.id + ng.name} group={ng} canMove={canMove} onThresh={onThresh} />)}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -155,8 +164,47 @@ export default function ManageEsms() {
       </Card>
 
       {mv && <MoveModal material={mv} materials={materials} user={user} onClose={() => setMv(null)} />}
-      {addOpen && <AddMaterialModal esms={esms} onClose={() => setAddOpen(false)} />}
+      {addOpen && <AddMaterialModal esms={esms} cats={activeCats} onClose={() => setAddOpen(false)} />}
     </div>
+  )
+}
+
+// Sprint 8H — one catalog row per material name. When the name has more than one
+// brand variant, a small brand picker selects which variant's stock numbers show;
+// a single-brand name just renders the brand as plain text.
+function CatalogNameRow({ group, canMove, onThresh }) {
+  const { name, variants } = group
+  const [idx, setIdx] = useState(0)
+  const m = variants[idx] || variants[0]
+  const multi = variants.length > 1
+  const tdR = { padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }
+  return (
+    <tr style={{ borderTop: '1px solid var(--line)' }}>
+      <td style={{ padding: '10px 8px' }}>
+        <div style={{ fontWeight: 600 }}>{name}</div>
+        {multi ? (
+          <select lang="en" value={idx} onChange={(e) => setIdx(Number(e.target.value))} title="Brand"
+            style={{ marginTop: 4, fontSize: 11, padding: '3px 6px', border: '1px solid var(--line)', borderRadius: 6, color: 'var(--text-3)', maxWidth: 240, background: '#fff' }}>
+            {variants.map((v, i) => <option key={v.id} value={i}>{[v.brand || v.brand_spec || '—', v.unit].filter(Boolean).join(' · ')}</option>)}
+          </select>
+        ) : (
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{[m.brand || m.brand_spec, m.unit].filter(Boolean).join(' · ') || '—'}</div>
+        )}
+      </td>
+      <td style={tdR}>{num(m.requested)}</td>
+      <td style={tdR}>{num(m.received)}</td>
+      <td style={{ ...tdR, fontWeight: 700, color: m.shortage > 0 ? '#EF4444' : 'var(--text-3)' }}>{num(m.shortage)}</td>
+      <td style={{ ...tdR, color: 'var(--text-3)' }}>{num(m.consumed)}</td>
+      <td style={{ ...tdR, fontWeight: 700 }}>{num(m.inStock)}</td>
+      <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+        {canMove
+          ? <input lang="en" defaultValue={m.threshold} onBlur={(e) => onThresh(m, e.target.value)} style={{ width: 60, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'center' }} />
+          : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.threshold)}</span>}
+      </td>
+      <td style={{ padding: '10px 8px' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: m.st.color, background: m.st.bg }}>{m.st.label}</span>
+      </td>
+    </tr>
   )
 }
 
@@ -186,29 +234,37 @@ function MoveModal({ material, materials, user, onClose }) {
   )
 }
 
-function AddMaterialModal({ esms, onClose }) {
+function AddMaterialModal({ esms, cats = [], onClose }) {
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [esmId, setEsmId] = useState(esms[0]?.id || '')
+  const [brand, setBrand] = useState('')
+  const [catId, setCatId] = useState('')
   const [planned, setPlanned] = useState('')
   const [threshold, setThreshold] = useState('')
   const [busy, setBusy] = useState(false)
+  // Sprint 8H — categories are scoped per ESM; offer only this ESM's active ones.
+  const esmCats = cats.filter((c) => c.esm_id === esmId)
   const save = async () => {
-    if (!code.trim() || !name.trim() || !esmId) return
+    if (!code.trim() || !name.trim() || !esmId || !catId) return
     setBusy(true)
-    const { error } = await bgInsert('materials', { code: code.trim(), name: name.trim(), esm_id: esmId, planned: parseInt(planned, 10) || 0, threshold: parseInt(threshold, 10) || 0 },
+    const { error } = await bgInsert('materials', { code: code.trim(), name: name.trim(), esm_id: esmId, category_id: catId, brand: brand.trim() || null, planned: parseInt(planned, 10) || 0, threshold: parseInt(threshold, 10) || 0 },
       { okMsg: 'Material added' })
     setBusy(false)
     if (!error) onClose()
   }
   return (
     <Modal open title="Add material" onClose={onClose}
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !code.trim() || !name.trim()}>{busy ? 'Saving…' : 'Add'}</Btn></>}>
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !code.trim() || !name.trim() || !catId}>{busy ? 'Saving…' : 'Add'}</Btn></>}>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}><Field label="SKU"><input lang="en" style={inputStyle} value={code} onChange={(e) => setCode(e.target.value)} placeholder="M-L01" /></Field></div>
         <div style={{ flex: 2 }}><Field label="Name"><input lang="en" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="LED Panel 40W" /></Field></div>
       </div>
-      <Field label="ESM"><select style={inputStyle} value={esmId} onChange={(e) => setEsmId(e.target.value)}>{esms.map((e) => <option key={e.id} value={e.id}>{e.code} · {e.name}</option>)}</select></Field>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1 }}><Field label="ESM"><select style={inputStyle} value={esmId} onChange={(e) => { setEsmId(e.target.value); setCatId('') }}>{esms.map((e) => <option key={e.id} value={e.id}>{e.code} · {e.name}</option>)}</select></Field></div>
+        <div style={{ flex: 1 }}><Field label="Category"><select style={inputStyle} value={catId} onChange={(e) => setCatId(e.target.value)}><option value="">Select…</option>{esmCats.map((c) => <option key={c.id} value={c.id}>{c.name_en}</option>)}</select></Field></div>
+      </div>
+      <Field label="Brand"><input lang="en" style={inputStyle} value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Philips (optional)" /></Field>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}><Field label="Planned"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={planned} onChange={(e) => setPlanned(e.target.value)} /></Field></div>
         <div style={{ flex: 1 }}><Field label="Threshold"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} /></Field></div>

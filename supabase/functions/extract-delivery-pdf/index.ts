@@ -216,7 +216,9 @@ Deno.serve(async (req) => {
 
     // --- match each line: exact/fuzzy variant, else fuzzy category ------------
     const { data: catalog } = await admin.from("materials").select("id,code,name,unit,esm_id,category_id,brand");
-    const { data: categories } = await admin.from("material_categories").select("id,code,name_en,default_unit,esm_id");
+    // Sprint 8H — the catalog collapsed to 6 active categories (old 28 are kept
+    // for FK safety but flagged is_active=false); only fuzzy-match against active.
+    const { data: categories } = await admin.from("material_categories").select("id,code,name_en,default_unit,esm_id").eq("is_active", true);
     const lines_with_matches = extracted.lines.map((ln: any) => {
       const mt = bestMatch(ln, catalog || []);
       if (mt) {
