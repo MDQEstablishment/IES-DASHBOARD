@@ -2,28 +2,33 @@ import { useState } from 'react'
 import { useLiveQuery } from '../lib/db'
 import { Empty } from './ui'
 
-// Sprint 8E — Main Warehouse rollup (top-bar Materials page). Total stock per
-// variant across ALL projects, with an expandable per-project breakdown. Reads
-// the main_warehouse_stock + project_warehouse_stock views.
+// Sprint 8E/8H — Main Warehouse rollup (top-bar Materials page). Total stock on
+// hand aggregated by material NAME across brand variants and across all projects;
+// click a row to drill down to the brand-by-brand split. Reads main_warehouse_stock.
 const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
 const num = (v) => (v == null ? 0 : Number(v))
 
 export default function MainWarehouse() {
   const { rows: main, loading } = useLiveQuery('main_warehouse_stock', (q) => q.select('*'))
-  const { rows: byProj } = useLiveQuery('project_warehouse_stock', (q) => q.select('variant_id,project_id,qty_on_hand'))
-  const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code').is('deleted_at', null))
   const [open, setOpen] = useState(null)
   const [esm, setEsm] = useState('all')
 
-  const projCode = Object.fromEntries(projects.map((p) => [p.id, p.code]))
-  const breakdown = {}
-  byProj.forEach((r) => { (breakdown[r.variant_id] = breakdown[r.variant_id] || []).push(r) })
+  // Aggregate variants by material name (within ESM + category). Each group keeps
+  // its per-brand rows for the drilldown.
+  const byName = {}
+  main.forEach((r) => {
+    const name = r.variant_name || r.variant_code
+    const key = (r.esm_code || '') + '|' + (r.category_name || r.category_code || '') + '|' + name
+    const g = byName[key] || (byName[key] = { key, esm_code: r.esm_code, category_name: r.category_name || r.category_code, name, qty: 0, brands: [] })
+    g.qty += num(r.qty_on_hand)
+    g.brands.push({ brand: r.brand || '—', code: r.variant_code, qty: num(r.qty_on_hand) })
+  })
 
   const esmsPresent = [...new Set(main.map((r) => r.esm_code).filter(Boolean))].sort((a, b) => ESM_ORDER(a) - ESM_ORDER(b))
-  const rows = main
-    .filter((r) => num(r.qty_on_hand) !== 0 || true)
+  const rows = Object.values(byName)
+    .map((g) => ({ ...g, brands: g.brands.sort((a, b) => (a.brand || '').localeCompare(b.brand || '')) }))
     .filter((r) => esm === 'all' || r.esm_code === esm)
-    .sort((a, b) => ESM_ORDER(a.esm_code) - ESM_ORDER(b.esm_code) || (a.category_code || '').localeCompare(b.category_code || '') || (a.brand || '').localeCompare(b.brand || ''))
+    .sort((a, b) => ESM_ORDER(a.esm_code) - ESM_ORDER(b.esm_code) || (a.category_name || '').localeCompare(b.category_name || '') || a.name.localeCompare(b.name))
 
   const th = { padding: '9px 8px', fontWeight: 600, textAlign: 'left' }
   return (
@@ -31,7 +36,7 @@ export default function MainWarehouse() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 15 }}>Main Warehouse</div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Total stock on hand across all projects. Click a row for the per-project breakdown.</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Total stock on hand across all projects, by material. Click a row for the brand-by-brand split.</div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {['all', ...esmsPresent].map((k) => (
@@ -44,27 +49,27 @@ export default function MainWarehouse() {
           <div className="ies-table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 680 }}>
               <thead><tr style={{ color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-                <th style={th}>ESM</th><th style={th}>CATEGORY</th><th style={th}>VARIANT (BRAND)</th>
+                <th style={th}>ESM</th><th style={th}>CATEGORY</th><th style={th}>MATERIAL</th>
                 <th style={{ ...th, textAlign: 'right' }}>TOTAL IN STOCK</th><th style={th} />
               </tr></thead>
               <tbody>
                 {rows.map((r) => {
-                  const bd = (breakdown[r.variant_id] || []).filter((x) => num(x.qty_on_hand) !== 0)
-                  const isOpen = open === r.variant_id
+                  const multi = r.brands.length > 1
+                  const isOpen = open === r.key
                   return (
                     <>
-                      <tr key={r.variant_id} style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }} onClick={() => setOpen(isOpen ? null : r.variant_id)}>
+                      <tr key={r.key} style={{ borderTop: '1px solid var(--line)', cursor: multi ? 'pointer' : 'default' }} onClick={() => multi && setOpen(isOpen ? null : r.key)}>
                         <td style={{ padding: '10px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>{r.esm_code || '—'}</td>
-                        <td style={{ padding: '10px 8px' }}><span className="ies-ellipsis" title={r.category_code}>{r.category_name || r.category_code || '—'}</span></td>
-                        <td style={{ padding: '10px 8px' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{r.variant_code}</span> · {r.brand || '—'}</td>
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(r.qty_on_hand)}</td>
-                        <td style={{ padding: '10px 8px', color: 'var(--text-3)', fontSize: 11 }}>{bd.length} project{bd.length === 1 ? '' : 's'} {isOpen ? '▲' : '▼'}</td>
+                        <td style={{ padding: '10px 8px' }}><span className="ies-ellipsis">{r.category_name || '—'}</span></td>
+                        <td style={{ padding: '10px 8px', fontWeight: 600 }}><span className="ies-ellipsis">{r.name}</span></td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{r.qty}</td>
+                        <td style={{ padding: '10px 8px', color: 'var(--text-3)', fontSize: 11 }}>{multi ? <>{r.brands.length} brands {isOpen ? '▲' : '▼'}</> : (r.brands[0]?.brand || '—')}</td>
                       </tr>
-                      {isOpen && bd.map((x) => (
-                        <tr key={r.variant_id + x.project_id} style={{ background: '#F8FAFC' }}>
+                      {multi && isOpen && r.brands.map((b) => (
+                        <tr key={r.key + b.code} style={{ background: '#F8FAFC' }}>
                           <td />
-                          <td colSpan={2} style={{ padding: '6px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{projCode[x.project_id] || x.project_id?.slice(0, 8)}</td>
-                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(x.qty_on_hand)}</td><td />
+                          <td colSpan={2} style={{ padding: '6px 8px', color: 'var(--text-3)' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{b.code}</span> · {b.brand}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{b.qty}</td><td />
                         </tr>
                       ))}
                     </>
