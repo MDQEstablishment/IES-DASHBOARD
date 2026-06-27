@@ -53,6 +53,13 @@ export default function Settings() {
     (q) => q.select('*').order('created_at', { ascending: false }).limit(50))
   const filteredAudit = audit.filter((a) => auditAction === 'all' || a.action === auditAction)
 
+  // PDF extraction monthly cap counter (PMO/admin). RLS already restricts reads.
+  const showCap = ['admin', 'pmo'].includes(role)
+  const monthIso = new Date(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1).toISOString()
+  const { rows: extractRows } = useLiveQuery('pdf_extraction_log',
+    (q) => q.select('id,success').gte('created_at', monthIso), [monthIso])
+  const PDF_CAP = 1000, usedThisMonth = extractRows.length, capPct = Math.min(100, Math.round((usedThisMonth / PDF_CAP) * 100))
+
   return (
     <div data-screen-label="Settings">
       <PageTitle kicker="ADMINISTRATION" title="Settings" />
@@ -66,6 +73,25 @@ export default function Settings() {
         </div>
         <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#2563EB', background: '#EFF6FF' }}>Your account</span>
       </div>
+
+      {/* AI PDF extraction — monthly usage cap (PMO/admin) */}
+      {showCap && (
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 14, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>AI delivery-note extraction</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>PDF extractions used this calendar month. Resets on the 1st.</div>
+            </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 800, color: usedThisMonth >= PDF_CAP ? 'var(--bad)' : 'var(--text)' }}>
+              {usedThisMonth} <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/ {PDF_CAP}</span>
+            </div>
+          </div>
+          <div style={{ height: 7, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden', marginTop: 10 }}>
+            <div style={{ height: '100%', width: capPct + '%', background: usedThisMonth >= PDF_CAP ? 'var(--bad)' : 'var(--accent)' }} />
+          </div>
+          {usedThisMonth >= PDF_CAP && <div style={{ fontSize: 11.5, color: 'var(--bad)', marginTop: 6 }}>Monthly limit reached — extraction is paused until next month. Deliveries can still be entered manually.</div>}
+        </div>
+      )}
 
       {/* Horizontal category tabs (dc setCats) */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--line)', marginBottom: 16, flexWrap: 'wrap' }}>
