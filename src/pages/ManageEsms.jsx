@@ -5,6 +5,7 @@ import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { CAN_MOVE_MATERIAL } from '../lib/constants'
 import { num, fmtShort } from '../lib/format'
+import MainWarehouse from '../components/MainWarehouse'
 
 // Materials (dc r_materials, 883-916). Stock grouped per-ESM; in-stock = received
 // − consumed and shortage = max(0, planned − received) are computed at read (no
@@ -62,6 +63,8 @@ export default function ManageEsms() {
           </div>
         )}
       </div>
+
+      <MainWarehouse />
 
       {lowCount > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>

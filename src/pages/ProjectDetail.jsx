@@ -15,6 +15,7 @@ import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChi
 import MaterialDeliveries from '../components/MaterialDeliveries'
 import CocMatrix from '../components/CocMatrix'
 import ProjectItems from '../components/ProjectItems'
+import ProjectWarehouse from '../components/ProjectWarehouse'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -28,6 +29,7 @@ const DOC_COLS = [
 const TABS = [
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
+  ['warehouse', 'Warehouse'],
   ['items', 'Items & Replacements'],
   ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
@@ -58,6 +60,8 @@ export default function ProjectDetail() {
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty,project_esm_id'))
+  const { rows: catShort } = useLiveQuery('project_category_stock', (q) => q.select('is_short').eq('project_id', id).eq('is_short', true), [id])
+  const anyShortage = catShort.length > 0
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) =>
     q.select('id,project_id,custom_name,ordinal,esm:esms(id,code,name)').eq('project_id', id).order('ordinal'), [id])
@@ -204,6 +208,7 @@ export default function ProjectDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '1px', color: '#94A3B8' }}>{project.code}</span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pillColor, background: pillBg }}>{pillLabel}</span>
+                {anyShortage && <span title="One or more material categories are below their remaining planned quantity — open the Warehouse tab" onClick={() => setTab('warehouse')} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: '#fff', background: '#DC2626' }}>⚠ LOW STOCK</span>}
               </div>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: '8px 0 8px', color: '#fff', letterSpacing: '-.3px' }}>{project.name}</h1>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 12.5, color: '#CBD5E1' }}>
@@ -378,6 +383,9 @@ export default function ProjectDetail() {
           )}
         </div>
       )}
+
+      {/* WAREHOUSE tab */}
+      {tab === 'warehouse' && <ProjectWarehouse projectId={id} />}
 
       {/* ITEMS & REPLACEMENTS tab */}
       {tab === 'items' && <ProjectItems projectId={id} project={project} />}
