@@ -88,6 +88,22 @@ function bestMatch(line: any, catalog: any[]) {
   return bestScore >= 0.75 ? { m: best, type: "fuzzy" } : null;
 }
 
+// Fuzzy-match a line's description to a CATEGORY (tier 2) when no variant matched,
+// so the UI can offer a one-click "create variant under this category".
+function bestCategory(line: any, categories: any[]) {
+  const lt = tokenize(line.material_description);
+  if (!lt.length) return null;
+  let best: any = null, bestScore = 0;
+  for (const c of categories) {
+    const ct = new Set(tokenize((c.name_en || "") + " " + (c.code || "")));
+    if (!ct.size) continue;
+    const hit = lt.filter((t) => ct.has(t)).length;
+    const score = hit / lt.length;
+    if (score > bestScore) { bestScore = score; best = c; }
+  }
+  return bestScore >= 0.75 ? { c: best } : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -126,6 +142,12 @@ Deno.serve(async (req) => {
     pdf_path = body.pdf_path || "";
     if (!project_id || !pdf_path) return json({ error: "invalid_pdf", message: "Missing project or file." }, 400);
 
+    // HEIC/HEIF isn't accepted by the model — reject early (don't spend a cap slot).
+    const ext = (pdf_path.split(".").pop() || "").toLowerCase();
+    if (ext === "heic" || ext === "heif") {
+      return json({ error: "unsupported_format_heic", message: "iPhone HEIC photos aren't supported yet — please save as JPG and re-upload." }, 415);
+    }
+
     // --- monthly cap ----------------------------------------------------------
     const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
     const { count } = await admin.from("pdf_extraction_log").select("*", { count: "exact", head: true })
@@ -140,7 +162,14 @@ Deno.serve(async (req) => {
     const bytes = new Uint8Array(await dl.data.arrayBuffer());
     let binary = ""; for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     const b64 = btoa(binary);
-    const pages = (binary.match(/\/Type\s*\/Page[^s]/g) || []).length || null;
+    // PDF → document block (today's behavior); image → image block. Haiku 4.5 is
+    // multimodal and reads scanned PDFs and photos directly.
+    const isPdf = ext === "pdf" || (dl.data.type || "") === "application/pdf";
+    const imgMime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+    const pages = isPdf ? ((binary.match(/\/Type\s*\/Page[^s]/g) || []).length || null) : 1;
+    const mediaBlock = isPdf
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
+      : { type: "image", source: { type: "base64", media_type: imgMime, data: b64 } };
 
     // --- call Claude (forced tool = guaranteed JSON shape) --------------------
     const ar = await fetch("https://api.anthropic.com/v1/messages", {
@@ -160,7 +189,7 @@ Deno.serve(async (req) => {
         messages: [{
           role: "user",
           content: [
-            { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } },
+            mediaBlock,
             { type: "text", text: "Extract this delivery note." },
           ],
         }],
@@ -185,19 +214,27 @@ Deno.serve(async (req) => {
       return json({ error: "extraction_failed", message: "No delivery lines were found in the PDF." }, 422);
     }
 
-    // --- match each line against the materials catalog ------------------------
-    const { data: catalog } = await admin.from("materials").select("id,code,name,unit,esm_id");
+    // --- match each line: exact/fuzzy variant, else fuzzy category ------------
+    const { data: catalog } = await admin.from("materials").select("id,code,name,unit,esm_id,category_id,brand");
+    const { data: categories } = await admin.from("material_categories").select("id,code,name_en,default_unit,esm_id");
     const lines_with_matches = extracted.lines.map((ln: any) => {
       const mt = bestMatch(ln, catalog || []);
+      if (mt) {
+        return {
+          ...ln, matched: true, match_type: mt.type,
+          material_id: mt.m.id, catalog_code: mt.m.code, catalog_name: mt.m.name,
+          catalog_unit: mt.m.unit, esm_id: mt.m.esm_id,
+          matched_category_id: mt.m.category_id || null, suggested_brand: null,
+        };
+      }
+      // no variant — try to at least pin the category so the UI can offer "create variant"
+      const cat = bestCategory(ln, categories || []);
       return {
-        ...ln,
-        matched: !!mt,
-        match_type: mt?.type || null,
-        material_id: mt?.m?.id || null,
-        catalog_code: mt?.m?.code || null,
-        catalog_name: mt?.m?.name || null,
-        catalog_unit: mt?.m?.unit || null,
-        esm_id: mt?.m?.esm_id || null,
+        ...ln, matched: false, match_type: null,
+        material_id: null, catalog_code: null, catalog_name: null, catalog_unit: cat?.c?.default_unit || ln.unit || null, esm_id: cat?.c?.esm_id || null,
+        matched_category_id: cat?.c?.id || null, matched_category_code: cat?.c?.code || null,
+        matched_category_name: cat?.c?.name_en || null,
+        suggested_brand: (ln.material_code || (ln.material_description || "").split(/\s+/)[0] || "").slice(0, 40) || null,
       };
     });
 
