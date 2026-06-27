@@ -29,12 +29,12 @@ const DOC_COLS = [
 const TABS = [
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
-  ['warehouse', 'Warehouse'],
   ['items', 'Items & Replacements'],
   ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
   ['coc', 'COC Matrix'],
   ['map', 'Map'],
+  ['warehouse', 'Project Warehouse'],
 ]
 
 export default function ProjectDetail() {
