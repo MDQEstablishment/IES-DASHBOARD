@@ -1,4 +1,5 @@
-import { useState, Fragment } from 'react'
+import { useState, useRef } from 'react'
+import { Camera } from 'lucide-react'
 import { useLiveQuery, uploadToBucket, signedUrlFor } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { toast } from '../lib/toast'
@@ -7,18 +8,54 @@ import { Empty, Btn, inputStyle } from './ui'
 import DateInput from './DateInput'
 import { fmtDate } from '../lib/format'
 
-const Lbl = ({ children }) => <span style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 5 }}>{children}</span>
+// Small uppercase field caption to match the Claude Design mockup.
+const Lbl = ({ children }) => <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 5 }}>{children}</span>
 
-// Sprint 8I — per-building Daily Progress logger. A "Log today's work" pad (one
+// Sprint 8I/8J — per-building Daily Progress logger. A "Log today's work" pad (one
 // MANPOWER + DATE for the batch, then one line per material installed) saved
 // all-or-nothing through the log_daily_progress RPC, which consumes from the
 // project warehouse and hard-blocks any line that would over-draw stock. Below,
-// a collapsible Daily Log history of past batches. Replaces the old install_log
-// daily tab.
+// a collapsible Daily Log history of past batches.
 const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
+// Colored ESM pills (8J-2): ESM1 indigo, ESM2 violet, ESM3 teal.
+const ESM_PILL = { ESM1: { c: '#4F46E5', bg: '#EEF2FF' }, ESM2: { c: '#7C3AED', bg: '#F5F3FF' }, ESM3: { c: '#0D9488', bg: '#F0FDFA' } }
+const esmPill = (code) => ESM_PILL[code] || { c: '#64748B', bg: '#F1F5F9' }
 const num = (v) => (v == null ? 0 : Number(v))
 const today = () => new Date().toISOString().slice(0, 10)
 const ACCEPT = '.jpg,.jpeg,.png,.heic,.heif,image/*'
+
+function EsmBadge({ code, style }) {
+  const p = esmPill(code)
+  return <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, color: p.c, background: p.bg, borderRadius: 6, padding: '3px 8px', ...style }}>{code || 'ESM'}</span>
+}
+
+// Custom photo picker — replaces the native <input type=file> (whose Arabic-locale
+// "no file chosen" text leaked Arabic into the UI). Outlined "+ Add photo" button
+// opens a hidden input; selected files show as removable chips. (8J-2a)
+function PhotoField({ files, onChange }) {
+  const ref = useRef(null)
+  const add = (e) => { onChange([...(files || []), ...Array.from(e.target.files || [])]); if (ref.current) ref.current.value = '' }
+  const remove = (i) => onChange(files.filter((_, j) => j !== i))
+  return (
+    <div>
+      <input ref={ref} type="file" accept={ACCEPT} multiple onChange={add} style={{ display: 'none' }} />
+      <button type="button" onClick={() => ref.current?.click()}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 11px', borderRadius: 8, border: '1px solid var(--line)', background: '#fff', color: 'var(--text-2)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+        <Camera size={15} /> Add photo
+      </button>
+      {!!(files && files.length) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 7 }}>
+          {files.map((f, i) => (
+            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: 150, padding: '3px 6px 3px 8px', borderRadius: 6, background: '#F1F5F9', fontSize: 11, color: 'var(--text-2)' }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+              <button type="button" title="Remove" onClick={() => remove(i)} style={{ border: 'none', background: 'none', color: 'var(--bad)', fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function DailyProgress({ buildingId, projectId, buildingCode, canWrite, user }) {
   const { rows: materials } = useLiveQuery('materials', (q) =>
@@ -29,7 +66,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
     q.select('variant_id,delta,reason').eq('building_id', buildingId).eq('reason', 'consumption_out'), [buildingId])
   const { rows: stock } = useLiveQuery('project_warehouse_stock', (q) => q.select('variant_id,qty_on_hand').eq('project_id', projectId), [projectId])
   const { rows: batches, refetch } = useLiveQuery('daily_progress_batch', (q) =>
-    q.select('*,creator:profiles!daily_progress_batch_created_by_fkey(full_name),lines:daily_progress_line(id,qty,photos,esm_id,material:materials(name,code,esm:esms(code)),room:rooms(name))')
+    q.select('*,creator:profiles!daily_progress_batch_created_by_fkey(full_name),lines:daily_progress_line(id,qty,photos,esm_id,material:materials(name,code,unit,esm:esms(code)),room:rooms(name))')
       .eq('building_id', buildingId).order('date', { ascending: false }), [buildingId])
 
   const matById = Object.fromEntries(materials.map((m) => [m.id, m]))
@@ -66,7 +103,6 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
     if (!canSave) return
     setBusy(true)
     try {
-      // upload each line's photos to daily-progress-photos/{building}/{date}/{uuid}.{ext}
       const payload = []
       for (const l of validLines) {
         const paths = []
@@ -105,8 +141,8 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
   return (
     <>
       {/* ── LOG TODAY'S WORK PAD ─────────────────────────────────────────── */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
           <div style={{ flex: 1, minWidth: 160 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Log today’s work · {buildingCode}</div>
             <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>One manpower count + date for the day; add a line per material installed. Saving consumes from the project warehouse.</div>
@@ -134,9 +170,9 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
             const avail = m ? (availByVar[m.id] || 0) : 0
             const over = m && num(l.qty) > avail
             return (
-              <div key={l.key} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 10, background: '#FCFCFD' }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <span style={{ ...mono, fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: '#EFF6FF', borderRadius: 6, padding: '4px 8px', marginTop: 22 }}>{m?.esm?.code || 'ESM'}</span>
+              <div key={l.key} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 14, marginBottom: 10, background: '#FCFCFD' }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <EsmBadge code={m?.esm?.code} style={{ marginTop: 22 }} />
                   <div style={{ flex: 2, minWidth: 200 }}>
                     <Lbl>Material</Lbl>
                     <select style={inputStyle} value={l.materialId} onChange={(e) => setLine(l.key, { materialId: e.target.value })}>
@@ -147,6 +183,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
                         </optgroup>
                       ))}
                     </select>
+                    {m && <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 3 }}>{[m.brand, m.unit].filter(Boolean).join(' · ') || m.code}</div>}
                   </div>
                   <div style={{ width: 90 }}>
                     <Lbl>Qty today</Lbl>
@@ -161,17 +198,22 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
                   </div>
                   <div style={{ flex: 1, minWidth: 150 }}>
                     <Lbl>Photos</Lbl>
-                    <input lang="en" type="file" accept={ACCEPT} multiple onChange={(e) => setLine(l.key, { files: [...(e.target.files || [])] })} style={{ fontSize: 12 }} />
+                    <PhotoField files={l.files} onChange={(files) => setLine(l.key, { files })} />
                   </div>
                   <button title="Remove line" onClick={() => rmLine(l.key)} style={{ marginTop: 22, width: 28, height: 28, borderRadius: 7, border: '1px solid var(--line)', background: '#fff', color: 'var(--bad)', fontWeight: 700, cursor: 'pointer' }}>×</button>
                 </div>
-                {/* read-only progress strip */}
-                <div style={{ display: 'flex', gap: 16, marginTop: 10, ...mono, fontSize: 11, color: 'var(--text-3)', flexWrap: 'wrap' }}>
-                  <span>Planned <b style={{ color: 'var(--text)' }}>{planned}</b></span>
-                  <span>Installed <b style={{ color: 'var(--ok)' }}>{installed}</b></span>
-                  <span>Rem <b style={{ color: 'var(--text)' }}>{rem}</b></span>
-                  <span>{pct}%</span>
-                  <span style={{ marginLeft: 'auto', color: over ? 'var(--bad)' : 'var(--text-3)' }}>Warehouse: {avail}{over ? ` · need ${num(l.qty)}` : ''}</span>
+                {/* read-only progress strip with bar */}
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ display: 'flex', gap: 16, ...mono, fontSize: 11, color: 'var(--text-3)', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span>Planned <b style={{ color: 'var(--text)' }}>{planned}</b></span>
+                    <span>Installed <b style={{ color: 'var(--ok)' }}>{installed}</b></span>
+                    <span>Rem <b style={{ color: 'var(--text)' }}>{rem}</b></span>
+                    <span style={{ fontWeight: 700, color: 'var(--text)' }}>{pct}%</span>
+                    <span style={{ marginLeft: 'auto', color: over ? 'var(--bad)' : 'var(--text-3)' }}>Warehouse: {avail}{over ? ` · need ${num(l.qty)}` : ''}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden', marginTop: 6 }}>
+                    <div style={{ height: '100%', width: Math.min(100, pct) + '%', background: pct >= 90 ? '#10B981' : 'var(--accent)' }} />
+                  </div>
                 </div>
               </div>
             )
@@ -185,7 +227,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
       </div>
 
       {/* ── DAILY LOG HISTORY ─────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 20 }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Daily Log <span style={{ ...mono, fontSize: 10, color: 'var(--text-3)', marginLeft: 6 }}>HISTORY</span></div>
         {batches.length === 0 ? <Empty icon="daily">No work logged in this building yet.</Empty> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -202,7 +244,7 @@ function HistoryRow({ batch }) {
   const lines = batch.lines || []
   const units = lines.reduce((a, l) => a + Number(l.qty || 0), 0)
   const workers = batch.manpower || 0
-  const perWorker = workers ? (units / workers).toFixed(1) : '—'
+  const perWorker = workers ? Math.round(units / workers) : '—'
   const esms = [...new Set(lines.map((l) => l.material?.esm?.code).filter(Boolean))].sort()
   const mono = { fontFamily: 'var(--mono)' }
 
@@ -211,8 +253,8 @@ function HistoryRow({ batch }) {
   return (
     <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
       <button onClick={() => setOpen((o) => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: open ? '#F8FAFC' : '#fff', cursor: 'pointer', textAlign: 'left' }}>
-        <span style={{ fontWeight: 700, fontSize: 13, minWidth: 110 }}>{fmtDate(batch.date)}</span>
-        <span style={{ display: 'flex', gap: 4 }}>{esms.map((e) => <span key={e} style={{ ...mono, fontSize: 9.5, fontWeight: 700, color: 'var(--accent)', background: '#EFF6FF', borderRadius: 5, padding: '2px 6px' }}>{e}</span>)}</span>
+        <span style={{ ...mono, fontWeight: 700, fontSize: 12.5, minWidth: 110 }}>{fmtDate(batch.date)}</span>
+        <span style={{ display: 'flex', gap: 4 }}>{esms.map((e) => <EsmBadge key={e} code={e} />)}</span>
         <span style={{ ...mono, fontSize: 11.5, color: 'var(--text-3)', marginLeft: 'auto' }}>{units} units · {lines.length} line{lines.length === 1 ? '' : 's'} · {workers} worker{workers === 1 ? '' : 's'} · {perWorker}/worker</span>
         <span style={{ color: 'var(--text-3)' }}>{open ? '▲' : '▼'}</span>
       </button>
@@ -226,7 +268,15 @@ function HistoryRow({ batch }) {
             <tbody>
               {lines.map((l) => (
                 <tr key={l.id} style={{ borderTop: '1px solid var(--line)' }}>
-                  <td style={{ padding: '8px 12px' }}><span style={{ ...mono, fontSize: 10, color: 'var(--accent)', marginRight: 6 }}>{l.material?.esm?.code || '—'}</span>{l.material?.name || '—'}</td>
+                  <td style={{ padding: '8px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <EsmBadge code={l.material?.esm?.code} />
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{l.material?.name || '—'}</div>
+                        {l.material?.unit && <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>{l.material.unit}</div>}
+                      </div>
+                    </div>
+                  </td>
                   <td style={{ padding: '8px 8px', textAlign: 'right', ...mono, fontWeight: 700 }}>{l.qty}</td>
                   <td style={{ padding: '8px 8px', color: 'var(--text-3)' }}>{l.room?.name || '—'}</td>
                   <td style={{ padding: '8px 8px' }}>

@@ -8,8 +8,7 @@ import { num } from '../lib/format'
 import { statusMeta } from '../lib/constants'
 import { ProjectFormModal, ProjectImportModal, DeleteProjectModal } from '../components/ProjectModals'
 
-const STATUS_RANK = { active: 0, draft: 1, on_hold: 2, closed: 3, deleted: 4 }
-const SORTS = [['recent', 'Status + Recent'], ['name', 'Name A→Z'], ['progress', 'Progress %'], ['start', 'Start date']]
+const SORTS = [['recent', 'Recent'], ['name', 'Name A→Z'], ['progress', 'Progress %'], ['start', 'Start date']]
 
 const FILTERS = [
   ['all', 'All'],
@@ -71,8 +70,8 @@ export default function Projects() {
       if (sort === 'name') return (a.name || '').localeCompare(b.name || '')
       if (sort === 'progress') return progOf(b) - progOf(a)
       if (sort === 'start') return new Date(b.start_date || 0) - new Date(a.start_date || 0)
-      const r = (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9)
-      return r !== 0 ? r : new Date(b.start_date || 0) - new Date(a.start_date || 0)
+      // recent (default): most recently created first, no status grouping (8J-4)
+      return new Date(b.created_at || b.start_date || 0) - new Date(a.created_at || a.start_date || 0)
     })
 
   const iconUpload = <Icon name="upload" size={15} />
