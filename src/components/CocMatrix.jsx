@@ -89,6 +89,16 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
   // is approved (the junction tables don't change on a status edit).
   const { rows: cocDocs, refetch: rcd } = useLiveQuery('project_documents',
     (q) => q.select('id,name,reference_no,revision,status,client_reviewer_name,client_response_date,submitted_at,updated_at,storage_path').eq('project_id', projectId).eq('doc_type', 'coc'), [projectId])
+
+  // Per-building progress (8J-3 soft guard): approved-installed ÷ planned, capped.
+  const { rows: bScopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,planned_qty'))
+  const { rows: bInstall } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
+  const insByScope = {}; bInstall.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + (r.qty || 0) })
+  const planByB = {}, insByB = {}
+  bScopes.forEach((s) => { const p = s.planned_qty || 0; planByB[s.building_id] = (planByB[s.building_id] || 0) + p; insByB[s.building_id] = (insByB[s.building_id] || 0) + Math.min(p, insByScope[s.id] || 0) })
+  const progOfBuilding = (bid) => { const p = planByB[bid] || 0; return p ? Math.round((insByB[bid] || 0) / p * 100) : 0 }
+  // The guard uses the LOWEST progress among a COC's covered buildings.
+  const cocMinProgress = (c) => { const ids = [...(c.buildings || [])]; return ids.length ? Math.min(...ids.map(progOfBuilding)) : 100 }
   const { rows: installed } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
   const { rows: removed } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId), [projectId])
 
@@ -251,6 +261,9 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
                       <td style={{ padding: '9px 8px', fontWeight: 700 }}>
                         {isStale(c) && <span title="PDF may be out of date — regenerate" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--warn)', marginRight: 6 }} />}
                         {c.name}
+                        {APPROVED.has(c.status) && cocMinProgress(c) < 90 && (
+                          <span title={`Approved while a covered building is below 90% (lowest ${cocMinProgress(c)}%)`} style={{ marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 700, color: '#B45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 6, padding: '2px 7px' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F59E0B' }} />Below threshold</span>
+                        )}
                       </td>
                       <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{scopeOf(c)}</td>
                       <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontWeight: 700 }}>{c.revision || 'A'}</td>
@@ -274,7 +287,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
       )}
 
       {wiz && <CocWizard projectId={projectId} project={project} onClose={() => setWiz(false)} onDone={refresh} />}
-      {statusDoc && <UpdateStatusModal doc={statusDoc} onClose={() => setStatusDoc(null)} onDone={refresh} />}
+      {statusDoc && <UpdateStatusModal doc={statusDoc} progressPct={cocMinProgress(statusDoc)} onClose={() => setStatusDoc(null)} onDone={refresh} />}
       {historyDoc && <DocHistoryDrawer doc={historyDoc} onClose={() => setHistoryDoc(null)} />}
       {plan && (
         <Modal open width={560} title="Generate default COCs" onClose={() => setPlan(null)}

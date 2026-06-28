@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { subscribeToasts } from '../lib/toast'
 import { statusMeta } from '../lib/constants'
@@ -109,9 +110,12 @@ export function Modal({ open, title, onClose, children, footer, width = 520 }) {
     return () => window.removeEventListener('keydown', h)
   }, [open, onClose])
   if (!open) return null
-  return (
+  // Portal to <body> so the overlay escapes any parent stacking context (e.g. the
+  // Leaflet map widget on Building Detail), and sit above Leaflet's panes
+  // (tiles 200 / markers 600 / popup 700) at z-index 1000. Sprint 8J-1.
+  return createPortal(
     <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(15,23,42,.55)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,.55)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
       <div style={{ width: '100%', maxWidth: width, background: '#fff', borderRadius: 16, boxShadow: '0 24px 60px rgba(15,23,42,.3)', display: 'flex', flexDirection: 'column', maxHeight: '86vh' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
@@ -120,7 +124,8 @@ export function Modal({ open, title, onClose, children, footer, width = 520 }) {
         <div style={{ padding: 20, overflow: 'auto' }}>{children}</div>
         {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

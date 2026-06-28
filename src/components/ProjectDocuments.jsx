@@ -195,12 +195,14 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
 
 // ── Doc lifecycle: submit → with client → approved/comments/rejected ────────
 // History rows are written automatically by the DB trigger on status change.
-export function UpdateStatusModal({ doc, onClose, onDone }) {
+export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) {
   const { user } = useAuth()
   const [reviewer, setReviewer] = useState(doc.client_reviewer_name || '')
   const [notes, setNotes] = useState(doc.response_notes || '')
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
+  // Sprint 8J-3 — soft guard: approving below 90% building progress prompts first.
+  const [confirmApprove, setConfirmApprove] = useState(null)
 
   const apply = async (patch) => {
     setBusy(true)
@@ -218,8 +220,11 @@ export function UpdateStatusModal({ doc, onClose, onDone }) {
     if (error) return { error }
     return { path }
   }
-  const decide = async (decision) => {
+  const decide = async (decision, confirmed = false) => {
     const needsFile = decision === 'approved' || decision === 'approved_with_comments'
+    // Soft 90% guard (COC only — progressPct is passed in that context). UI-only;
+    // the client remains responsible, so this just confirms, never blocks.
+    if (needsFile && progressPct != null && progressPct < 90 && !confirmed) { setConfirmApprove(decision); return }
     if (needsFile && !reviewer.trim()) { toast('Client reviewer name is required', 'err'); return }
     if (needsFile && !file) { toast('Upload the approved version file', 'err'); return }
     if (decision === 'approved_with_comments' && !notes.trim()) { toast('Notes capturing the client comments are required', 'err'); return }
@@ -263,6 +268,14 @@ export function UpdateStatusModal({ doc, onClose, onDone }) {
         {btn(`Create Revision ${nextRev(doc.revision)}`, createRevision)}
         <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Clones this as a draft (new file awaited); client review restarts.</span>
       </div>
+      {confirmApprove && (
+        <Modal open width={460} title="Building below 90% — approve anyway?" onClose={() => setConfirmApprove(null)}
+          footer={<><Btn onClick={() => setConfirmApprove(null)}>Cancel</Btn><Btn variant="primary" disabled={busy} onClick={() => { const d = confirmApprove; setConfirmApprove(null); decide(d, true) }}>Approve anyway</Btn></>}>
+          <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>
+            This building is at <strong>{progressPct}%</strong> completion. COC approval typically requires at least 90%. Continue anyway?
+          </div>
+        </Modal>
+      )}
     </Modal>
   )
 }
