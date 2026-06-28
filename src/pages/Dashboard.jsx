@@ -35,7 +35,13 @@ export default function Dashboard() {
   const [help, setHelp] = useState(false)
   const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code,name,status,client,region').is('deleted_at', null))
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('id,project_id,status_override'))
-  const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
+  // Only count buildings that belong to a live (non-deleted) project. `projects`
+  // is already filtered to deleted_at IS NULL, so a building whose project_id is
+  // not in this set is an orphan of a soft-deleted project and must be excluded —
+  // otherwise its scopes inflate the planned total and skew Portfolio Progress +
+  // the S-Curve (which both derive from `overall`). Sprint 8I-A.
+  const activeProjectIds = new Set(projects.map((p) => p.id))
+  const buildings = allBuildings.filter((b) => b.status_override !== 'archived' && activeProjectIds.has(b.project_id))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
   const { rows: install, loading } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: escs } = useLiveQuery('escalations', (q) =>
@@ -55,10 +61,11 @@ export default function Dashboard() {
   const per = {}       // project_id -> {planned, installed}
   const esmAgg = {}    // ESMx -> {planned, installed}
   scopes.forEach((s) => {
+    const pid = bP[s.building_id]
+    if (!pid) return // scope belongs to a soft-deleted/archived-project building — exclude from all totals
     const ins = Math.min(s.planned_qty || 0, installedByScope[s.id] || 0)
     planned += s.planned_qty || 0; installed += ins
-    const pid = bP[s.building_id]
-    if (pid) { (per[pid] = per[pid] || { planned: 0, installed: 0 }); per[pid].planned += s.planned_qty || 0; per[pid].installed += ins }
+    ;(per[pid] = per[pid] || { planned: 0, installed: 0 }); per[pid].planned += s.planned_qty || 0; per[pid].installed += ins
     const e = esmOf(s.material_code)
     if (e) { (esmAgg[e] = esmAgg[e] || { planned: 0, installed: 0 }); esmAgg[e].planned += s.planned_qty || 0; esmAgg[e].installed += ins }
   })
