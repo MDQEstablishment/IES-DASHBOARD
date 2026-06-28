@@ -51,6 +51,9 @@ export default function ProjectDetail() {
   const [editBldg, setEditBldg] = useState(null)
   const [archiveBldg, setArchiveBldg] = useState(null)
   const [statusBldg, setStatusBldg] = useState(null)
+  const [bldgQuery, setBldgQuery] = useState('') // raw input
+  const [bldgQ, setBldgQ] = useState('')         // debounced (150ms)
+  useEffect(() => { const t = setTimeout(() => setBldgQ(bldgQuery.trim().toLowerCase()), 150); return () => clearTimeout(t) }, [bldgQuery])
   const canManage = can(role, MANAGERS) || role === 'admin'
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
@@ -59,6 +62,10 @@ export default function ProjectDetail() {
   useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
+  // 8K-1 — debounced live filter across code / name / engineer / region / city / contractor
+  const filteredBuildings = bldgQ
+    ? buildings.filter((b) => [b.code, b.name, b.engineer_name, b.region, b.city, b.contractor].some((v) => (v || '').toLowerCase().includes(bldgQ)))
+    : buildings
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty,project_esm_id'))
   const { rows: catShort } = useLiveQuery('project_category_stock', (q) => q.select('is_short').eq('project_id', id).eq('is_short', true), [id])
   const anyShortage = catShort.length > 0
@@ -249,7 +256,13 @@ export default function ProjectDetail() {
           <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }} title={project.end_date ? `Ends ${fmtDate(project.end_date)}` : 'No end date set'}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>REMAINING</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3, color: (daysToEnd != null && daysToEnd <= 14) ? 'var(--bad)' : 'var(--warn)' }}>
-              {daysToEnd != null ? `${Math.max(0, daysToEnd)} days` : `${weeksRemaining} wks`}
+              {(() => {
+                // 8K-3 — timeline in weeks, not days
+                if (daysToEnd == null) { const w = weeksRemaining; return `${w} week${w === 1 ? '' : 's'}` }
+                if (daysToEnd < 0) { const w = Math.max(1, Math.round(-daysToEnd / 7)); return `Overdue by ${w} week${w === 1 ? '' : 's'}` }
+                if (daysToEnd < 7) return '< 1 week'
+                const w = Math.round(daysToEnd / 7); return `${w} week${w === 1 ? '' : 's'}`
+              })()}
             </div>
           </div>
           <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }}>
@@ -286,7 +299,11 @@ export default function ProjectDetail() {
       {/* BUILDINGS tab */}
       {tab === 'buildings' && (
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Buildings</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Buildings <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({buildings.length})</span></div>
+            <input lang="en" value={bldgQuery} onChange={(e) => setBldgQuery(e.target.value)} placeholder="Search code, name, engineer, region…"
+              style={{ width: buildings.length < 6 ? 200 : 280, maxWidth: '100%', padding: '7px 11px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12.5 }} />
+          </div>
           {buildings.length === 0 ? (
             <Empty icon="buildings">No buildings yet. Import an Excel or add buildings to populate this project.</Empty>
           ) : (
@@ -302,7 +319,9 @@ export default function ProjectDetail() {
                 {canManage && <th style={{ padding: '9px 8px', fontWeight: 600, width: 64 }} />}
               </tr></thead>
               <tbody>
-                {buildings.map((b) => {
+                {filteredBuildings.length === 0 ? (
+                  <tr><td colSpan={canManage ? 8 : 7} style={{ padding: '16px 8px', color: 'var(--text-3)', textAlign: 'center' }}>No buildings match “{bldgQuery}”.</td></tr>
+                ) : filteredBuildings.map((b) => {
                   const d = perB[b.id] || { planned: 0, installed: 0 }
                   const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
                   const color = prog >= 100 ? '#10B981' : 'var(--accent)'

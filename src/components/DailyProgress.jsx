@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Camera } from 'lucide-react'
+import { useState } from 'react'
+import FileDropZone from './FileDropZone'
 import { useLiveQuery, uploadToBucket, signedUrlFor } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { toast } from '../lib/toast'
@@ -27,34 +27,6 @@ const ACCEPT = '.jpg,.jpeg,.png,.heic,.heif,image/*'
 function EsmBadge({ code, style }) {
   const p = esmPill(code)
   return <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, color: p.c, background: p.bg, borderRadius: 6, padding: '3px 8px', ...style }}>{code || 'ESM'}</span>
-}
-
-// Custom photo picker — replaces the native <input type=file> (whose Arabic-locale
-// "no file chosen" text leaked Arabic into the UI). Outlined "+ Add photo" button
-// opens a hidden input; selected files show as removable chips. (8J-2a)
-function PhotoField({ files, onChange }) {
-  const ref = useRef(null)
-  const add = (e) => { onChange([...(files || []), ...Array.from(e.target.files || [])]); if (ref.current) ref.current.value = '' }
-  const remove = (i) => onChange(files.filter((_, j) => j !== i))
-  return (
-    <div>
-      <input ref={ref} type="file" accept={ACCEPT} multiple onChange={add} style={{ display: 'none' }} />
-      <button type="button" onClick={() => ref.current?.click()}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 11px', borderRadius: 8, border: '1px solid var(--line)', background: '#fff', color: 'var(--text-2)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-        <Camera size={15} /> Add photo
-      </button>
-      {!!(files && files.length) && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 7 }}>
-          {files.map((f, i) => (
-            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: 150, padding: '3px 6px 3px 8px', borderRadius: 6, background: '#F1F5F9', fontSize: 11, color: 'var(--text-2)' }}>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-              <button type="button" title="Remove" onClick={() => remove(i)} style={{ border: 'none', background: 'none', color: 'var(--bad)', fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}>×</button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
 }
 
 export default function DailyProgress({ buildingId, projectId, buildingCode, canWrite, user }) {
@@ -160,6 +132,11 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
 
         {!canWrite ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Read-only — your role can view the log but not record work.</div> : (<>
           <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12, marginBottom: lines.length ? 12 : 0 }} onClick={addLine}>Add sub-type</Btn>
+          {lines.length === 0 && (
+            <div style={{ marginTop: 10, padding: '14px 16px', border: '1px dashed var(--line)', borderRadius: 10, background: '#FBFCFE', fontSize: 12.5, color: 'var(--text-3)' }}>
+              ↑ {batches.length === 0 ? 'No work logged yet' : 'Nothing added for today yet'} — start by adding a sub-type above.
+            </div>
+          )}
 
           {lines.map((l) => {
             const m = matById[l.materialId]
@@ -196,9 +173,9 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
                       {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}{r.floor ? ` (${r.floor})` : ''}</option>)}
                     </select>
                   </div>
-                  <div style={{ flex: 1, minWidth: 150 }}>
+                  <div style={{ flex: 1, minWidth: 170 }}>
                     <Lbl>Photos</Lbl>
-                    <PhotoField files={l.files} onChange={(files) => setLine(l.key, { files })} />
+                    <FileDropZone compact multi accept={ACCEPT} maxSizeMb={10} onFiles={(files) => setLine(l.key, { files })} helperText="JPG, PNG or HEIC" />
                   </div>
                   <button title="Remove line" onClick={() => rmLine(l.key)} style={{ marginTop: 22, width: 28, height: 28, borderRadius: 7, border: '1px solid var(--line)', background: '#fff', color: 'var(--bad)', fontWeight: 700, cursor: 'pointer' }}>×</button>
                 </div>

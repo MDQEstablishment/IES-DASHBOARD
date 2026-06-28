@@ -7,6 +7,7 @@ import DateInput from './DateInput'
 import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import InspectionFormModal from './InspectionFormModal'
+import FileDropZone from './FileDropZone'
 
 const DSTATUS = {
   pending: ['Pending', '#64748B', '#F1F5F9'], in_transit: ['In Transit', '#2563EB', '#EFF6FF'],
@@ -33,7 +34,9 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
   const { rows: projRows } = useLiveQuery('projects',
     (q) => q.select('id,code,name,region,client,project_reference_no,beneficiary_entity,contractor_name,doc_rev').eq('id', projectId).is('deleted_at', null), [projectId])
   const [addOpen, setAddOpen] = useState(false)
+  const [addTab, setAddTab] = useState('pdf')
   const [mirOpen, setMirOpen] = useState(false)
+  const openAdd = (t) => { setAddTab(t); setAddOpen(true) }
   const project = projRows[0]
 
   const patchRow = async (id, patch) => { const { error } = await bgUpdate('material_deliveries', id, patch); if (!error) refetch() }
@@ -49,10 +52,21 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
         <div style={{ fontWeight: 700, fontSize: 14 }}>Materials Delivery</div>
         {canWrite && <div style={{ display: 'flex', gap: 8 }}>
           <Btn icon="plus" variant="primary" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setMirOpen(true)} disabled={!project}>Generate MIR</Btn>
-          <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setAddOpen(true)}>Add delivery</Btn>
+          <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => openAdd('pdf')}>Add delivery</Btn>
         </div>}
       </div>
-      {rows.length === 0 ? <Empty icon="box">No deliveries scheduled.</Empty> : (
+      {rows.length === 0 ? (
+        canWrite ? (
+          <div style={{ textAlign: 'center', padding: '34px 16px' }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>No deliveries yet</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '4px 0 16px' }}>Add a delivery to bring materials into the project warehouse.</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Btn variant="primary" icon="plus" onClick={() => openAdd('pdf')}>Upload delivery PDF</Btn>
+              <Btn icon="plus" onClick={() => openAdd('manual')}>Enter manually</Btn>
+            </div>
+          </div>
+        ) : <Empty icon="box">No deliveries scheduled.</Empty>
+      ) : (
         <div className="ies-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
@@ -87,7 +101,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
         </div>
       )}
       {addOpen && project && (
-        <AddDeliveryModal projectId={projectId} buildings={buildings} userId={user.id}
+        <AddDeliveryModal projectId={projectId} buildings={buildings} userId={user.id} initialTab={addTab}
           onClose={() => setAddOpen(false)} onSaved={() => { setAddOpen(false); refetch() }} />
       )}
       {mirOpen && project && (
@@ -99,8 +113,8 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
 }
 
 // ── Add delivery — two tabs: Upload PDF (default) + Manual entry ──────────────
-function AddDeliveryModal({ projectId, buildings, userId, onClose, onSaved }) {
-  const [tab, setTab] = useState('pdf')
+function AddDeliveryModal({ projectId, buildings, userId, onClose, onSaved, initialTab = 'pdf' }) {
+  const [tab, setTab] = useState(initialTab)
   const tabBtn = (k, label) => (
     <button onClick={() => setTab(k)} style={{ padding: '8px 14px', fontSize: 13, fontWeight: tab === k ? 700 : 500, color: tab === k ? 'var(--accent)' : 'var(--text-3)', borderBottom: tab === k ? '2px solid var(--accent)' : '2px solid transparent', background: 'none', marginBottom: -1 }}>{label}</button>
   )
@@ -243,12 +257,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
   if (!lines) {
     return (
       <div>
-        <Field label="Delivery note — PDF or image (max 5 MB)">
-          <input ref={fileRef} type="file" accept={ACCEPT} onChange={onFile} style={{ display: 'none' }} />
-          <div onClick={() => fileRef.current?.click()} style={{ border: '1.5px dashed var(--line)', borderRadius: 10, padding: 16, textAlign: 'center', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12.5 }}>
-            {file ? <span style={{ color: 'var(--text)', fontWeight: 600 }}>{file.name}</span> : 'Drop a delivery note (PDF or image) or click to browse'}
-          </div>
-        </Field>
+        <FileDropZone label="Delivery note — PDF or image (max 5 MB)" accept={ACCEPT} maxSizeMb={5} onFiles={(f) => { setFile(f); setErr('') }} helperText="PDF, JPG, PNG or WEBP" />
         {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginBottom: 10 }}>{err}</div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Btn onClick={onClose}>Cancel</Btn>
