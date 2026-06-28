@@ -6,6 +6,7 @@ import { Avatar, Chip, Loading, Empty, Btn, Modal, Field, inputStyle } from '../
 import DateInput from '../components/DateInput'
 import BuildingMaterialsPlan from '../components/BuildingMaterialsPlan'
 import DailyProgress from '../components/DailyProgress'
+import BuildingChat from '../components/BuildingChat'
 import InspectionFormModal from '../components/InspectionFormModal'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgUpdate, bgInsert, bgDelete, uploadToBucket } from '../lib/db'
@@ -251,16 +252,7 @@ export default function BuildingDetail() {
             <BuildingsMap buildings={[b]} />
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 8 }}>{b.gps || (b.location_lat ? `${b.location_lat}, ${b.location_lng}` : '—')}</div>
           </div>
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Comments</div>
-            {buildingActivity.slice(0, 4).map((a) => (
-              <div key={a.id} style={{ display: 'flex', gap: 8, padding: '7px 0', borderTop: '1px solid #F1F5F9' }}>
-                <Avatar name={a.actor_name || 'System'} size={22} />
-                <div style={{ minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{a.actor_name || 'System'}</div><div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{a.summary || a.action}</div></div>
-              </div>
-            ))}
-            <input lang="en" disabled placeholder="Add a comment… (coming soon)" style={{ ...inputStyle, marginTop: 10, fontSize: 12.5, background: '#FAFBFC', color: 'var(--text-3)' }} />
-          </div>
+          <BuildingChat buildingId={bid} user={user} />
         </div>
       </div>
 
