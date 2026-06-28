@@ -5,6 +5,7 @@ import Icon from '../components/Icon'
 import { Avatar, Chip, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import DateInput from '../components/DateInput'
 import BuildingMaterialsPlan from '../components/BuildingMaterialsPlan'
+import DailyProgress from '../components/DailyProgress'
 import InspectionFormModal from '../components/InspectionFormModal'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgUpdate, bgInsert, bgDelete, uploadToBucket } from '../lib/db'
@@ -35,8 +36,6 @@ export default function BuildingDetail() {
   const { user, role } = useAuth()
   const isQA = can(role, CAN_QA)
   const canInstall = can(role, CAN_INSTALL)
-  const [addOpen, setAddOpen] = useState(false)
-  const [esmFilter, setEsmFilter] = useState('')
   const [infoOpen, setInfoOpen] = useState(false)
 
   const base = `/projects/${id}/buildings/${bid}`
@@ -175,58 +174,9 @@ export default function BuildingDetail() {
             )
           })()}
 
-          {/* DAILY PROGRESS */}
+          {/* DAILY PROGRESS — Sprint 8I logger (manpower + per-material lines → warehouse consumption) */}
           {activeTab === '' && !itemId && (
-            <>
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>Log today’s work · {b.code}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>Pick a sub-type, enter installed quantity, location, workers and photos.</div>
-                  </div>
-                  {canInstall
-                    ? <Btn variant="primary" icon="plus" onClick={() => setAddOpen(true)}>Add sub-type</Btn>
-                    : <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Read-only — your role can view the log.</span>}
-                </div>
-              </div>
-
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>Daily Log</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <Chipx on={esmFilter === ''} onClick={() => setEsmFilter('')}>All</Chipx>
-                    {esmCodes.map((c) => <Chipx key={c} on={esmFilter === c} onClick={() => setEsmFilter(c)}>{c}</Chipx>)}
-                  </div>
-                </div>
-                {install.length === 0 ? <Empty icon="daily">No installs logged in this building yet.</Empty> : (
-                  <div className="ies-table-wrap">
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 720 }}>
-                      <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-                        <th style={{ padding: 8, fontWeight: 600 }}>DATE</th><th style={{ padding: 8, fontWeight: 600 }}>SUB-TYPE</th>
-                        <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>INSTALLED</th><th style={{ padding: 8, fontWeight: 600 }}>LOCATION</th>
-                        <th style={{ padding: 8, fontWeight: 600 }}>BY</th><th style={{ padding: 8, fontWeight: 600 }}>STATUS</th><th />
-                      </tr></thead>
-                      <tbody>
-                        {install.filter((r) => !esmFilter || esmOfScope(scopeById[r.scope_id] || {}) === esmFilter).map((r) => {
-                          const sc = scopeById[r.scope_id]
-                          return (
-                            <tr key={r.id} className="ies-trow" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }} onClick={() => nav(`${base}/install-log/${r.id}`)}>
-                              <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtShort(r.entry_date)}</td>
-                              <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--accent)', marginRight: 6 }}>{esmOfScope(sc || {})}</span>{sc?.sub_type || '—'}</td>
-                              <td style={{ padding: '9px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--ok)' }}>+{r.qty}</td>
-                              <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{r.note || '—'}</td>
-                              <td style={{ padding: '9px 8px' }}><span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Avatar name={r.by?.full_name} size={20} /><span style={{ fontSize: 12 }}>{r.by?.full_name || '—'}</span></span></td>
-                              <td style={{ padding: '9px 8px' }}><Chip status={r.qa_status} /></td>
-                              <td style={{ padding: '9px 8px', color: 'var(--accent)', fontWeight: 700, fontSize: 11.5 }}>Open ›</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
+            <DailyProgress buildingId={bid} projectId={id} buildingCode={b.code} canWrite={canInstall} user={user} />
           )}
 
           {/* ROOMS */}
@@ -314,7 +264,6 @@ export default function BuildingDetail() {
         </div>
       </div>
 
-      {addOpen && <InstallModal bid={bid} scopes={scopes} rooms={rooms} esmOf={esmOfScope} user={user} onClose={() => setAddOpen(false)} />}
       {wirOpen && b && (
         <InspectionFormModal kind="wir" project={b.project ? { ...b.project, region: b.region || b.project.region } : { id: b.project_id, code: b.project?.code, name: b.project?.name }}
           esm={null} building={{ id: b.id, code: b.code, name: b.name }}
@@ -324,9 +273,6 @@ export default function BuildingDetail() {
   )
 }
 
-function Chipx({ on, onClick, children }) {
-  return <button onClick={onClick} style={{ padding: '4px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, border: '1px solid ' + (on ? 'var(--accent)' : 'var(--line)'), background: on ? '#EFF6FF' : '#fff', color: on ? 'var(--accent)' : 'var(--text-3)' }}>{children}</button>
-}
 function Meta({ k, v }) {
   return <div><div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>{k.toUpperCase()}</div><div style={{ fontWeight: 600, marginTop: 2 }}>{v}</div></div>
 }
@@ -386,56 +332,3 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
   )
 }
 
-// ── Add-install modal (searchable sub-type + qty + location + workers + photos) ─
-function InstallModal({ bid, scopes, rooms, esmOf, user, onClose }) {
-  const [scopeId, setScopeId] = useState(scopes[0]?.id || '')
-  const [qty, setQty] = useState('')
-  const [roomId, setRoomId] = useState('')
-  const [workers, setWorkers] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
-  const [files, setFiles] = useState([])
-  const [busy, setBusy] = useState(false)
-
-  const save = async () => {
-    if (!scopeId || !qty || Number(qty) < 1) return
-    setBusy(true)
-    const sc = scopes.find((s) => s.id === scopeId)
-    const room = rooms.find((r) => r.id === roomId)
-    const locParts = [room?.name, workers ? `${workers} workers` : null].filter(Boolean)
-    const { data, error } = await bgInsert('install_log', {
-      entry_date: date, building_id: bid, scope_id: scopeId, room_id: roomId || null,
-      qty: Number(qty), source: 'manual', installed_by_id: user.id, note: locParts.join(' · ') || null, photos: [],
-    }, { okMsg: 'Install logged ✓' })
-    // photos → building_photos (source daily_report, esm + date)
-    if (!error && files.length) {
-      for (const file of files) {
-        if (!file.type.startsWith('image/')) continue
-        const small = await compressImage(file, { maxBytes: 200000 })
-        const { path } = await uploadToBucket('building-photos', small, { userId: user.id, prefix: bid })
-        if (path) await bgInsert('building_photos', { building_id: bid, storage_path: path, source: 'daily_report', esm: esmOf(sc || {}), taken_at: date + 'T12:00:00', file_size_bytes: small.size, mime_type: small.type, uploaded_by: user.id })
-      }
-    }
-    setBusy(false); if (!error) onClose()
-  }
-
-  return (
-    <Modal open width={560} title="Add today’s install" onClose={onClose}
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !scopeId || !qty}>{busy ? 'Saving…' : 'Log install'}</Btn></>}>
-      <Field label="Sub-type">
-        <select style={inputStyle} value={scopeId} onChange={(e) => setScopeId(e.target.value)}>
-          <option value="">Select sub-type…</option>
-          {scopes.map((s) => <option key={s.id} value={s.id}>{esmOf(s)} · {s.sub_type} ({s.planned_qty} planned)</option>)}
-        </select>
-      </Field>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1 }}><Field label="Quantity installed"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="e.g. 12" /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Install date"><DateInput style={inputStyle} value={date} onChange={(e) => setDate(e.target.value)} /></Field></div>
-      </div>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 2 }}><Field label="Location / room"><select style={inputStyle} value={roomId} onChange={(e) => setRoomId(e.target.value)}><option value="">—</option>{rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</select></Field></div>
-        <div style={{ flex: 1 }}><Field label="Workers"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={workers} onChange={(e) => setWorkers(e.target.value)} /></Field></div>
-      </div>
-      <Field label="Photos (compressed to ≤200 KB, tagged by ESM + date)"><input lang="en" type="file" accept="image/*" multiple onChange={(e) => setFiles([...(e.target.files || [])])} style={{ fontSize: 13 }} /></Field>
-    </Modal>
-  )
-}
