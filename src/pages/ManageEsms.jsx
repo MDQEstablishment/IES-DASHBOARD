@@ -96,7 +96,14 @@ export default function ManageEsms() {
         </div>
       )}
 
-      {loading ? <Loading /> : groups.length === 0 ? <Empty icon="box">No ESMs.</Empty> : (
+      {loading ? <Loading /> : groups.length === 0 ? <Empty icon="box">No ESMs.</Empty>
+        : decorated.length === 0 ? (
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '40px 16px', textAlign: 'center' }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>No materials yet</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '4px 0 16px' }}>Add your first material to build the catalog. Variants are grouped by ESM and category.</div>
+            {canMove && <button onClick={() => setAddOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 18px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}><Icon name="plus" size={16} />Add first material</button>}
+          </div>
+        ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {groups.map((g) => (
             <div key={g.no} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>

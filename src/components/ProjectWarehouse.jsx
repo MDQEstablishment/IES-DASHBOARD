@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useLiveQuery } from '../lib/db'
 import { Empty } from './ui'
 
@@ -44,6 +45,11 @@ export default function ProjectWarehouse({ projectId }) {
 
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+      {/* 8K-2b — discoverability hint: materials are global; this tab is per-project stock */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 12px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Materials are added globally in the <Link to="/materials" style={{ color: 'var(--accent)', fontWeight: 600 }}>Materials page</Link>. Use this tab to track per-project stock.</div>
+        <Link to="/materials" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}>+ Add material</Link>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Warehouse — stock on hand</div>
         <div style={{ display: 'flex', gap: 6 }}>

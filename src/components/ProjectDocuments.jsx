@@ -7,6 +7,7 @@ import { Empty, Btn, Modal, Field, inputStyle, Drawer } from './ui'
 import { compressImage } from '../lib/image'
 import { toast } from '../lib/toast'
 import InspectionFormModal from './InspectionFormModal'
+import FileDropZone from './FileDropZone'
 
 // One vocabulary, shared with the ESM Documentation Tracker matrix.
 export const DOC_TYPES = [
@@ -254,7 +255,7 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
       footer={<Btn onClick={onClose}>Close</Btn>}>
       <Field label="Client reviewer name (required to approve)"><input lang="en" style={inputStyle} value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="e.g. Eng. Khalid Al-Mutairi" /></Field>
       <Field label="Notes / client comments (required to reject or approve-with-comments)"><textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Client comments / rejection reason" /></Field>
-      <Field label="Approved / cover-comments version file (required for an approval)"><input lang="en" type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize: 13 }} /></Field>
+      <FileDropZone label="Approved / cover-comments version file (required for an approval)" accept=".pdf,image/*" maxSizeMb={25} onFiles={(f) => setFile(f)} helperText="PDF or image · 25 MB cap" />
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>WORKFLOW</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {doc.status === 'draft' && btn('Mark Submitted', () => decide('submitted'))}
@@ -332,9 +333,7 @@ function UploadModal({ projectId, buildingId, esmOpts, bldgOpts, rows, prefill, 
 
   useEffect(() => { setRevision(suggestRev(esmId, type, bldgId)) }, [esmId, type, bldgId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onFile = (e) => {
-    const f = e.target.files?.[0]
-    if (f && f.size > HARD_CAP) { toast('File exceeds the 25 MB cap', 'err'); e.target.value = ''; return }
+  const onFile = (f) => {
     if (f && f.size > 10 * 1024 * 1024) toast('Large file (>10 MB) — upload may be slow', 'err')
     setFile(f || null)
     if (f && !name) setName(f.name.replace(/\.[^.]+$/, ''))
@@ -386,7 +385,7 @@ function UploadModal({ projectId, buildingId, esmOpts, bldgOpts, rows, prefill, 
         </Field>
       )}
       {type === 'other' && <Field label="Custom type label"><input lang="en" style={inputStyle} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="e.g. Inspection Report" /></Field>}
-      <Field label="File (PDF stored as-is; images compressed to ≤500 KB; 25 MB cap)"><input lang="en" type="file" onChange={onFile} style={{ fontSize: 13 }} /></Field>
+      <FileDropZone label="File" accept=".pdf,image/*" maxSizeMb={25} onFiles={onFile} helperText="PDF stored as-is; images compressed to ≤500 KB; 25 MB cap" />
     </Modal>
   )
 }
