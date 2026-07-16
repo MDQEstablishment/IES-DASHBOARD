@@ -167,33 +167,33 @@ export default function ProjectItems({ projectId, project }) {
     writeFileXLSX(wb, 'items-replacements-template.xlsx')
   }
 
-  if (esms.length === 0) return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}><Empty icon="materials">Add ESMs to capture installed & removed items.</Empty></div>
+  if (esms.length === 0) return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}><Empty icon="materials">Add ESMs to capture installed & removed items.</Empty></div>
 
   const th = (t) => <th style={{ padding: '6px 7px', fontWeight: 600, fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{t}</th>
   const layout = project?.coc_layout
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Items &amp; Replacements</div>
-          {layout && <span title={layout === 'scattered' ? 'Scattered: buildings far apart → per-building COCs' : 'Concatenated: one site → project-wide COCs'} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: '#EFF6FF', cursor: 'help' }}>Layout: {layout === 'scattered' ? 'Scattered' : 'Concatenated'} ⓘ</span>}
+          {layout && <span title={layout === 'scattered' ? 'Scattered: buildings far apart → per-building COCs' : 'Concatenated: one site → project-wide COCs'} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: '#F5EEDF', cursor: 'help' }}>Layout: {layout === 'scattered' ? 'Scattered' : 'Concatenated'} ⓘ</span>}
         </div>
         {canEdit && <div style={{ display: 'flex', gap: 8 }}>
           <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={downloadTemplate}>Download template</Btn>
           <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={exportCsv}>Export</Btn>
-          <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import<input type="file" accept=".csv,.xlsx" onChange={importCsv} style={{ display: 'none' }} /></label>
+          <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import<input type="file" accept=".csv,.xlsx" onChange={importCsv} style={{ display: 'none' }} /></label>
         </div>}
       </div>
       {orphanCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9ECEA', border: '1px solid #EBCFC9', color: '#96271E', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
           <strong>{orphanCount}</strong> item(s) without a pair. Every new item must be paired with the old item it replaces — use <strong>↔ Pair</strong> on each flagged row, or delete it.
         </div>
       )}
       {importErrors.length > 0 && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#B91C1C', fontWeight: 700, marginBottom: 4 }}><span>{importErrors.length} import row(s) rejected</span><button onClick={() => setImportErrors([])} style={{ color: '#B91C1C', fontWeight: 700 }}>Dismiss</button></div>
-          <ul style={{ margin: 0, paddingLeft: 16, color: '#B91C1C' }}>{importErrors.slice(0, 12).map((m, i) => <li key={i}>{m}</li>)}{importErrors.length > 12 && <li>…and {importErrors.length - 12} more</li>}</ul>
+        <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#96271E', fontWeight: 700, marginBottom: 4 }}><span>{importErrors.length} import row(s) rejected</span><button onClick={() => setImportErrors([])} style={{ color: '#96271E', fontWeight: 700 }}>Dismiss</button></div>
+          <ul style={{ margin: 0, paddingLeft: 16, color: '#96271E' }}>{importErrors.slice(0, 12).map((m, i) => <li key={i}>{m}</li>)}{importErrors.length > 12 && <li>…and {importErrors.length - 12} more</li>}</ul>
         </div>
       )}
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Each row is a replacement pair: installed (new) ↔ removed (old). Click any cell to edit — changes save automatically.</div>
@@ -222,7 +222,7 @@ export default function ProjectItems({ projectId, project }) {
                   {rows.map((row) => {
                     const orphan = !(row.inst && row.rem)
                     return (
-                    <tr key={row.key} title={orphan ? 'Unpaired item — pair it with its replacement or delete it' : undefined} style={{ borderTop: '1px solid var(--line)', background: orphan ? '#FFF7F7' : '#fff', boxShadow: orphan ? 'inset 3px 0 0 #EF4444' : 'none' }}>
+                    <tr key={row.key} title={orphan ? 'Unpaired item — pair it with its replacement or delete it' : undefined} style={{ borderTop: '1px solid var(--line)', background: orphan ? '#FBF1EF' : '#fff', boxShadow: orphan ? 'inset 3px 0 0 #B3362B' : 'none' }}>
                       {/* installed side */}
                       <td style={{ padding: 2, minWidth: 140 }}>{row.inst ? <Cell value={row.inst.item_description} onSave={(v) => saveI(row.inst.id, { item_description: v || null })} placeholder="Installed item" /> : <span style={{ color: 'var(--text-3)', fontSize: 11, paddingLeft: 6 }}>—</span>}</td>
                       <td style={{ padding: 2 }}>{row.inst && <Cell value={row.inst.model_code} onSave={(v) => saveI(row.inst.id, { model_code: v || null })} placeholder="Model" />}</td>

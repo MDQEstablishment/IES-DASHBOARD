@@ -33,7 +33,7 @@ export default function Buildings() {
         title="Buildings"
         right={<span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{current ? current.name : 'All projects'} · {buildings.length} buildings</span>} />
 
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
         {loading ? <Loading /> : buildings.length === 0 ? <Empty icon="buildings">No buildings for this project.</Empty> : (
           <div className="ies-table-wrap">
             <table className="ies-tbl" style={{ minWidth: 720 }}>
@@ -73,7 +73,7 @@ export default function Buildings() {
                         </div>
                       </td>
                       <td><Chip status={b.status_override || 'pending'} /></td>
-                      <td><span style={{ color: '#CBD5E1' }}><Icon name="chevronr" size={16} /></span></td>
+                      <td><span style={{ color: '#C9C3B4' }}><Icon name="chevronr" size={16} /></span></td>
                     </tr>
                   )
                 })}
@@ -111,7 +111,7 @@ function BuildingDetail({ b, progress }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       {/* Header card — code/name/meta + weighted progress (mockup lines 420-426) */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 18 }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 18 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</div>
@@ -128,8 +128,8 @@ function BuildingDetail({ b, progress }) {
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>weighted progress</div>
           </div>
         </div>
-        <div style={{ height: 7, borderRadius: 5, background: '#EFF2F6', marginTop: 12, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: Math.min(100, pp) + '%', background: 'linear-gradient(90deg,#2563EB,#3B82F6)' }} />
+        <div style={{ height: 7, borderRadius: 5, background: '#EDEAE0', marginTop: 12, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: Math.min(100, pp) + '%', background: 'linear-gradient(90deg,#A0762B,#C29A4B)' }} />
         </div>
       </div>
 
@@ -143,11 +143,11 @@ function BuildingDetail({ b, progress }) {
             const n = i + 1
             const done = n < cur
             const isCur = n === cur
-            const bg = done ? '#ECFDF5' : isCur ? '#EFF6FF' : '#fff'
-            const border = done ? '#A7F3D0' : isCur ? '#2563EB' : 'var(--line)'
-            const numBg = done ? '#10B981' : isCur ? '#2563EB' : '#EFF2F6'
+            const bg = done ? '#E9F3EE' : isCur ? '#F5EEDF' : '#fff'
+            const border = done ? '#BFDFCF' : isCur ? '#A0762B' : 'var(--line)'
+            const numBg = done ? '#217A54' : isCur ? '#A0762B' : '#EDEAE0'
             const numCol = done || isCur ? '#fff' : 'var(--text-3)'
-            const nameCol = done ? '#065F46' : isCur ? '#1E40AF' : 'var(--text-3)'
+            const nameCol = done ? '#175A3E' : isCur ? '#8A6524' : 'var(--text-3)'
             return (
               <div key={i} style={{ background: bg, border: '1px solid ' + border, borderRadius: 10, padding: '9px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 22, height: 22, flex: 'none', borderRadius: '50%', background: numBg, color: numCol, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700 }}>
@@ -161,7 +161,7 @@ function BuildingDetail({ b, progress }) {
       </div>
 
       {/* Scope & install table */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Scope · Installed vs Planned</div>
         <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>Approved installs counted against each sub-type's planned quantity.</div>
         {scopes.length === 0 ? <Empty icon="box">No scope defined for this building.</Empty> : (
@@ -203,7 +203,7 @@ function BuildingDetail({ b, progress }) {
 
       {/* Rooms + Documents */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 14 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Rooms &amp; locations</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>Defined rooms feed Daily Progress locations.</div>
           {rooms.length === 0 ? <Empty icon="pin">No rooms defined.</Empty> : (
@@ -218,7 +218,7 @@ function BuildingDetail({ b, progress }) {
           )}
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Documents</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>Submittals, inspections &amp; certificates.</div>
           {docs.length === 0 ? <Empty icon="doc">No documents uploaded.</Empty> : (

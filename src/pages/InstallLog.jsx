@@ -59,7 +59,7 @@ export default function InstallLog() {
         })}
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
         {loading ? (
           <Loading />
         ) : filtered.length === 0 ? (

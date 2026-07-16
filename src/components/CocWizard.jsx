@@ -174,7 +174,7 @@ export default function CocWizard({ projectId, project, onClose, onDone }) {
               <button onClick={selectByResp} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Add</button>
             </>}
           </div>
-          <div style={{ maxHeight: 200, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 8, padding: 8, marginBottom: 14 }}>
+          <div style={{ maxHeight: 200, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 6, padding: 8, marginBottom: 14 }}>
             {buildings.length === 0 ? <Empty icon="buildings">No active buildings.</Empty> : buildings.map((b, i) => (
               <label key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 2px', fontSize: 12.5, cursor: 'pointer' }}>
                 <input type="checkbox" checked={selB.has(b.id)} onChange={() => toggle(selB, setSelB, b.id)} />
@@ -188,7 +188,7 @@ export default function CocWizard({ projectId, project, onClose, onDone }) {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {esms.map((e) => (
               <button key={e.code} onClick={() => toggle(selE, setSelE, e.code)}
-                style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: '1px solid ' + (selE.has(e.code) ? 'var(--accent)' : 'var(--line)'), background: selE.has(e.code) ? '#EFF6FF' : '#fff', color: selE.has(e.code) ? 'var(--accent)' : 'var(--text-3)' }}>{e.code} · {e.name}</button>
+                style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: '1px solid ' + (selE.has(e.code) ? 'var(--accent)' : 'var(--line)'), background: selE.has(e.code) ? '#F5EEDF' : '#fff', color: selE.has(e.code) ? 'var(--accent)' : 'var(--text-3)' }}>{e.code} · {e.name}</button>
             ))}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 12 }}>{selBuildings.length} buildings × {selEsmList.length} ESMs selected. This will create one COC ({cocNo}).</div>
@@ -197,7 +197,7 @@ export default function CocWizard({ projectId, project, onClose, onDone }) {
 
       {step === 2 && (
         <>
-          <div style={{ background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 12.5 }}>
+          <div style={{ background: '#FAF8F2', border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 12.5 }}>
             <div style={{ fontWeight: 700 }}>{project?.name} <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>· {cocNo}</span></div>
             <div style={{ color: 'var(--text-3)', marginTop: 4 }}>🏢 {project?.client || '—'} · 📍 {project?.region || '—'} · 🛠 {selEsmList.map((e) => e.code).join('+')}</div>
             <div style={{ marginTop: 6 }}><strong>Buildings ({selBuildings.length}):</strong> {selBuildings.map((b) => b.code).join(', ')}</div>

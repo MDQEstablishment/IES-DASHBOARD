@@ -12,9 +12,9 @@ import MainWarehouse from '../components/MainWarehouse'
 // stored columns). Movements ledger kept below as the Request/Receipt feature.
 function statusOf(inStock, threshold) {
   const t = threshold || 0
-  if (inStock < t) return { label: 'Reorder', color: '#EF4444', bg: '#FEF2F2' }
-  if (inStock < t * 1.5) return { label: 'Low', color: '#F59E0B', bg: '#FFFBEB' }
-  return { label: 'Healthy', color: '#10B981', bg: '#ECFDF5' }
+  if (inStock < t) return { label: 'Reorder', color: '#B3362B', bg: '#F9ECEA' }
+  if (inStock < t * 1.5) return { label: 'Low', color: '#B45309', bg: '#FAF3E3' }
+  return { label: 'Healthy', color: '#217A54', bg: '#E9F3EE' }
 }
 
 export default function ManageEsms() {
@@ -83,7 +83,7 @@ export default function ManageEsms() {
         <PageTitle kicker="STOCK · ALL PROJECTS" title="Materials" />
         {canMove && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13 }}><Icon name="plus" size={15} />Add Material</button>
+            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13 }}><Icon name="plus" size={15} />Add Material</button>
           </div>
         )}
       </div>
@@ -91,22 +91,22 @@ export default function ManageEsms() {
       <MainWarehouse />
 
       {lowCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9ECEA', border: '1px solid #EBCFC9', color: '#96271E', borderRadius: 8, padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>
           <Icon name="alert" size={15} /><span><strong>{lowCount}</strong> material(s) below threshold — reorder action required. Surfaced on the PMO dashboard.</span>
         </div>
       )}
 
       {loading ? <Loading /> : groups.length === 0 ? <Empty icon="box">No ESMs.</Empty>
         : decorated.length === 0 ? (
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '40px 16px', textAlign: 'center' }}>
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '40px 16px', textAlign: 'center' }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>No materials yet</div>
             <div style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '4px 0 16px' }}>Add your first material to build the catalog. Variants are grouped by ESM and category.</div>
-            {canMove && <button onClick={() => setAddOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 18px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}><Icon name="plus" size={16} />Add first material</button>}
+            {canMove && <button onClick={() => setAddOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 18px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}><Icon name="plus" size={16} />Add first material</button>}
           </div>
         ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {groups.map((g) => (
-            <div key={g.no} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+            <div key={g.no} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{g.no}</span>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>{g.name}</span>
@@ -130,7 +130,7 @@ export default function ManageEsms() {
                       <tr><td colSpan={8} style={{ padding: '14px 8px', color: 'var(--text-3)' }}>No materials in this ESM.</td></tr>
                     ) : g.cats.map((c) => (
                       <Fragment key={c.cat.id}>
-                        <tr><td colSpan={8} style={{ padding: '7px 8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', background: '#F8FAFC', borderTop: '1px solid var(--line)' }}>{c.cat.name_en}</td></tr>
+                        <tr><td colSpan={8} style={{ padding: '7px 8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', background: '#FAF8F2', borderTop: '1px solid var(--line)' }}>{c.cat.name_en}</td></tr>
                         {c.nameGroups.map((ng) => <CatalogNameRow key={c.cat.id + ng.name} group={ng} canMove={canMove} onThresh={onThresh} />)}
                       </Fragment>
                     ))}
@@ -158,7 +158,7 @@ export default function ManageEsms() {
                   <tr key={m.id} className="ies-trow">
                     <td style={{ fontFamily: 'var(--mono)', whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtShort(m.occurred_at)}</td>
                     <td style={{ fontFamily: 'var(--mono)' }}>{m.material?.code || '—'}</td>
-                    <td><Chip label={m.kind === 'receipt' ? 'Receipt' : 'Request'} color={m.kind === 'receipt' ? '#10B981' : '#2563EB'} bg={m.kind === 'receipt' ? '#ECFDF5' : '#EFF6FF'} /></td>
+                    <td><Chip label={m.kind === 'receipt' ? 'Receipt' : 'Request'} color={m.kind === 'receipt' ? '#217A54' : '#A0762B'} bg={m.kind === 'receipt' ? '#E9F3EE' : '#F5EEDF'} /></td>
                     <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(m.qty)}</td>
                     <td style={{ whiteSpace: 'nowrap' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={m.by?.full_name || 'system'} size={22} /><span>{m.by?.full_name || 'system'}</span></div></td>
                     <td style={{ color: 'var(--text-3)', fontSize: 11.5, maxWidth: 260 }}>{(m.note || '').replace(/^\[seed\]\s*/, '') || '—'}</td>
@@ -200,7 +200,7 @@ function CatalogNameRow({ group, canMove, onThresh }) {
       </td>
       <td style={tdR}>{num(m.requested)}</td>
       <td style={tdR}>{num(m.received)}</td>
-      <td style={{ ...tdR, fontWeight: 700, color: m.shortage > 0 ? '#EF4444' : 'var(--text-3)' }}>{num(m.shortage)}</td>
+      <td style={{ ...tdR, fontWeight: 700, color: m.shortage > 0 ? '#B3362B' : 'var(--text-3)' }}>{num(m.shortage)}</td>
       <td style={{ ...tdR, color: 'var(--text-3)' }}>{num(m.consumed)}</td>
       <td style={{ ...tdR, fontWeight: 700 }}>{num(m.inStock)}</td>
       <td style={{ padding: '10px 8px', textAlign: 'center' }}>

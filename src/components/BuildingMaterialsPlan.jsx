@@ -27,7 +27,7 @@ export default function BuildingMaterialsPlan({ buildingId, projectId }) {
   let lastEsm = null
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 14 }}>
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>Materials — Planned / Used / Remaining / Warehouse</div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>By category. Available-in-warehouse is the project's on-hand stock, shared across all its buildings.</div>
       {rows.length === 0 ? <Empty icon="materials">No planned materials for this building yet.</Empty> : (
@@ -45,13 +45,13 @@ export default function BuildingMaterialsPlan({ buildingId, projectId }) {
                 const short = r.avail < num(r.remaining_qty)
                 return (
                   <>
-                    {header && <tr key={'h' + esm}><td colSpan={5} style={{ padding: '8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: '#F8FAFC', borderTop: '1px solid var(--line)' }}>{header}</td></tr>}
+                    {header && <tr key={'h' + esm}><td colSpan={5} style={{ padding: '8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: '#FAF8F2', borderTop: '1px solid var(--line)' }}>{header}</td></tr>}
                     <tr key={r.category_id} style={{ borderTop: '1px solid var(--line)' }}>
                       <td style={{ padding: '9px 8px' }}><span className="ies-ellipsis" title={r.cat.code}>{r.cat.name_en}</span></td>
                       <td style={tdR}>{num(r.planned_qty)}</td>
                       <td style={{ ...tdR, color: 'var(--ok)' }}>{num(r.used_qty)}</td>
                       <td style={{ ...tdR, fontWeight: 700 }}>{num(r.remaining_qty)}</td>
-                      <td style={{ ...tdR, color: short ? 'var(--bad)' : 'var(--text)' }}>{r.avail}{short && <span title="Warehouse stock is below this building's remaining need" style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 5, padding: '1px 5px' }}>LOW</span>}</td>
+                      <td style={{ ...tdR, color: short ? 'var(--bad)' : 'var(--text)' }}>{r.avail}{short && <span title="Warehouse stock is below this building's remaining need" style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#96271E', background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 5, padding: '1px 5px' }}>LOW</span>}</td>
                     </tr>
                   </>
                 )

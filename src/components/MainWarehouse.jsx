@@ -32,7 +32,7 @@ export default function MainWarehouse() {
 
   const th = { padding: '9px 8px', fontWeight: 600, textAlign: 'left' }
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 18 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 15 }}>Main Warehouse</div>
@@ -40,7 +40,7 @@ export default function MainWarehouse() {
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {['all', ...esmsPresent].map((k) => (
-            <button key={k} onClick={() => setEsm(k)} style={{ padding: '4px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, border: '1px solid ' + (esm === k ? 'var(--accent)' : 'var(--line)'), background: esm === k ? '#EFF6FF' : '#fff', color: esm === k ? 'var(--accent)' : 'var(--text-3)' }}>{k === 'all' ? 'All ESM' : k}</button>
+            <button key={k} onClick={() => setEsm(k)} style={{ padding: '4px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, border: '1px solid ' + (esm === k ? 'var(--accent)' : 'var(--line)'), background: esm === k ? '#F5EEDF' : '#fff', color: esm === k ? 'var(--accent)' : 'var(--text-3)' }}>{k === 'all' ? 'All ESM' : k}</button>
           ))}
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function MainWarehouse() {
                         <td style={{ padding: '10px 8px', color: 'var(--text-3)', fontSize: 11 }}>{multi ? <>{r.brands.length} brands {isOpen ? '▲' : '▼'}</> : (r.brands[0]?.brand || '—')}</td>
                       </tr>
                       {multi && isOpen && r.brands.map((b) => (
-                        <tr key={r.key + b.code} style={{ background: '#F8FAFC' }}>
+                        <tr key={r.key + b.code} style={{ background: '#FAF8F2' }}>
                           <td />
                           <td colSpan={2} style={{ padding: '6px 8px', color: 'var(--text-3)' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{b.code}</span> · {b.brand}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{b.qty}</td><td />

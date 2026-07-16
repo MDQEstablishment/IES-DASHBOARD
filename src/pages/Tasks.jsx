@@ -88,20 +88,20 @@ export default function Tasks() {
 
       {/* Team Performance widget (dc showPerf 653-678) — managers only */}
       {isManager && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Team Performance</div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>OPEN QUEUE HEALTH</div>
           </div>
           <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: '120px 120px 1fr', gap: 18, alignItems: 'start' }}>
             <Perf label="AVG AGE" value={`${avgAge}d`} />
-            <Perf label="AVG CYCLE" value={`${avgCycle}d`} color="#10B981" />
+            <Perf label="AVG CYCLE" value={`${avgCycle}d`} color="#217A54" />
             <div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>TOP 3 OLDEST OPEN</div>
               {topOldest.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>None open.</div> : topOldest.map((t) => (
                 <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderTop: '1px solid var(--line)' }}>
                   <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#F59E0B', flex: 'none' }}>{dayAge(t.created_at)}d</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#B45309', flex: 'none' }}>{dayAge(t.created_at)}d</span>
                 </div>
               ))}
             </div>
@@ -111,14 +111,14 @@ export default function Tasks() {
 
       {/* Tabs + status filter pills */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-        <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 9, padding: 3, background: '#fff' }}>
+        <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 8, padding: 3, background: '#fff' }}>
           {TABS.map((t) => {
             const active = tab === t.key
             return (
               <button key={t.key} onClick={() => setTab(t.key)} style={{
                 padding: '6px 14px', fontSize: 12.5, fontWeight: 600, borderRadius: 7,
                 color: active ? 'var(--accent)' : 'var(--text-3)',
-                background: active ? 'rgba(37,99,235,.10)' : 'transparent',
+                background: active ? 'rgba(160,118,43,.10)' : 'transparent',
                 cursor: 'pointer',
               }}>{t.label}</button>
             )
@@ -131,7 +131,7 @@ export default function Tasks() {
               <button key={s.v} onClick={() => setStatusFilter(s.v)} style={{
                 padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'),
-                background: active ? '#EFF6FF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
+                background: active ? '#F5EEDF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
               }}>{s.l}</button>
             )
           })}
@@ -139,12 +139,12 @@ export default function Tasks() {
       </div>
 
       {/* Task table */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
         {loading ? <Loading /> : filtered.length === 0 ? <Empty icon="tasks">No tasks in this view.</Empty> : (
           <div className="ies-table-wrap" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 880 }}>
               <thead>
-                <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)', background: '#FCFCFD' }}>
+                <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)', background: '#FCFBF7' }}>
                   <th style={{ padding: '11px 14px', fontWeight: 600 }}>TITLE</th>
                   <th style={{ padding: '11px 8px', fontWeight: 600 }}>ASSIGNEE</th>
                   <th style={{ padding: '11px 8px', fontWeight: 600 }}>BUILDING</th>
@@ -170,7 +170,7 @@ export default function Tasks() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           {t.assignee
                             ? <Avatar name={t.assignee.full_name} color={roleColor(t.assignee.role)} size={24} />
-                            : <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#E2E8F0', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700 }}>{initials(null)}</span>}
+                            : <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#E3DFD3', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700 }}>{initials(null)}</span>}
                           <span style={{ whiteSpace: 'nowrap' }}>{t.assignee?.full_name || 'Unassigned'}</span>
                         </div>
                       </td>
@@ -189,9 +189,9 @@ export default function Tasks() {
                           </select>
                         ) : <Chip status={t.status} />}
                       </td>
-                      <td style={{ padding: '12px 8px', fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap', color: overdue ? '#EF4444' : 'var(--text-3)' }}>
+                      <td style={{ padding: '12px 8px', fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap', color: overdue ? '#B3362B' : 'var(--text-3)' }}>
                         {fmtDate(t.due_date)}
-                        {overdue && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, color: '#EF4444', background: '#FEF2F2' }}>overdue</span>}
+                        {overdue && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, color: '#B3362B', background: '#F9ECEA' }}>overdue</span>}
                       </td>
                     </tr>
                   )

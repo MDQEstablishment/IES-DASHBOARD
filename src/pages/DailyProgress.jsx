@@ -164,7 +164,7 @@ export default function DailyProgress() {
       const tot = b.ESM1 + b.ESM2 + b.ESM3
       const scale = 70 / max
       return {
-        dlabel: d.dlabel, total: tot, offBg: tot ? '#F1F5F9' : '#FAFBFC',
+        dlabel: d.dlabel, total: tot, offBg: tot ? '#F0EDE4' : '#FBFAF6',
         h1: Math.round(b.ESM1 * scale), h2: Math.round(b.ESM2 * scale), h3: Math.round(b.ESM3 * scale),
       }
     })
@@ -196,7 +196,7 @@ export default function DailyProgress() {
 
       {/* KPI row: today's tally · 7-day rolling · productivity */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 16 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>TODAY'S TALLY · {fmtShort(today())}</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 30, fontWeight: 700, marginTop: 6 }}>{tally.total}<span style={{ fontSize: 13, color: 'var(--text-3)' }}> units</span></div>
           <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: 11, fontFamily: 'var(--mono)', flexWrap: 'wrap' }}>
@@ -208,33 +208,33 @@ export default function DailyProgress() {
           <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 8 }}>{todays.length} entries today</div>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>7-DAY ROLLING</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 78, marginTop: 12 }}>
             {chartBars.map((d, i) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: 70, background: d.offBg, borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ height: d.h3, background: '#10B981' }} />
-                  <div style={{ height: d.h2, background: '#F59E0B' }} />
-                  <div style={{ height: d.h1, background: '#2563EB' }} />
+                  <div style={{ height: d.h3, background: '#217A54' }} />
+                  <div style={{ height: d.h2, background: '#B45309' }} />
+                  <div style={{ height: d.h1, background: '#A0762B' }} />
                 </div>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--text-3)' }}>{d.dlabel}</span>
               </div>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 6, fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>
-            <span><span style={{ color: '#2563EB' }}>■</span> Lighting</span>
-            <span><span style={{ color: '#F59E0B' }}>■</span> Control</span>
-            <span><span style={{ color: '#10B981' }}>■</span> AC</span>
+            <span><span style={{ color: '#A0762B' }}>■</span> Lighting</span>
+            <span><span style={{ color: '#B45309' }}>■</span> Control</span>
+            <span><span style={{ color: '#217A54' }}>■</span> AC</span>
           </div>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>PRODUCTIVITY</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
             <svg viewBox="0 0 64 64" style={{ width: 68, height: 68, flex: 'none' }}>
-              <circle cx="32" cy="32" r="26" fill="none" stroke="#EFF2F6" strokeWidth="8" />
-              <circle cx="32" cy="32" r="26" fill="none" stroke="#2563EB" strokeWidth="8" strokeLinecap="round"
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#EDEAE0" strokeWidth="8" />
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#A0762B" strokeWidth="8" strokeLinecap="round"
                 strokeDasharray={`${Math.min(1, tally.total / 40) * 163.4} 163.4`} transform="rotate(-90 32 32)" />
             </svg>
             <div>
@@ -257,7 +257,7 @@ export default function DailyProgress() {
       </div>
 
       {tab === 'quick' && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 18, maxWidth: 560 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 18, maxWidth: 560 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Quick entry</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 16 }}>One install → one log row. Decrements stock, writes the activity log, and bumps every percentage.</div>
 
@@ -268,14 +268,14 @@ export default function DailyProgress() {
               {/* Date */}
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Date</span>
-                <input lang="en" value={today()} readOnly style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14, fontFamily: 'var(--mono)', background: '#FAFBFC' }} />
+                <input lang="en" value={today()} readOnly style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14, fontFamily: 'var(--mono)', background: '#FBFAF6' }} />
               </label>
 
               {/* Building */}
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Building</span>
                 <select value={bid} onChange={(e) => { setBid(e.target.value); setScopeId(''); setEsmCode('') }}
-                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14, background: '#fff' }}>
+                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14, background: '#fff' }}>
                   <option value="">Select building…</option>
                   {buildings.map((b) => <option key={b.id} value={b.id}>{b.code} · {b.name}</option>)}
                 </select>
@@ -292,7 +292,7 @@ export default function DailyProgress() {
                       <button key={e.code} onClick={() => { setEsmCode(on ? '' : e.code); setScopeId('') }}
                         className="ies-hover" style={{
                           flex: 1, minWidth: 120, padding: 12, borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-                          border: `2px solid ${on ? 'var(--accent)' : 'var(--line)'}`, background: on ? '#EFF6FF' : '#fff',
+                          border: `2px solid ${on ? 'var(--accent)' : 'var(--line)'}`, background: on ? '#F5EEDF' : '#fff',
                         }}>
                         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}>{e.code}</div>
                         <div style={{ fontWeight: 600, fontSize: 12.5, marginTop: 2 }}>{e.name}</div>
@@ -306,7 +306,7 @@ export default function DailyProgress() {
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Sub-type</span>
                 <select value={scopeId} onChange={(e) => setScopeId(e.target.value)} disabled={!bid}
-                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14, background: '#fff' }}>
+                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14, background: '#fff' }}>
                   <option value="">{bid ? 'Select sub-type…' : 'Pick a building first'}</option>
                   {subScopes.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -321,20 +321,20 @@ export default function DailyProgress() {
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Qty installed</span>
                 <input lang="en" value={qty} onChange={(e) => setQty(e.target.value)} type="text" inputMode="numeric" min="1"
                   placeholder={sel ? `e.g. 12 (of ${sel.planned_qty})` : 'e.g. 12'}
-                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14 }} />
+                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14 }} />
               </label>
 
               {/* Room / note */}
               <label style={{ display: 'block' }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Room / location note</span>
                 <input lang="en" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Floor 2 east"
-                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 14 }} />
+                  style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 14 }} />
               </label>
 
               {/* Photos */}
               <input lang="en" ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
               <button onClick={() => fileRef.current?.click()} disabled={uploading}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 11, borderRadius: 9, border: '1px dashed #CBD5E1', color: photoPath ? 'var(--ok)' : 'var(--text-3)', fontSize: 12.5, background: '#fff', cursor: 'pointer' }}>
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 11, borderRadius: 8, border: '1px dashed #C9C3B4', color: photoPath ? 'var(--ok)' : 'var(--text-3)', fontSize: 12.5, background: '#fff', cursor: 'pointer' }}>
                 <Icon name="camera" size={15} />
                 {uploading ? 'Uploading…' : photoPath ? '1 photo attached' : 'Add photos (auto-compressed · 500 KB)'}
               </button>
@@ -350,7 +350,7 @@ export default function DailyProgress() {
       )}
 
       {tab === 'batch' && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, maxWidth: 560 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, maxWidth: 560 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Batch grid · end of day</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
             Use Quick entry to log individual installs. End-of-day batch grid is recorded one row per install via the same log.
@@ -363,12 +363,12 @@ export default function DailyProgress() {
         <div style={{ fontWeight: 700, fontSize: 14 }}>Today's entries</div>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{todays.length} logged · {tally.total} units</div>
       </div>
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
         {loading ? <Loading /> : todays.length === 0 ? <Empty icon="daily">No install entries today yet.</Empty> : (
           <div className="ies-table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
               <thead>
-                <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)', background: '#FCFCFD' }}>
+                <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)', background: '#FCFBF7' }}>
                   <th style={{ padding: '10px 14px', fontWeight: 600 }}>TIME</th>
                   <th style={{ padding: '10px 8px', fontWeight: 600 }}>BUILDING</th>
                   <th style={{ padding: '10px 8px', fontWeight: 600 }}>SUB-TYPE</th>

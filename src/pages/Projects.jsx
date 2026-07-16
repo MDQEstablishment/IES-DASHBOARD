@@ -83,14 +83,14 @@ export default function Projects() {
         <PageTitle kicker="RETROFIT PROGRAMME" title="Projects" />
         {canAdd && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setImportOpen(true)} className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
-            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>{iconPlus}Add Project</button>
+            <button onClick={() => setImportOpen(true)} className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 8, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
+            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>{iconPlus}Add Project</button>
           </div>
         )}
       </div>
 
       {projectsReadOnly && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', borderRadius: 9, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FAF3E3', border: '1px solid #EBDCB2', color: '#92400E', borderRadius: 8, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
           <Icon name="alert" size={15} />Read-only access — your role can view projects but not edit them.
         </div>
       )}
@@ -99,7 +99,7 @@ export default function Projects() {
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           {FILTERS.map(([key, label]) => {
             const active = filter === key
-            const [col, bg] = key === 'all' ? ['#2563EB', '#EFF6FF'] : statusMeta(key)
+            const [col, bg] = key === 'all' ? ['#A0762B', '#F5EEDF'] : statusMeta(key)
             return (
               <button key={key} onClick={() => setFilter(key)}
                 style={{ padding: '6px 13px', borderRadius: 20, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
@@ -111,7 +111,7 @@ export default function Projects() {
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-3)' }}>
           Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12.5, background: '#fff', fontWeight: 600 }}>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12.5, background: '#fff', fontWeight: 600 }}>
             {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
@@ -124,17 +124,17 @@ export default function Projects() {
             const pp = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
             const remaining = Math.max(0, d.planned - d.installed)
             const [pillColor, pillBg, pillLabel] = statusMeta(p.status)
-            const barCol = pp >= 100 ? '#10B981' : 'var(--accent)'
+            const barCol = pp >= 100 ? '#217A54' : 'var(--accent)'
             const r = 22, circ = 2 * Math.PI * r
             const ringDash = `${((pp / 100) * circ).toFixed(1)} ${circ.toFixed(1)}`
             return (
               <div key={p.id} className="ies-hover" role="button" tabIndex={0} onClick={() => navigate(`/projects/${p.id}`)}
-                style={{ textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 0, display: 'flex', alignItems: 'stretch', overflow: 'hidden', boxShadow: '0 1px 2px rgba(15,23,42,.04)', cursor: 'pointer' }}>
+                style={{ textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 0, display: 'flex', alignItems: 'stretch', overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,26,36,.04)', cursor: 'pointer' }}>
                 <div style={{ width: 4, background: pillColor, flex: 'none' }} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 18, padding: '15px 18px', flexWrap: 'wrap' }}>
                   <div style={{ position: 'relative', width: 50, height: 50, flex: 'none' }}>
                     <svg viewBox="0 0 50 50" style={{ width: 50, height: 50 }}>
-                      <circle cx="25" cy="25" r="22" fill="none" stroke="#EFF2F6" strokeWidth="5" />
+                      <circle cx="25" cy="25" r="22" fill="none" stroke="#EDEAE0" strokeWidth="5" />
                       <circle cx="25" cy="25" r="22" fill="none" stroke={barCol} strokeWidth="5" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 25 25)" />
                     </svg>
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700 }}>{pp}%</div>
@@ -162,11 +162,11 @@ export default function Projects() {
                     </div>
                     {(canEdit || canDelete) && (
                       <span style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                        {canEdit && <button title="Edit project" onClick={() => setEditProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="edit" size={14} /></button>}
-                        {canDelete && <button title="Delete project" onClick={() => setDelProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={14} /></button>}
+                        {canEdit && <button title="Edit project" onClick={() => setEditProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="edit" size={14} /></button>}
+                        {canDelete && <button title="Delete project" onClick={() => setDelProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid #EBCFC9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={14} /></button>}
                       </span>
                     )}
-                    <span style={{ color: '#CBD5E1' }}><Icon name="chevronr" size={18} /></span>
+                    <span style={{ color: '#C9C3B4' }}><Icon name="chevronr" size={18} /></span>
                   </div>
                 </div>
               </div>
