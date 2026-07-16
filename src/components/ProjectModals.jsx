@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import DateInput from './DateInput'
-import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
+import FileDropZone from './FileDropZone'
+import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor } from '../lib/db'
+import { compressImage } from '../lib/image'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { toast } from '../lib/toast'
@@ -31,6 +33,17 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const [showItems, setShowItems] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [busy, setBusy] = useState(false)
+  // Project cover photo (edit mode). photoFile = new selection; removePhoto = drop
+  // the existing one on save; replacing = user chose to swap the current photo.
+  const [photoFile, setPhotoFile] = useState(null)
+  const [removePhoto, setRemovePhoto] = useState(false)
+  const [replacing, setReplacing] = useState(false)
+  const [curPhoto, setCurPhoto] = useState(null) // signed URL of the existing photo
+  useEffect(() => {
+    let cancelled = false
+    if (project?.photo_url) signedUrlFor('project-photos', project.photo_url).then((u) => { if (!cancelled) setCurPhoto(u) })
+    return () => { cancelled = true }
+  }, [project?.photo_url])
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
   const setItem = (i, k, v) => setItems((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
 
@@ -47,6 +60,20 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       project_reference_no: f.project_reference_no || null, beneficiary_entity: f.beneficiary_entity || null,
     }
     if (mode === 'edit') {
+      // Resolve the cover photo before the row update so photo_url lands atomically.
+      if (photoFile) {
+        let f = photoFile
+        if (f.size > 800 * 1024) { try { f = await compressImage(f, { maxBytes: 800000, maxDim: 1600 }) } catch { /* keep original */ } }
+        const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
+        const path = `${project.id}/${crypto.randomUUID()}.${ext}`
+        const { error: upErr } = await uploadToBucket('project-photos', f, { key: path, maxBytes: 5 * 1024 * 1024 })
+        if (upErr) { setBusy(false); return } // uploadToBucket already toasted
+        payload.photo_url = path
+        if (project.photo_url && project.photo_url !== path) supabase.storage.from('project-photos').remove([project.photo_url])
+      } else if (removePhoto && project.photo_url) {
+        await supabase.storage.from('project-photos').remove([project.photo_url])
+        payload.photo_url = null
+      }
       const { error } = await bgUpdate('projects', project.id, payload, { okMsg: 'Project updated' })
       setBusy(false); if (!error) onClose()
       return
@@ -84,9 +111,39 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Create project'}</Btn>
         {showDelete && <DeleteProjectModal project={project} onClose={() => { setShowDelete(false); onClose() }} />}
       </>}>
+      {mode === 'edit' && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '0 0 8px' }}>PROJECT PHOTO</div>
+          {project.photo_url && curPhoto && !removePhoto && !replacing && !photoFile ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <img src={curPhoto} alt="" style={{ width: 104, height: 66, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn onClick={() => setReplacing(true)}>Replace</Btn>
+                <Btn variant="danger" onClick={() => { setRemovePhoto(true); setPhotoFile(null); setReplacing(false) }}>Remove</Btn>
+              </div>
+            </div>
+          ) : (
+            <>
+              <FileDropZone compact accept="image/*" maxSizeMb={5} label="Upload project photo"
+                onFiles={(file) => { setPhotoFile(file); setRemovePhoto(false) }} />
+              {removePhoto && project.photo_url && (
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
+                  Current photo will be removed on save. <button type="button" onClick={() => setRemovePhoto(false)} style={{ color: 'var(--accent)', fontWeight: 700 }}>Undo</button>
+                </div>
+              )}
+              {replacing && project.photo_url && !photoFile && (
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
+                  Choose a replacement, or <button type="button" onClick={() => setReplacing(false)} style={{ color: 'var(--accent)', fontWeight: 700 }}>keep current</button>.
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>JPG, PNG, WebP or HEIC · up to 5 MB · large images are compressed automatically.</div>
+            </>
+          )}
+        </div>
+      )}
       {mode === 'add' && (
         <div style={{ background: '#F5EEDF', border: '1px solid #E7D9B8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#8A6524', marginBottom: 16 }}>
-          After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later.
+          After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later. Add a cover photo here once the project exists.
         </div>
       )}
       <Row>

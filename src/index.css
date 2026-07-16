@@ -69,6 +69,12 @@ h1,h2,h3,p{margin:0}
 .ies-card-hover:hover{border-color:var(--accent) !important;box-shadow:0 4px 14px rgba(160,118,43,.12)}
 .ies-trow{transition:background .1s}
 .ies-trow:hover{background:var(--hover)}
+/* Sprint 8Q — Projects "Panorama" cards: mobile-first responsive grid (1-up / 2-up ≥768 / 3-up ≥1200) */
+.ies-panorama-grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:768px){.ies-panorama-grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1200px){.ies-panorama-grid{grid-template-columns:repeat(3,1fr)}}
+.ies-panorama-card{transition:transform .14s,box-shadow .14s}
+.ies-panorama-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(16,26,36,.22)}
 .ies-tbl{width:100%;border-collapse:collapse}
 .ies-tbl th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;color:var(--text-3);font-weight:600;padding:10px 14px;background:var(--raised);border-bottom:1px solid var(--line);white-space:nowrap;text-transform:uppercase}
 .ies-tbl td{padding:11px 14px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}

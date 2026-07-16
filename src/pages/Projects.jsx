@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { PageTitle, Loading, Empty } from '../components/ui'
 import { useAuth } from '../rbac'
-import { useLiveQuery } from '../lib/db'
+import { useLiveQuery, signedUrlFor } from '../lib/db'
 import { num } from '../lib/format'
 import { statusMeta } from '../lib/constants'
-import { ProjectFormModal, ProjectImportModal, DeleteProjectModal } from '../components/ProjectModals'
+import { ProjectFormModal, ProjectImportModal } from '../components/ProjectModals'
 
 const SORTS = [['recent', 'Recent'], ['name', 'Name A→Z'], ['progress', 'Progress %'], ['start', 'Start date']]
 
@@ -26,7 +26,6 @@ export default function Projects() {
   const [addOpen, setAddOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [editProj, setEditProj] = useState(null)
-  const [delProj, setDelProj] = useState(null)
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
     q.select('*, pm:profiles!projects_pm_id_fkey(full_name)').is('deleted_at', null).order('code'))
@@ -35,9 +34,22 @@ export default function Projects() {
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) => q.select('id,project_id'))
 
+  // Resolve a signed URL for each project that has a cover photo (private bucket).
+  // Keyed on id:path so it only re-fetches when a photo is added/changed/removed.
+  const [photoUrls, setPhotoUrls] = useState({})
+  const photoKey = projects.map((p) => `${p.id}:${p.photo_url || ''}`).join('|')
+  useEffect(() => {
+    let cancelled = false
+    const withPhotos = projects.filter((p) => p.photo_url)
+    if (!withPhotos.length) { setPhotoUrls({}); return }
+    Promise.all(withPhotos.map(async (p) => [p.id, await signedUrlFor('project-photos', p.photo_url)]))
+      .then((pairs) => { if (!cancelled) setPhotoUrls(Object.fromEntries(pairs.filter(([, u]) => u))) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoKey])
+
   const canAdd = ['admin', 'ceo', 'pmo'].includes(role)
   const canEdit = ['admin', 'pmo', 'projm', 'progm'].includes(role)
-  const canDelete = role === 'admin'
   const projectsReadOnly = !canEdit
 
   // approved-installed qty per scope
@@ -118,58 +130,14 @@ export default function Projects() {
       </div>
 
       {loading ? <Loading /> : filtered.length === 0 ? <Empty icon="projects">No projects match this filter.</Empty> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="ies-panorama-grid">
           {filtered.map((p) => {
             const d = prog[p.id] || { planned: 0, installed: 0 }
             const pp = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
-            const remaining = Math.max(0, d.planned - d.installed)
-            const [pillColor, pillBg, pillLabel] = statusMeta(p.status)
-            const barCol = pp >= 100 ? '#217A54' : 'var(--accent)'
-            const r = 22, circ = 2 * Math.PI * r
-            const ringDash = `${((pp / 100) * circ).toFixed(1)} ${circ.toFixed(1)}`
             return (
-              <div key={p.id} className="ies-hover" role="button" tabIndex={0} onClick={() => navigate(`/projects/${p.id}`)}
-                style={{ textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 0, display: 'flex', alignItems: 'stretch', overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,26,36,.04)', cursor: 'pointer' }}>
-                <div style={{ width: 4, background: pillColor, flex: 'none' }} />
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 18, padding: '15px 18px', flexWrap: 'wrap' }}>
-                  <div style={{ position: 'relative', width: 50, height: 50, flex: 'none' }}>
-                    <svg viewBox="0 0 50 50" style={{ width: 50, height: 50 }}>
-                      <circle cx="25" cy="25" r="22" fill="none" stroke="#EDEAE0" strokeWidth="5" />
-                      <circle cx="25" cy="25" r="22" fill="none" stroke={barCol} strokeWidth="5" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 25 25)" />
-                    </svg>
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700 }}>{pp}%</div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>{p.code}</span>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: pillColor, background: pillBg }}>{pillLabel}</span>
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: 15.5, marginTop: 3, letterSpacing: '-.2px' }}>{p.name}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>🏛 {p.client || '—'} · 📍 {p.region || '—'} · 👷 {p.pm_name || p.pm?.full_name || '—'}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 18, alignItems: 'center', flex: 'none' }}>
-                    <div style={{ textAlign: 'center', minWidth: 58 }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 700, color: 'var(--warn)' }}>{num(remaining)}</div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.5px', color: 'var(--text-3)', marginTop: 2 }}>REMAINING</div>
-                    </div>
-                    <div style={{ textAlign: 'center', minWidth: 44 }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 700 }}>{bldgCount[p.id] || 0}</div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.5px', color: 'var(--text-3)', marginTop: 2 }}>BLDGS</div>
-                    </div>
-                    <div style={{ textAlign: 'center', minWidth: 44 }}>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 700 }}>{esmCount[p.id] || 0}</div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.5px', color: 'var(--text-3)', marginTop: 2 }}>ESMs</div>
-                    </div>
-                    {(canEdit || canDelete) && (
-                      <span style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                        {canEdit && <button title="Edit project" onClick={() => setEditProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="edit" size={14} /></button>}
-                        {canDelete && <button title="Delete project" onClick={() => setDelProj(p)} className="ies-hover" style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid #EBCFC9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={14} /></button>}
-                      </span>
-                    )}
-                    <span style={{ color: '#C9C3B4' }}><Icon name="chevronr" size={18} /></span>
-                  </div>
-                </div>
-              </div>
+              <PanoramaCard key={p.id} p={p} pp={pp} remaining={Math.max(0, d.planned - d.installed)}
+                bldgs={bldgCount[p.id] || 0} esms={esmCount[p.id] || 0} photoUrl={photoUrls[p.id]}
+                canEdit={canEdit} onOpen={() => navigate(`/projects/${p.id}`)} onEdit={() => setEditProj(p)} />
             )
           })}
         </div>
@@ -178,7 +146,88 @@ export default function Projects() {
       {addOpen && <ProjectFormModal mode="add" onClose={() => setAddOpen(false)} />}
       {importOpen && <ProjectImportModal onClose={() => setImportOpen(false)} />}
       {editProj && <ProjectFormModal mode="edit" project={editProj} onClose={() => setEditProj(null)} />}
-      {delProj && <DeleteProjectModal project={delProj} onClose={() => setDelProj(null)} />}
+    </div>
+  )
+}
+
+// Sprint 8Q — "Panorama Vertical" project card (handoff 2a). Full-bleed cover
+// photo (beige fallback when absent) under a navy scrim, all data overlaid.
+// On-dark status pill palette (the light statusMeta colors would vanish on navy).
+const PILL = {
+  active:  ['#7BC9A3', 'rgba(33,122,84,0.30)', 'rgba(123,201,163,0.40)'],
+  draft:   ['#C7CED5', 'rgba(120,132,143,0.32)', 'rgba(199,206,213,0.35)'],
+  on_hold: ['#E8B662', 'rgba(180,83,9,0.32)', 'rgba(232,182,98,0.40)'],
+  closed:  ['#9FB0BD', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
+  deleted: ['#9FB0BD', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
+}
+const SCRIM = 'linear-gradient(180deg, rgba(16,39,59,0.88) 0%, rgba(16,39,59,0.35) 22%, rgba(16,39,59,0) 45%, rgba(16,39,59,0.55) 68%, rgba(16,39,59,0.95) 100%)'
+
+function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen, onEdit }) {
+  const [pillC, pillBg, pillBd] = PILL[p.status] || PILL.draft
+  const pillLabel = statusMeta(p.status)[2]
+  const meta = [p.client, p.region, p.pm_name || p.pm?.full_name].filter(Boolean).join(' · ')
+  const r = 23, circ = 2 * Math.PI * r
+  const ringDash = `${((pp / 100) * circ).toFixed(1)} ${circ.toFixed(1)}`
+  const stat = (val, label, color) => (
+    <div style={{ flex: 1, textAlign: 'center', padding: '0 6px' }}>
+      <div style={{ fontSize: 17, fontWeight: 700, color, lineHeight: 1.1 }}>{val}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '1px', color: '#8DA0B1', marginTop: 3 }}>{label}</div>
+    </div>
+  )
+  return (
+    <div className="ies-panorama-card" role="button" tabIndex={0} onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
+      style={{ position: 'relative', height: 420, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 8px rgba(22,29,36,0.12)', background: '#E8E4D8' }}>
+      {/* photo layer */}
+      {photoUrl && <img src={photoUrl} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+      {/* scrim */}
+      <div style={{ position: 'absolute', inset: 0, background: SCRIM, pointerEvents: 'none' }} />
+      {/* content */}
+      <div style={{ position: 'absolute', inset: 0, padding: 19, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        {/* top row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: '#8DA0B1' }}>{p.code}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pillC, background: pillBg, border: `1px solid ${pillBd}`, whiteSpace: 'nowrap' }}>{pillLabel}</span>
+          </div>
+          {canEdit && (
+            <button title="Edit project" onClick={(e) => { e.stopPropagation(); onEdit() }}
+              style={{ width: 28, height: 28, borderRadius: 6, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(16,39,59,0.4)', cursor: 'pointer' }}>
+              <Icon name="edit" size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* bottom block */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px', color: '#F7F4EC', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+              <div style={{ fontSize: 12, color: '#B9C4CD', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta || '—'}</div>
+            </div>
+            <div style={{ position: 'relative', width: 52, height: 52, flex: 'none' }}>
+              <svg viewBox="0 0 52 52" style={{ width: 52, height: 52 }}>
+                <circle cx="26" cy="26" r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="6" />
+                <circle cx="26" cy="26" r={r} fill="none" stroke="#C29A4B" strokeWidth="6" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 26 26)" />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: '#fff' }}>{pp}%</div>
+            </div>
+          </div>
+          {/* progress bar */}
+          <div style={{ height: 5, borderRadius: 2, background: 'rgba(255,255,255,0.18)', overflow: 'hidden', margin: '13px 0 0' }}>
+            <div style={{ height: '100%', width: pp + '%', background: '#C29A4B' }} />
+          </div>
+          {/* stats strip */}
+          <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.16)', marginTop: 13, paddingTop: 11 }}>
+            {stat(num(remaining), 'REMAINING', '#E8B662')}
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.16)' }} />
+            {stat(bldgs, 'BLDGS', '#F7F4EC')}
+            <div style={{ width: 1, background: 'rgba(255,255,255,0.16)' }} />
+            {stat(esms, 'ESMS', '#F7F4EC')}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
