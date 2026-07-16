@@ -47,19 +47,19 @@ export default function Escalations() {
         right={<Btn variant="primary" icon="plus" onClick={() => setShowNew(true)}>Raise escalation</Btn>} />
 
       {noManager && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF', borderRadius: 9, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5EEDF', border: '1px solid #E7D9B8', color: '#8A6524', borderRadius: 8, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
           <Icon name="alert" size={15} />You sit at the top of the chain — escalations route up to you; you don't raise them.
         </div>
       )}
 
       {/* Open / Resolved tabs (dc escTabs) */}
-      <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 9, padding: 3, background: '#fff', marginBottom: 16, width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 8, padding: 3, background: '#fff', marginBottom: 16, width: 'fit-content' }}>
         {[['open', `Open (${open.length})`], ['resolved', `Resolved (${resolved.length})`]].map(([k, l]) => {
           const active = tab === k
           return (
             <button key={k} onClick={() => setTab(k)} style={{
               padding: '6px 16px', fontSize: 12.5, fontWeight: 600, borderRadius: 7,
-              color: active ? 'var(--accent)' : 'var(--text-3)', background: active ? 'rgba(37,99,235,.10)' : 'transparent', cursor: 'pointer',
+              color: active ? 'var(--accent)' : 'var(--text-3)', background: active ? 'rgba(160,118,43,.10)' : 'transparent', cursor: 'pointer',
             }}>{l}</button>
           )
         })}
@@ -71,7 +71,7 @@ export default function Escalations() {
             const done = e.status === 'resolved' || e.status === 'closed'
             const cur = Math.min(e.level || 1, CHAIN.length - 1)
             return (
-              <div key={e.id} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+              <div key={e.id} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
                 {/* head: severity + status pills, ago, resolve action */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -82,14 +82,14 @@ export default function Escalations() {
                   {!done && (
                     <Can allow={MANAGERS}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A' }}>Forward ↑</button>
-                        <button onClick={() => resolve(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>Resolve</button>
+                        <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#FAF3E3', color: '#B45309', border: '1px solid #EBDCB2' }}>Forward ↑</button>
+                        <button onClick={() => resolve(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#E9F3EE', color: '#1D6A49', border: '1px solid #BFDFCF' }}>Resolve</button>
                       </div>
                     </Can>
                   )}
                   {done && e.status === 'resolved' && (
                     <Can allow={MANAGERS}>
-                      <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FECACA' }}>Re-escalate ↑</button>
+                      <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#F9ECEA', color: '#96271E', border: '1px solid #EBCFC9' }}>Re-escalate ↑</button>
                     </Can>
                   )}
                 </div>
@@ -100,7 +100,7 @@ export default function Escalations() {
 
                 {/* meta: building + raised_by -> raised_to */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '12px 0', fontSize: 12.5 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: 'var(--text-3)', background: '#F1F5F9' }}>{e.building?.code || '—'}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: 'var(--text-3)', background: '#F0EDE4' }}>{e.building?.code || '—'}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                     <Avatar name={e.raised_by?.full_name} color={roleColor(e.raised_by?.role)} size={22} />
                     <span style={{ whiteSpace: 'nowrap' }}>{e.raised_by?.full_name || '—'}</span>
@@ -117,9 +117,9 @@ export default function Escalations() {
                   {CHAIN.map((c, i) => {
                     const isDone = done || i < cur
                     const isCur = !done && i === cur
-                    const bg = isDone ? '#10B981' : isCur ? '#EF4444' : '#fff'
-                    const border = isDone ? '#10B981' : isCur ? '#EF4444' : 'var(--line)'
-                    const labelCol = isDone ? '#059669' : isCur ? '#DC2626' : 'var(--text-3)'
+                    const bg = isDone ? '#217A54' : isCur ? '#B3362B' : '#fff'
+                    const border = isDone ? '#217A54' : isCur ? '#B3362B' : 'var(--line)'
+                    const labelCol = isDone ? '#1D6A49' : isCur ? '#B3362B' : 'var(--text-3)'
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -128,7 +128,7 @@ export default function Escalations() {
                           </span>
                           <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, color: labelCol, whiteSpace: 'nowrap' }}>{c}</span>
                         </div>
-                        {i < CHAIN.length - 1 && <span style={{ width: 26, height: 2, background: i < cur || done ? '#A7F3D0' : 'var(--line)', margin: '0 8px' }} />}
+                        {i < CHAIN.length - 1 && <span style={{ width: 26, height: 2, background: i < cur || done ? '#BFDFCF' : 'var(--line)', margin: '0 8px' }} />}
                       </div>
                     )
                   })}

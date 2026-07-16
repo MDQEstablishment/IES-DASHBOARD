@@ -207,18 +207,18 @@ export default function ProjectDetail() {
       </div>
 
       {/* header card */}
-      <div style={{ border: '1px solid var(--line)', borderRadius: 16, marginBottom: 14, overflow: 'hidden', boxShadow: '0 1px 3px rgba(15,23,42,.06)' }}>
-        <div style={{ position: 'relative', background: 'linear-gradient(120deg,#0F172A,#1E293B)', padding: '20px 22px', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, opacity: .4, background: 'radial-gradient(420px 220px at 88% -20%,rgba(37,99,235,.45),transparent 60%)' }} />
+      <div style={{ border: '1px solid var(--line)', borderRadius: 12, marginBottom: 14, overflow: 'hidden', boxShadow: '0 1px 3px rgba(16,26,36,.06)' }}>
+        <div style={{ position: 'relative', background: 'linear-gradient(120deg,#10273B,#1B3A53)', padding: '20px 22px', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, opacity: .4, background: 'radial-gradient(420px 220px at 88% -20%,rgba(160,118,43,.45),transparent 60%)' }} />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '1px', color: '#94A3B8' }}>{project.code}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '1px', color: '#8DA0B1' }}>{project.code}</span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pillColor, background: pillBg }}>{pillLabel}</span>
-                {anyShortage && <span title="One or more material categories are below their remaining planned quantity — open the Warehouse tab" onClick={() => setTab('warehouse')} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: '#fff', background: '#DC2626' }}>⚠ LOW STOCK</span>}
+                {anyShortage && <span title="One or more material categories are below their remaining planned quantity — open the Warehouse tab" onClick={() => setTab('warehouse')} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: '#fff', background: '#B3362B' }}>⚠ LOW STOCK</span>}
               </div>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: '8px 0 8px', color: '#fff', letterSpacing: '-.3px' }}>{project.name}</h1>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 12.5, color: '#CBD5E1' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 12.5, color: '#8DA0B1' }}>
                 <span>🏛 {project.client || '—'}</span>
                 <span>📍 {project.region || '—'}</span>
                 <span>👷 PM {project.pm_name || project.pm?.full_name || '—'}</span>
@@ -226,7 +226,7 @@ export default function ProjectDetail() {
                   🛠 Eng {project.engineer_name || project.engineer?.full_name || 'Unassigned'}
                   {canManage && (
                     <button title="Change project engineer" onClick={() => setEngOpen(true)} className="ies-hover"
-                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 6, color: '#CBD5E1', background: 'rgba(255,255,255,.08)' }}>
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 6, color: '#8DA0B1', background: 'rgba(255,255,255,.08)' }}>
                       <Icon name="edit" size={11} />
                     </button>
                   )}
@@ -235,14 +235,14 @@ export default function ProjectDetail() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18, flex: 'none' }}>
-              <div style={{ position: 'relative', width: 84, height: 84, flex: 'none', cursor: 'help' }} title="Progress = installed ÷ planned across all building scopes, weighted by scope size. Engineer install entries move this number.">
-                <svg viewBox="0 0 64 64" style={{ width: 84, height: 84 }}>
+              <div style={{ position: 'relative', width: 88, height: 88, flex: 'none', cursor: 'help' }} title="Progress = installed ÷ planned across all building scopes, weighted by scope size. Engineer install entries move this number.">
+                <svg viewBox="0 0 64 64" style={{ width: 88, height: 88 }}>
                   <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.14)" strokeWidth="7" />
-                  <circle cx="32" cy="32" r="26" fill="none" stroke="#60A5FA" strokeWidth="7" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 32 32)" />
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="var(--brass-bright)" strokeWidth="7" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 32 32)" />
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 19, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{overall}%</span>
-                  <span style={{ fontSize: 8, color: '#94A3B8', letterSpacing: '.5px' }}>DONE</span>
+                  <span style={{ fontSize: 8, color: '#8DA0B1', letterSpacing: '.5px' }}>DONE</span>
                 </div>
               </div>
             </div>
@@ -288,7 +288,7 @@ export default function ProjectDetail() {
           const active = tab === key
           return (
             <button key={key} onClick={() => setTab(key)}
-              style={{ padding: '10px 15px', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer', background: 'none', border: 'none',
+              style={{ padding: '10px 15px', fontSize: 13, fontWeight: active ? 700 : 500, whiteSpace: 'nowrap', cursor: 'pointer', background: 'none', border: 'none',
                 color: active ? 'var(--accent)' : 'var(--text-3)', borderBottom: '2px solid ' + (active ? 'var(--accent)' : 'transparent') }}>
               <span>{label}</span>
             </button>
@@ -298,11 +298,11 @@ export default function ProjectDetail() {
 
       {/* BUILDINGS tab */}
       {tab === 'buildings' && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Buildings <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({buildings.length})</span></div>
             <input lang="en" value={bldgQuery} onChange={(e) => setBldgQuery(e.target.value)} placeholder="Search code, name, engineer, region…"
-              style={{ width: buildings.length < 6 ? 200 : 280, maxWidth: '100%', padding: '7px 11px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12.5 }} />
+              style={{ width: buildings.length < 6 ? 200 : 280, maxWidth: '100%', padding: '7px 11px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12.5 }} />
           </div>
           {buildings.length === 0 ? (
             <Empty icon="buildings">No buildings yet. Import an Excel or add buildings to populate this project.</Empty>
@@ -324,7 +324,7 @@ export default function ProjectDetail() {
                 ) : filteredBuildings.map((b) => {
                   const d = perB[b.id] || { planned: 0, installed: 0 }
                   const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
-                  const color = prog >= 100 ? '#10B981' : 'var(--accent)'
+                  const color = prog >= 100 ? '#217A54' : 'var(--accent)'
                   return (
                     <tr key={b.id} onClick={() => navigate(`/projects/${id}/buildings/${b.id}`)} className="ies-trow" style={{ borderTop: '1px solid var(--line)', cursor: 'pointer' }}>
                       <td style={{ padding: '11px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{b.code}</td>
@@ -332,7 +332,7 @@ export default function ProjectDetail() {
                       <td style={{ padding: '11px 8px', color: 'var(--text-3)', maxWidth: 180 }}><span className="ies-ellipsis" title={b.contractor || ''}>{b.contractor || '—'}</span></td>
                       <td style={{ padding: '11px 8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={b.engineer_name} size={22} /><span style={{ color: 'var(--text-3)' }}>{b.engineer_name || '—'}</span></div></td>
                       <td style={{ padding: '11px 8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: prog + '%', background: color }} /></div>
+                        <div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden' }}><div style={{ height: '100%', width: prog + '%', background: color }} /></div>
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, width: 34, textAlign: 'right' }}>{prog}%</span>
                       </div></td>
                       <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
@@ -350,7 +350,7 @@ export default function ProjectDetail() {
                         <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
                           <span style={{ display: 'flex', gap: 6 }}>
                             <button title="Edit building" onClick={() => setEditBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="edit" size={13} /></button>
-                            <button title="Archive building" onClick={() => setArchiveBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
+                            <button title="Archive building" onClick={() => setArchiveBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #EBCFC9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
                           </span>
                         </td>
                       )}
@@ -365,7 +365,7 @@ export default function ProjectDetail() {
 
       {/* ESM ROLLUP tab */}
       {tab === 'rollup' && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>BOQ — Bill of Quantities</div>
             {canManage && <Btn icon="settings" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setEsmPanel(true)}>Manage ESMs</Btn>}
@@ -391,7 +391,7 @@ export default function ProjectDetail() {
                       <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(e.planned)}</td>
                       <td style={{ padding: '11px 8px', textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--ok)' }}>{num(e.installed)}</td>
                       <td style={{ padding: '11px 8px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: prog + '%', background: '#2563EB' }} /></div>
+                        <div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden' }}><div style={{ height: '100%', width: prog + '%', background: '#A0762B' }} /></div>
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, width: 34, textAlign: 'right' }}>{prog}%</span>
                       </div></td>
                     </tr>
@@ -415,7 +415,7 @@ export default function ProjectDetail() {
       {/* DOC TRACKER tab */}
       {tab === 'docs' && (
         <>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>ESM Documentation Tracker</div>
             {avgDaysCourt != null && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>Avg Days in Client Court: <strong style={{ color: avgDaysCourt > 14 ? 'var(--bad)' : 'var(--text)' }}>{avgDaysCourt}d</strong></div>}
@@ -449,9 +449,9 @@ export default function ProjectDetail() {
                                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700 }}>{sub}<span style={{ color: 'var(--text-3)', fontWeight: 600 }}> submitted{app ? ` · ${app} appr` : ''}</span></div>
                               ) : (<>
                                 <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700 }}>{sub}/{exp}</div>
-                                <div style={{ height: 5, borderRadius: 3, background: '#EFF2F6', overflow: 'hidden', marginTop: 3, position: 'relative' }}>
-                                  <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: subPct + '%', background: '#BFDBFE' }} />
-                                  <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: appPct + '%', background: '#10B981' }} />
+                                <div style={{ height: 5, borderRadius: 3, background: '#EDEAE0', overflow: 'hidden', marginTop: 3, position: 'relative' }}>
+                                  <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: subPct + '%', background: '#E7D9B8' }} />
+                                  <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: appPct + '%', background: '#217A54' }} />
                                 </div>
                               </>)}
                             </div>
@@ -464,8 +464,8 @@ export default function ProjectDetail() {
                       return (
                         <td key={k} style={{ padding: 8 }}>
                           {canManage
-                            ? <button title={`Upload ${row.code} ${k.replace(/_/g, ' ')}`} onClick={() => setUploadReq({ esmId: row.esmId, docType: k, key: Date.now() })} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}><Chip label="Missing" color="#94A3B8" bg="#F1F5F9" /></button>
-                            : <Chip label="Missing" color="#94A3B8" bg="#F1F5F9" />}
+                            ? <button title={`Upload ${row.code} ${k.replace(/_/g, ' ')}`} onClick={() => setUploadReq({ esmId: row.esmId, docType: k, key: Date.now() })} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}><Chip label="Missing" color="#A39D8E" bg="#F0EDE4" /></button>
+                            : <Chip label="Missing" color="#A39D8E" bg="#F0EDE4" />}
                         </td>
                       )
                     })}
@@ -487,7 +487,7 @@ export default function ProjectDetail() {
 
       {/* MAP tab — real OpenStreetMap markers */}
       {tab === 'map' && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Buildings Map — {project.region || '—'}</div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>CLICK A MARKER FOR CONTRACTOR INFO</div>

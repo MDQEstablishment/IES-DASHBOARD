@@ -37,7 +37,7 @@ export default function Reports() {
       name: p.full_name, role: roleTitle(p.role), handled: mine.length, ontime, avg,
       bn: mine.filter((t) => t.status === 'blocked').length,
       es: escs.filter((e) => e.raised_by_id === p.id).length,
-      otColor: ontime >= 90 ? '#10B981' : ontime >= 70 ? '#F59E0B' : '#EF4444',
+      otColor: ontime >= 90 ? '#217A54' : ontime >= 70 ? '#B45309' : '#B3362B',
     }
   }).filter((e) => e.handled > 0).sort((a, b) => b.handled - a.handled)
 
@@ -60,25 +60,25 @@ export default function Reports() {
 
       <div className="ies-2col" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14, marginBottom: 14, alignItems: 'start' }}>
         {/* 1 · Materials Consumption */}
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>1 · Materials Consumption</div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 7, background: consBars.length === 0 ? '#E5E7EB' : '#10B981', color: consBars.length === 0 ? 'var(--text-3)' : '#fff', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
+              <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 7, background: consBars.length === 0 ? '#E5E7EB' : '#217A54', color: consBars.length === 0 ? 'var(--text-3)' : '#fff', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }}><option>All projects</option></select>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }}><option>This year</option></select>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }}><option>Group by ESM</option><option>By sub-type</option><option>By building</option></select>
+            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>All projects</option></select>
+            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>This year</option></select>
+            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>Group by ESM</option><option>By sub-type</option><option>By building</option></select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {consBars.length === 0 ? <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No consumption recorded yet.</div> : consBars.map((b, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)', width: 46 }}>{b.esm}</span>
                 <span style={{ fontSize: 12.5, width: 180, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
-                <div style={{ flex: 1, height: 18, borderRadius: 5, background: '#EFF2F6', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: Math.round((b.qty / maxCons) * 100) + '%', background: 'linear-gradient(90deg,#2563EB,#3B82F6)' }} />
+                <div style={{ flex: 1, height: 18, borderRadius: 5, background: '#EDEAE0', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: Math.round((b.qty / maxCons) * 100) + '%', background: 'linear-gradient(90deg,#A0762B,#C29A4B)' }} />
                 </div>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, width: 80, textAlign: 'right' }}>{b.qty} {b.unit}</span>
               </div>
@@ -87,20 +87,20 @@ export default function Reports() {
         </div>
 
         {/* 2 · Tarsheed (locked) */}
-        <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 200 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: '#F59E0B', fontWeight: 700 }}>2 · AWAITING CLIENT FORMAT</div>
+        <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 200 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: '#B45309', fontWeight: 700 }}>2 · AWAITING CLIENT FORMAT</div>
           <div style={{ fontWeight: 700, fontSize: 15, margin: '8px 0 6px' }}>Tarsheed Excel</div>
           <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.45 }}>Tarsheed report template — awaiting client format. Once received, this report will export to the exact Excel layout the client submits to Tarsheed.</div>
-          <div style={{ marginTop: 14, alignSelf: 'flex-start', fontSize: 12, fontWeight: 600, padding: '8px 13px', borderRadius: 8, border: '1px solid var(--line)', color: 'var(--text-3)', background: '#FAFAFA' }}>Locked — pending template</div>
+          <div style={{ marginTop: 14, alignSelf: 'flex-start', fontSize: 12, fontWeight: 600, padding: '8px 13px', borderRadius: 6, border: '1px solid var(--line)', color: 'var(--text-3)', background: '#FAFAFA' }}>Locked — pending template</div>
         </div>
       </div>
 
       {/* 3 · Employee Performance (PMO + CEO only) */}
       {empAllowed && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>3 · Employee Performance <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#7C3AED', background: '#F5F3FF', padding: '2px 7px', borderRadius: 5, marginLeft: 6 }}>PMO + CEO ONLY</span></div>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 12 }}><option>This month</option><option>Quarter</option><option>Year</option></select>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>3 · Employee Performance <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#6D5A8E', background: '#F0EDF6', padding: '2px 7px', borderRadius: 5, marginLeft: 6 }}>PMO + CEO ONLY</span></div>
+            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>This month</option><option>Quarter</option><option>Year</option></select>
           </div>
           <div className="ies-table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
@@ -136,7 +136,7 @@ export default function Reports() {
       )}
 
       {/* ESM Progress vs Plan (designer suggestion) */}
-      <div style={{ background: 'linear-gradient(180deg,#fff,#FCFCFD)', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+      <div style={{ background: 'linear-gradient(180deg,#fff,#FCFBF7)', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', fontWeight: 700 }}>[ DESIGNER SUGGESTION ]</div>
         <div style={{ fontWeight: 700, fontSize: 15, margin: '8px 0 6px' }}>ESM Progress vs Plan</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-3)', maxWidth: 560 }}>Per-ESM planned vs actual installed quantities over time, with delay attribution by building. High-value for the Planning Engineer's delay analysis.</div>

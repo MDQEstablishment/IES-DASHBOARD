@@ -58,13 +58,13 @@ export default function BuildingPhotos({ buildingId }) {
   const slideIndexOf = (id) => rows.filter((p) => urls[p.id]).findIndex((p) => p.id === id)
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Site Photos</div>
         {canUpload && (
           <>
             <input lang="en" ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onFiles} />
-            <button onClick={() => fileRef.current?.click()} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700 }}>
+            <button onClick={() => fileRef.current?.click()} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700 }}>
               <Icon name="camera" size={14} />{busy ? 'Uploading…' : 'Upload photos'}
             </button>
           </>
@@ -76,9 +76,9 @@ export default function BuildingPhotos({ buildingId }) {
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 8 }}>{date === 'Undated' ? 'UNDATED' : fmtDate(date).toUpperCase()}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 10 }}>
               {ps.map((p) => (
-                <button key={p.id} onClick={() => setIndex(slideIndexOf(p.id))} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', background: '#EFF2F6' }}>
+                <button key={p.id} onClick={() => setIndex(slideIndexOf(p.id))} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', background: '#EDEAE0' }}>
                   {urls[p.id] ? <img src={urls[p.id]} alt={p.caption || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 10, color: 'var(--text-3)' }}>…</span>}
-                  <span style={{ position: 'absolute', top: 5, left: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '2px 6px', borderRadius: 5, color: '#fff', background: p.source === 'daily_report' ? 'rgba(37,99,235,.9)' : 'rgba(15,23,42,.7)' }}>
+                  <span style={{ position: 'absolute', top: 5, left: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '2px 6px', borderRadius: 5, color: '#fff', background: p.source === 'daily_report' ? 'rgba(160,118,43,.9)' : 'rgba(16,26,36,.7)' }}>
                     {p.source === 'daily_report' ? (p.esm || 'ESM') : 'General'}
                   </span>
                 </button>

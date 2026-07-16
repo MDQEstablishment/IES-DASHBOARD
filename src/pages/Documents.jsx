@@ -56,7 +56,7 @@ export default function Documents() {
 
       {/* ESM × document-kind status matrix — Doc Tracker tab visual language */}
       {hasProject ? (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>ESM Documentation Tracker</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
             Live submittal status per ESM and document kind for {current ? current.name : 'this project'}.
@@ -95,13 +95,13 @@ export default function Documents() {
           )}
         </div>
       ) : (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px', marginBottom: 14, fontSize: 12.5, color: 'var(--text-3)' }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '14px 16px', marginBottom: 14, fontSize: 12.5, color: 'var(--text-3)' }}>
           Select a project from the sidebar to see its ESM documentation tracker.
         </div>
       )}
 
       {/* dc-styled document table */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
         {loading ? (
           <Loading />
         ) : docs.length === 0 ? (

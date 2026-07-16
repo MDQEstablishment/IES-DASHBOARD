@@ -21,10 +21,10 @@ function FitToMarkers({ pts }) {
 // Real OpenStreetMap building markers (Phase 4). Numbered pin via divIcon to
 // avoid Leaflet's bundler-broken default marker images. Popup shows building
 // name, contractor name + phone, and status.
-function numberedIcon(n, color = '#2563EB') {
+function numberedIcon(n, color = '#A0762B') {
   return L.divIcon({
     className: '',
-    html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);box-shadow:0 2px 6px rgba(15,23,42,.35);display:flex;align-items:center;justify-content:center;border:2px solid #fff"><span style="transform:rotate(45deg);color:#fff;font:700 12px/1 'JetBrains Mono',monospace">${n}</span></div>`,
+    html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);box-shadow:0 2px 6px rgba(16,26,36,.35);display:flex;align-items:center;justify-content:center;border:2px solid #fff"><span style="transform:rotate(45deg);color:#fff;font:700 12px/1 'JetBrains Mono',monospace">${n}</span></div>`,
     iconSize: [26, 26],
     iconAnchor: [13, 26],
     popupAnchor: [0, -24],
@@ -56,10 +56,10 @@ export default function BuildingsMap({ buildings = [] }) {
           <Marker key={b.id} position={[Number(b.location_lat), Number(b.location_lng)]} icon={numberedIcon(i + 1, col)}>
             <Popup>
               <div style={{ fontFamily: 'var(--ui)', minWidth: 180 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#64748B' }}>{b.code}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#8A8577' }}>{b.code}</div>
                 <div style={{ fontWeight: 700, fontSize: 13, margin: '2px 0 6px' }}>{b.name}</div>
-                <div style={{ fontSize: 12, color: '#334155' }}>🏗 {b.contractor_name || b.contractor || '—'}</div>
-                {b.contractor_phone && <div style={{ fontSize: 12, color: '#334155' }}>📞 {b.contractor_phone}</div>}
+                <div style={{ fontSize: 12, color: '#2C4359' }}>🏗 {b.contractor_name || b.contractor || '—'}</div>
+                {b.contractor_phone && <div style={{ fontSize: 12, color: '#2C4359' }}>📞 {b.contractor_phone}</div>}
                 <div style={{ marginTop: 6, display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: col, background: statusMeta(b.status_override || 'pending')[1] }}>
                   {statusMeta(b.status_override || 'pending')[2]}
                 </div>

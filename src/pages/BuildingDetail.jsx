@@ -88,7 +88,7 @@ export default function BuildingDetail() {
         {/* MAIN COLUMN */}
         <div>
           {/* header */}
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 18, marginBottom: 14 }}>
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 18, marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '1px', color: 'var(--text-3)' }}>{b.code}</div>
@@ -100,7 +100,7 @@ export default function BuildingDetail() {
                   <span>Contractor: {b.contractor_name || b.contractor || '—'}</span>
                 </div>
                 {['admin', 'pmo', 'projm', 'proje'].includes(role) && (
-                  <button onClick={() => setWirOpen(true)} title="Open the Work/Mockup Inspection Form (WIR)" style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 8, padding: '6px 11px', background: '#fff', cursor: 'pointer' }}>Generate WIR PDF</button>
+                  <button onClick={() => setWirOpen(true)} title="Open the Work/Mockup Inspection Form (WIR)" style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 6, padding: '6px 11px', background: '#fff', cursor: 'pointer' }}>Generate WIR PDF</button>
                 )}
               </div>
               <div style={{ textAlign: 'right', minWidth: 110 }} title="Weighted progress = installed ÷ planned across building scopes">
@@ -108,14 +108,14 @@ export default function BuildingDetail() {
                 <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>weighted progress</div>
               </div>
             </div>
-            <div style={{ height: 8, borderRadius: 5, background: '#EFF2F6', overflow: 'hidden', marginTop: 12 }}>
-              <div style={{ height: '100%', width: prog + '%', background: prog >= 100 ? '#10B981' : 'var(--accent)' }} />
+            <div style={{ height: 8, borderRadius: 5, background: '#EDEAE0', overflow: 'hidden', marginTop: 12 }}>
+              <div style={{ height: '100%', width: prog + '%', background: prog >= 100 ? '#217A54' : 'var(--accent)' }} />
             </div>
           </div>
 
           {/* Building Info — collapsed section (Sprint 8C #2/#3/#5). Lives ABOVE the
               tabs; does not touch Daily Progress / Rooms / Materials / Documents. */}
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, marginBottom: 14, overflow: 'hidden' }}>
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, marginBottom: 14, overflow: 'hidden' }}>
             <button onClick={() => setInfoOpen((o) => !o)}
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'none', cursor: 'pointer' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>Building Info</span>
@@ -154,7 +154,7 @@ export default function BuildingDetail() {
             if (!r) return <Empty icon="reports">Install item not found in this building.</Empty>
             const sc = scopeById[r.scope_id]
             return (
-              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 20 }}>
+              <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 20 }}>
                 <Link to={base} style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 13 }}>← Back to Daily Progress</Link>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '12px 0' }}>
                   <div style={{ fontWeight: 700, fontSize: 16 }}>{sc?.sub_type || 'Install entry'}</div><Chip status={r.qa_status} />
@@ -186,7 +186,7 @@ export default function BuildingDetail() {
           {/* MATERIALS */}
           {activeTab === 'materials' && (<>
             <BuildingMaterialsPlan buildingId={bid} projectId={id} />
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>Sub-type detail (per scope)</div>
               </div>
@@ -211,7 +211,7 @@ export default function BuildingDetail() {
                               ? <input lang="en" defaultValue={planned} type="text" inputMode="numeric" min="0" onBlur={(e) => Number(e.target.value) !== planned && bgUpdate('building_item_scope', s.id, { planned_qty: Math.max(0, parseInt(e.target.value, 10) || 0) }, { okMsg: 'Planned updated' })} style={{ width: 70, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'right' }} />
                               : <span style={{ fontFamily: 'var(--mono)' }}>{num(planned)}</span>}
                           </td>
-                          <td style={{ padding: '9px 8px', width: 160 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: Math.min(100, p) + '%', background: 'var(--accent)' }} /></div><span style={{ fontFamily: 'var(--mono)', fontSize: 11, width: 34, textAlign: 'right' }}>{p}%</span></div></td>
+                          <td style={{ padding: '9px 8px', width: 160 }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ flex: 1, height: 6, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden' }}><div style={{ height: '100%', width: Math.min(100, p) + '%', background: 'var(--accent)' }} /></div><span style={{ fontFamily: 'var(--mono)', fontSize: 11, width: 34, textAlign: 'right' }}>{p}%</span></div></td>
                         </tr>
                       )
                     })}
@@ -229,13 +229,13 @@ export default function BuildingDetail() {
 
           {/* ACTIVITY */}
           {activeTab === 'activity' && (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Activity Log <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginLeft: 6 }}>THIS BUILDING</span></div>
               {buildingActivity.length === 0 ? <Empty icon="bell">No recent activity for this building.</Empty> : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {buildingActivity.map((a) => (
                     <div key={a.id} style={{ display: 'flex', gap: 10, padding: '9px 0', borderTop: '1px solid var(--line)' }}>
-                      <span style={{ flex: 'none', width: 8, height: 8, borderRadius: '50%', background: '#2563EB', marginTop: 5 }} />
+                      <span style={{ flex: 'none', width: 8, height: 8, borderRadius: '50%', background: '#A0762B', marginTop: 5 }} />
                       <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5 }}><span style={{ fontWeight: 600 }}>{a.actor_name || 'System'}</span> <span style={{ color: 'var(--text-3)' }}>{a.summary || a.action}</span></div><div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{fmtShort(a.created_at)}</div></div>
                     </div>
                   ))}
@@ -247,7 +247,7 @@ export default function BuildingDetail() {
 
         {/* RIGHT RAIL */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 14 }}>
+          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Location</div>
             <BuildingsMap buildings={[b]} />
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 8 }}>{b.gps || (b.location_lat ? `${b.location_lat}, ${b.location_lng}` : '—')}</div>
@@ -283,7 +283,7 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
   const itemsOf = (rid) => roomItems.filter((ri) => ri.room_id === rid)
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Rooms &amp; locations</div>
         {canEdit && <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setAdding((v) => !v)}>Add room</Btn>}
@@ -307,7 +307,7 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
               <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', margin: '8px 0 6px' }}>ITEM TYPES</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {itemsOf(r.id).length === 0 ? <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>None yet</span>
-                  : itemsOf(r.id).map((ri) => <span key={ri.id} style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: '#EFF6FF', color: '#2563EB' }}>{ri.scope?.sub_type || 'Item'}</span>)}
+                  : itemsOf(r.id).map((ri) => <span key={ri.id} style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: '#F5EEDF', color: '#A0762B' }}>{ri.scope?.sub_type || 'Item'}</span>)}
               </div>
               {canEdit && (
                 <select value="" onChange={(e) => { if (e.target.value) { bgInsert('room_items', { room_id: r.id, scope_id: e.target.value }, { okMsg: 'Item type added' }) } }}

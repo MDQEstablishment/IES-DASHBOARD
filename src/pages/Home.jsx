@@ -28,7 +28,7 @@ export default function Home() {
       <div className="ies-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
         {items.map((n, i) => (
           <button key={n.id} onClick={() => nav(n.to)} className="ies-card-hover"
-            style={{ textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+            style={{ textAlign: 'left', background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{String(i + 1).padStart(2, '0')}</div>
             <div style={{ fontWeight: 700, fontSize: 15, margin: '6px 0 4px' }}>{n.label}</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.35 }}>{DESC[n.id] || ''}</div>

@@ -65,18 +65,18 @@ export default function Settings() {
       <PageTitle kicker="ADMINISTRATION" title="Settings" />
 
       {/* Your account */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <Avatar name={profile?.full_name} color={roleColor(role)} size={40} />
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{profile?.full_name || '—'}</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{roleTitle(role)} · {user?.email || '—'}</div>
         </div>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#2563EB', background: '#EFF6FF' }}>Your account</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#A0762B', background: '#F5EEDF' }}>Your account</span>
       </div>
 
       {/* AI PDF extraction — monthly usage cap (PMO/admin) */}
       {showCap && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 14, marginBottom: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>AI delivery-note extraction</div>
@@ -86,7 +86,7 @@ export default function Settings() {
               {usedThisMonth} <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/ {PDF_CAP}</span>
             </div>
           </div>
-          <div style={{ height: 7, borderRadius: 4, background: '#EFF2F6', overflow: 'hidden', marginTop: 10 }}>
+          <div style={{ height: 7, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden', marginTop: 10 }}>
             <div style={{ height: '100%', width: capPct + '%', background: usedThisMonth >= PDF_CAP ? 'var(--bad)' : 'var(--accent)' }} />
           </div>
           {usedThisMonth >= PDF_CAP && <div style={{ fontSize: 11.5, color: 'var(--bad)', marginTop: 6 }}>Monthly limit reached — extraction is paused until next month. Deliveries can still be entered manually.</div>}
@@ -143,13 +143,13 @@ export default function Settings() {
                           {(assignedByUser[u.id] || []).length === 0
                             ? <span style={{ color: 'var(--text-3)' }}>—</span>
                             : <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                {assignedByUser[u.id].map((c) => <span key={c} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6, color: '#2563EB', background: '#EFF6FF' }}>{c}</span>)}
+                                {assignedByUser[u.id].map((c) => <span key={c} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6, color: '#A0762B', background: '#F5EEDF' }}>{c}</span>)}
                               </span>}
                         </td>
                         <td style={{ padding: '10px 8px' }}>
                           {u.archived
-                            ? <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#94A3B8', background: '#F1F5F9' }}>archived</span>
-                            : <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#059669', background: '#ECFDF5' }}>active</span>}
+                            ? <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#A39D8E', background: '#F0EDE4' }}>archived</span>
+                            : <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#1D6A49', background: '#E9F3EE' }}>active</span>}
                         </td>
                       </tr>
                     ))}
@@ -173,7 +173,7 @@ export default function Settings() {
                       <span style={{ display: 'flex', alignItems: 'center', gap: 9, width: 200 }}>
                         <Avatar name={ROSTER[r]?.name} color={roleColor(r)} size={28} />
                         <span>
-                          <span style={{ display: 'block', fontWeight: 700, fontSize: 13 }}>{roleTitle(r)}{r === role && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#2563EB', background: '#EFF6FF' }}>you</span>}</span>
+                          <span style={{ display: 'block', fontWeight: 700, fontSize: 13 }}>{roleTitle(r)}{r === role && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#A0762B', background: '#F5EEDF' }}>you</span>}</span>
                           <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>{ROLE_DESC[r]}</span>
                         </span>
                       </span>
@@ -183,8 +183,8 @@ export default function Settings() {
                           return (
                             <span key={area} title={areaLabel(area)}
                               style={{ fontSize: 11, padding: '3px 9px', borderRadius: 6, fontWeight: 600,
-                                background: ok ? '#EFF6FF' : 'var(--bg)', color: ok ? '#2563EB' : '#CBD5E1',
-                                border: '1px solid ' + (ok ? '#DBEAFE' : 'var(--line)'), display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                background: ok ? '#F5EEDF' : 'var(--bg)', color: ok ? '#A0762B' : '#C9C3B4',
+                                border: '1px solid ' + (ok ? '#EFE3C8' : 'var(--line)'), display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               {ok && <Icon name="check" size={11} />}{areaLabel(area)}
                             </span>
                           )
@@ -213,7 +213,7 @@ export default function Settings() {
                   return (
                     <button key={a} onClick={() => setAuditAction(a)} style={{
                       padding: '4px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, textTransform: 'capitalize',
-                      border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'), background: active ? '#EFF6FF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
+                      border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'), background: active ? '#F5EEDF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
                     }}>{a}</button>
                   )
                 })}

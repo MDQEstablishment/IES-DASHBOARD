@@ -85,7 +85,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         {showDelete && <DeleteProjectModal project={project} onClose={() => { setShowDelete(false); onClose() }} />}
       </>}>
       {mode === 'add' && (
-        <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 9, padding: '10px 12px', fontSize: 12, color: '#1E40AF', marginBottom: 16 }}>
+        <div style={{ background: '#F5EEDF', border: '1px solid #E7D9B8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#8A6524', marginBottom: 16 }}>
           After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later.
         </div>
       )}
@@ -107,7 +107,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       <Field label="COC Layout">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
-            <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 8, padding: '8px 10px', background: f.coc_layout === v ? '#EFF6FF' : '#fff' }}>
+            <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 6, padding: '8px 10px', background: f.coc_layout === v ? '#F5EEDF' : '#fff' }}>
               <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
               <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
             </label>
@@ -147,7 +147,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           {buildings.map((b, i) => {
             const upd = (k, v) => setBuildings((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
             return (
-              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#F8FAFC' }}>
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#FAF8F2' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>BUILDING {i + 1}</span>
                   <button onClick={() => setBuildings((arr) => arr.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
@@ -179,7 +179,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           {showItems && <>
             <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 6 }}>Fill once at creation — installed ↔ removed pairs are persisted with the project. You can refine later in the Items &amp; Replacements tab.</div>
             {items.map((it, i) => (
-              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#F8FAFC' }}>
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#FAF8F2' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
                   <select style={{ ...inputStyle, width: 130, padding: '6px 8px' }} value={it.esm_code} onChange={(e) => setItem(i, 'esm_code', e.target.value)}>{allEsms.map((e) => <option key={e.code} value={e.code}>{e.code}</option>)}</select>
                   <button onClick={() => setItems((a) => a.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
@@ -249,7 +249,7 @@ export function StatusChangeModal({ project, onClose }) {
         <textarea style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is the status changing?" />
       </Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Recorded in the project status history with your name and the time.</div>
-      {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }
@@ -285,7 +285,7 @@ export function DeleteProjectModal({ project, onClose }) {
       <div style={{ fontSize: 13, marginBottom: 6 }}>This will delete the project and hide its buildings, scopes, items, deliveries, and documents from every list. It is soft-deleted and recoverable for 30 days.</div>
       <div style={{ fontSize: 13, marginBottom: 12 }}>Type <strong style={{ fontFamily: 'var(--mono)' }}>{project.code}</strong> to confirm.</div>
       <input lang="en" style={inputStyle} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={project.code} />
-      {err && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }
@@ -495,7 +495,7 @@ export function ProjectImportModal({ onClose }) {
       <Btn icon={dlState === 'done' ? 'check' : 'upload'} onClick={downloadTemplate} disabled={dlState === 'busy'} style={{ marginBottom: dlState === 'done' ? 6 : 14 }}>
         {dlState === 'busy' ? 'Downloading…' : dlState === 'done' ? 'Downloaded ✓' : 'Download template (.xlsx)'}
       </Btn>
-      {dlState === 'done' && <div style={{ fontSize: 12, color: '#047857', marginBottom: 12 }}>Downloaded ✓ — fill it and upload below.</div>}
+      {dlState === 'done' && <div style={{ fontSize: 12, color: '#1D6A49', marginBottom: 12 }}>Downloaded ✓ — fill it and upload below.</div>}
       <Field label="Step 2 — upload the filled template">
         <input ref={fileRef} lang="en" type="file" accept=".xlsx,.xls" onChange={onFile} style={{ display: 'none' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -506,20 +506,20 @@ export function ProjectImportModal({ onClose }) {
         </div>
       </Field>
       {errors.length > 0 && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12, color: '#B91C1C', marginTop: 8 }}>
+        <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12, color: '#96271E', marginTop: 8 }}>
           {errors.slice(0, 10).map((e, i) => <div key={i}>{e}</div>)}
           {errors.length > 10 && <div>+{errors.length - 10} more…</div>}
         </div>
       )}
       {parsed && !errors.length && (
-        <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: 12, fontSize: 13, color: '#065F46', marginTop: 10 }}>
+        <div style={{ background: '#E9F3EE', border: '1px solid #BFDFCF', borderRadius: 6, padding: 12, fontSize: 13, color: '#175A3E', marginTop: 10 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Ready to import — please confirm:</div>
           <div><strong>{counts.p}</strong> project (<span style={{ fontFamily: 'var(--mono)' }}>{s(parsed.project.code)}</span>), <strong>{counts.b}</strong> buildings, <strong>{counts.c}</strong> scopes, <strong>{counts.m}</strong> materials{counts.i > 0 && <>, <strong>{counts.i}</strong> item pairs</>} will be created.</div>
-          <div style={{ fontSize: 11.5, marginTop: 4, color: '#047857' }}>Everything is created in a single transaction — all or nothing.</div>
+          <div style={{ fontSize: 11.5, marginTop: 4, color: '#1D6A49' }}>Everything is created in a single transaction — all or nothing.</div>
         </div>
       )}
       {importErr && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: 10, fontSize: 12.5, color: '#B91C1C', marginTop: 10 }}>
+        <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 10 }}>
           {importErr}
         </div>
       )}

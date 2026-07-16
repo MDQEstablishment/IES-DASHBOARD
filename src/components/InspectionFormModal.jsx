@@ -127,7 +127,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     onDone?.(); onClose?.()
   }
 
-  const readOnly = { ...inputStyle, background: '#F8FAFC', color: 'var(--text-3)' }
+  const readOnly = { ...inputStyle, background: '#FAF8F2', color: 'var(--text-3)' }
   const cell = { padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, width: '100%' }
 
   return (
@@ -137,7 +137,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
         {/* ── form pane ─────────────────────────────────────────────── */}
         <div style={{ flex: '1 1 0', minWidth: 0, maxHeight: 560, overflowY: 'auto', paddingRight: 4 }}>
           {missing.length > 0 && (
-            <div style={{ background: '#FEF9C3', border: '1px solid #FDE68A', color: '#854D0E', borderRadius: 9, padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
+            <div style={{ background: '#F5E9CE', border: '1px solid #EBDCB2', color: '#854D0E', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
               Set <strong>Project Reference No / Contractor / Beneficiary</strong> in Project Settings (Edit project) so they appear on every MIR/WIR/COC. Missing: {missing.map((m) => m.replace(/_/g, ' ')).join(', ')}. You can still generate; those fields will be blank.
             </div>
           )}
@@ -191,14 +191,14 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
           </table></div>
 
           <Field label={`Photos (${photos.length}) — 2 per page, large, on the last pages`}>
-            <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: '1px dashed var(--line)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: '1px dashed var(--line)', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               + Add photos<input type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: 'none' }} />
             </label>
           </Field>
           {photos.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {photos.map((f, i) => (
-                <div key={i} style={{ position: 'relative', width: 60, height: 60, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                <div key={i} style={{ position: 'relative', width: 60, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)' }}>
                   <img src={f.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <button onClick={() => removePhoto(i)} title="Remove" style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, lineHeight: '16px' }}>×</button>
                 </div>
@@ -212,11 +212,11 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
             Live preview {previewBusy && <span style={{ color: 'var(--accent)', fontWeight: 600 }}>· Updating…</span>}
           </div>
-          <div style={{ position: 'relative', flex: 1, minHeight: 540, border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden', background: '#F8FAFC' }}>
+          <div style={{ position: 'relative', flex: 1, minHeight: 540, border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden', background: '#FAF8F2' }}>
             {previewUrl
               ? <iframe title="PDF preview" src={previewUrl} style={{ width: '100%', height: '100%', border: 'none' }} />
               : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-3)', fontSize: 12 }}>Building preview…</div>}
-            {previewBusy && previewUrl && <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(37,99,235,.9)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6 }}>Updating…</div>}
+            {previewBusy && previewUrl && <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(160,118,43,.9)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6 }}>Updating…</div>}
           </div>
         </div>
       </div>

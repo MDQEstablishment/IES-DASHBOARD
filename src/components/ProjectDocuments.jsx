@@ -20,14 +20,14 @@ export const MULTI_KINDS = new Set(['mir', 'wir', 'coc'])
 
 // Client-court status vocabulary: [label, color, bg, tooltip].
 export const DOC_STATUS = {
-  draft:                  ['Draft', '#64748B', '#F1F5F9', 'Prepared by the contractor, not yet submitted to the client.'],
-  submitted:              ['Submitted', '#2563EB', '#EFF6FF', 'Submitted to the client (Tarshid) — logged with the submission date.'],
-  under_review:           ['With Client', '#7C3AED', '#F3E8FF', 'With the client (Tarshid) for review — awaiting their response.'],
-  approved:               ['Approved', '#10B981', '#ECFDF5', 'Approved by Client — ready for project closeout.'],
-  approved_with_comments: ['Approved w/ Comments', '#CA8A04', '#FEF9C3', 'Approved by Client with comments — a cover-comments version was uploaded.'],
-  rejected:               ['Rejected', '#EF4444', '#FEF2F2', 'Returned by Client — must be revised and resubmitted (see notes).'],
-  resubmitted:            ['Resubmitted', '#2563EB', '#EFF6FF', 'Revised and resubmitted to the client after a return.'],
-  superseded:             ['Superseded', '#64748B', '#F1F5F9', 'Replaced by a newer revision.'],
+  draft:                  ['Draft', '#8A8577', '#F0EDE4', 'Prepared by the contractor, not yet submitted to the client.'],
+  submitted:              ['Submitted', '#A0762B', '#F5EEDF', 'Submitted to the client (Tarshid) — logged with the submission date.'],
+  under_review:           ['With Client', '#6D5A8E', '#F3E8FF', 'With the client (Tarshid) for review — awaiting their response.'],
+  approved:               ['Approved', '#217A54', '#E9F3EE', 'Approved by Client — ready for project closeout.'],
+  approved_with_comments: ['Approved w/ Comments', '#B45309', '#F5E9CE', 'Approved by Client with comments — a cover-comments version was uploaded.'],
+  rejected:               ['Rejected', '#B3362B', '#F9ECEA', 'Returned by Client — must be revised and resubmitted (see notes).'],
+  resubmitted:            ['Resubmitted', '#A0762B', '#F5EEDF', 'Revised and resubmitted to the client after a return.'],
+  superseded:             ['Superseded', '#8A8577', '#F0EDE4', 'Replaced by a newer revision.'],
 }
 export const docStatusMeta = (s) => DOC_STATUS[s] || DOC_STATUS.submitted
 
@@ -46,7 +46,7 @@ export function AttachmentChip({ docs = [], onOpen }) {
       {open && (
         <>
           <div onClick={(e) => { e.stopPropagation(); setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', zIndex: 31, top: '100%', left: 0, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 8px 24px rgba(15,23,42,.14)', padding: 6, minWidth: 190 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', zIndex: 31, top: '100%', left: 0, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 6, boxShadow: '0 8px 24px rgba(16,26,36,.14)', padding: 6, minWidth: 190 }}>
             {withFiles.map((d) => (
               <button key={d.id} className="ies-hover" onClick={() => { setOpen(false); onOpen?.(d) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 600, borderRadius: 6 }}>
@@ -120,7 +120,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{headerExtra}{canWrite && <Btn icon="upload" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => { setPrefill(null); setUp(true) }}>Upload document</Btn>}</div>
@@ -283,9 +283,9 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
 
 // ── Doc submission history timeline drawer (5C) ─────────────────────────────
 const ACTION_META = {
-  submitted: ['Submitted to client', '#2563EB'], client_received: ['Received by client', '#7C3AED'],
-  approved: ['Approved', '#10B981'], approved_with_comments: ['Approved with comments', '#CA8A04'],
-  rejected: ['Rejected', '#EF4444'], resubmitted: ['Resubmitted', '#2563EB'],
+  submitted: ['Submitted to client', '#A0762B'], client_received: ['Received by client', '#6D5A8E'],
+  approved: ['Approved', '#217A54'], approved_with_comments: ['Approved with comments', '#B45309'],
+  rejected: ['Rejected', '#B3362B'], resubmitted: ['Resubmitted', '#A0762B'],
 }
 export function DocHistoryDrawer({ doc, onClose }) {
   const { rows: events } = useLiveQuery('doc_submission_history', (q) => q.select('*').eq('doc_id', doc.id).order('action_date', { ascending: true }), [doc.id])
@@ -297,7 +297,7 @@ export function DocHistoryDrawer({ doc, onClose }) {
       {events.length === 0 ? <Empty icon="doc">No history yet.</Empty> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {events.map((ev, i) => {
-            const [lbl, c] = ACTION_META[ev.action] || [ev.action, '#64748B']
+            const [lbl, c] = ACTION_META[ev.action] || [ev.action, '#8A8577']
             return (
               <div key={ev.id} style={{ display: 'flex', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

@@ -8,11 +8,17 @@
    styles in components; this file holds the tokens, resets, keyframes and the
    responsive .ies-* rules exactly as the mockup defines them.
    ========================================================================== */
+/* Sprint 8M — IES Control Visual Redesign tokens (README §Design Tokens).
+   Warm-paper canvas, deep-navy chrome, desert-brass accent, IBM Plex type. */
 :root{
-  --nav-bg:#0F172A;--nav-bg-elev:#1E293B;--nav-text:#E2E8F0;--nav-text-3:#64748B;--nav-accent:#3B82F6;
-  --bg:#F8FAFC;--surface-1:#FFFFFF;--line:#E2E8F0;--text:#0F172A;--text-3:#64748B;--accent:#2563EB;
-  --ok:#10B981;--warn:#F59E0B;--bad:#EF4444;--info:#3B82F6;
-  --mono:'JetBrains Mono',ui-monospace,monospace;--ui:'Inter',system-ui,sans-serif;
+  --nav-bg:#10273B;--nav-bg-elev:#1B3A53;--nav-text:#F0EDE3;--nav-text-3:#8DA0B1;--nav-accent:#C29A4B;
+  --bg:#F5F3ED;--surface-1:#FFFFFF;--line:#E3DFD3;--text:#1A2530;--text-3:#8A8577;--accent:#A0762B;
+  --accent-hover:#8A6524;--brass-bright:#C29A4B;--ink-display:#16222D;--text-faint:#A39D8E;
+  --raised:#FBFAF6;--hover:#FAF8F2;--track:#EDEAE0;--line-soft:#F0EDE4;--line-ctrl:#DCD6C7;
+  --ok:#217A54;--ok-bg:#E9F3EE;--warn:#B45309;--warn-bg:#FAF3E3;--bad:#B3362B;--bad-bg:#F9ECEA;
+  --info:#3E5C8A;--info-bg:#EBF0F7;--live:#5FA987;
+  --esm1:#3E5C8A;--esm1-bg:#EBF0F7;--esm2:#6D5A8E;--esm2-bg:#F0EDF6;--esm3:#2A7A72;--esm3-bg:#E8F3F1;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--ui:'IBM Plex Sans',system-ui,sans-serif;
 }
 *{box-sizing:border-box}
 html,body,#root{margin:0;padding:0}
@@ -22,9 +28,9 @@ input,select,textarea{font-family:inherit}
 a{color:inherit;text-decoration:none}
 h1,h2,h3,p{margin:0}
 ::-webkit-scrollbar{width:9px;height:9px}
-::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:6px}
+::-webkit-scrollbar-thumb{background:#C9C3B4;border-radius:6px}
 ::-webkit-scrollbar-track{background:transparent}
-@keyframes iesPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.55)}50%{box-shadow:0 0 0 6px rgba(245,158,11,0)}}
+@keyframes iesPulse{0%,100%{box-shadow:0 0 0 0 rgba(194,154,75,.55)}50%{box-shadow:0 0 0 6px rgba(194,154,75,0)}}
 @keyframes iesBlink{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes iesDrawer{from{transform:translateY(-12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes iesSlideR{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -55,19 +61,26 @@ h1,h2,h3,p{margin:0}
 }
 /* hover helpers used across inline-styled buttons/rows */
 .ies-hover{transition:background .12s,border-color .12s,box-shadow .12s,color .12s}
-.ies-hover:hover{background:#1E293B}
-.ies-nav-btn:hover{background:#1E293B !important;color:#fff !important}
+.ies-hover:hover{background:var(--hover)}
+.ies-nav-btn:hover{background:var(--nav-bg-elev) !important;color:#fff !important}
 .ies-row-hover{transition:background .1s}
 .ies-row-hover:hover{background:var(--bg)}
 .ies-card-hover{transition:border-color .12s,box-shadow .12s,transform .12s}
-.ies-card-hover:hover{border-color:var(--accent) !important;box-shadow:0 4px 14px rgba(37,99,235,.1)}
+.ies-card-hover:hover{border-color:var(--accent) !important;box-shadow:0 4px 14px rgba(160,118,43,.12)}
 .ies-trow{transition:background .1s}
-.ies-trow:hover{background:#F8FAFC}
+.ies-trow:hover{background:var(--hover)}
 .ies-tbl{width:100%;border-collapse:collapse}
-.ies-tbl th{text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.5px;color:#64748B;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;text-transform:uppercase}
-.ies-tbl td{padding:11px 14px;border-bottom:1px solid #F1F5F9;font-size:13px;vertical-align:middle}
+.ies-tbl th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;color:var(--text-3);font-weight:600;padding:10px 14px;background:var(--raised);border-bottom:1px solid var(--line);white-space:nowrap;text-transform:uppercase}
+.ies-tbl td{padding:11px 14px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}
 .ies-tbl tr:last-child td{border-bottom:none}
 /* Sprint 7.6 Fix #2 — global long-text guards for table cells & lists */
 .ies-ellipsis{display:inline-block;max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .ies-ellipsis-sm{display:inline-block;max-width:20ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .ies-clamp2{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Sprint 8M additions — extend, don't replace */
+.ies-hover-dark{transition:background .12s,border-color .12s,color .12s}
+.ies-hover-dark:hover{background:var(--nav-bg-elev)}
+.ies-kicker{font-family:var(--mono);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:2.5px;color:var(--text-3)}
+.ies-kicker-brass{color:var(--accent)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px rgba(160,118,43,.12);outline:none}

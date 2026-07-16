@@ -152,10 +152,10 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
     </div>
   )
   const toggleBtn = (key, label) => (
-    <button onClick={() => setView(key)} style={{ padding: '6px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--line)', background: view === key ? 'var(--accent)' : '#fff', color: view === key ? '#fff' : 'var(--text-3)', borderRadius: 8 }}>{label}</button>
+    <button onClick={() => setView(key)} style={{ padding: '6px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: '1px solid var(--line)', background: view === key ? 'var(--accent)' : '#fff', color: view === key ? '#fff' : 'var(--text-3)', borderRadius: 6 }}>{label}</button>
   )
 
-  const th = { padding: '8px 10px', fontWeight: 700, fontSize: 10.5, fontFamily: 'var(--mono)', color: 'var(--text-3)', position: 'sticky', top: 0, background: '#F8FAFC', borderBottom: '1px solid var(--line)' }
+  const th = { padding: '8px 10px', fontWeight: 700, fontSize: 10.5, fontFamily: 'var(--mono)', color: 'var(--text-3)', position: 'sticky', top: 0, background: '#FAF8F2', borderBottom: '1px solid var(--line)' }
 
   return (
     <div>
@@ -169,7 +169,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
       </div>
 
       {/* Layout decision banner — shows the active rule + admin toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12, background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12, background: '#FAF8F2', border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>
         <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
           <strong>Layout:</strong> {layout === 'scattered' ? 'Scattered (per-building)' : 'Concatenated (project-wide)'}
           {groups.length > 0 && <> · <strong>Bundles:</strong> {groups.map((g) => g.label).join(' + ')}</>}
@@ -189,14 +189,14 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
         {kpi('Total COCs Expected', expected, layout === 'scattered' ? `${rows.length} buildings × ${groups.length} bundle${groups.length === 1 ? '' : 's'}` : `${groups.length} project-wide bundle${groups.length === 1 ? '' : 's'}`)}
-        {kpi('COCs Approved', approved, `${pct}% of expected`, '#10B981')}
-        {kpi('COCs Pending Client', pending, 'submitted + under review', '#F59E0B')}
+        {kpi('COCs Approved', approved, `${pct}% of expected`, '#217A54')}
+        {kpi('COCs Pending Client', pending, 'submitted + under review', '#B45309')}
       </div>
 
       {groups.length === 0 || rows.length === 0 ? (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}><Empty icon="doc">Add buildings and ESMs to this project to track COCs.</Empty></div>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}><Empty icon="doc">Add buildings and ESMs to this project to track COCs.</Empty></div>
       ) : view === 'matrix' ? (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>{layout === 'scattered' ? 'Buildings × ESM bundles' : 'Project × ESM bundles'}</div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>{canManage ? 'COUNT = COCS COVERING THIS BUNDLE · CLICK TO OPEN/CREATE' : 'COC COVERAGE PER BUNDLE'}</div>
@@ -219,7 +219,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
                       const anyApproved = cs.some((c) => APPROVED.has(c.status))
                       const anyPending = cs.some((c) => PENDING.has(c.status))
                       const c = cs.length ? cs[0] : null
-                      const color = anyApproved ? ['#10B981', '#ECFDF5'] : anyPending ? ['#F59E0B', '#FFFBEB'] : ['#94A3B8', '#F1F5F9']
+                      const color = anyApproved ? ['#217A54', '#E9F3EE'] : anyPending ? ['#B45309', '#FAF3E3'] : ['#A39D8E', '#F0EDE4']
                       const tip = cs.length ? `${cs.length} COC${cs.length === 1 ? '' : 's'}: ${cs.map((x) => `${x.name} (Rev ${x.revision || 'A'}, ${(docStatusMeta(x.status)[0])})`).join('; ')}` : 'No COC — click to create'
                       return (
                         <td key={g.key} style={{ padding: 8, textAlign: 'center' }}>
@@ -244,7 +244,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
           )}
         </div>
       ) : (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           {cocList.length === 0 ? <Empty icon="doc">No COCs yet. Use “New COC” to create one.</Empty> : (
             <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 880 }}>
               <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
@@ -262,7 +262,7 @@ export default function CocMatrix({ projectId, project, buildings = [], projectE
                         {isStale(c) && <span title="PDF may be out of date — regenerate" style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--warn)', marginRight: 6 }} />}
                         {c.name}
                         {APPROVED.has(c.status) && cocMinProgress(c) < 90 && (
-                          <span title={`Approved while a covered building is below 90% (lowest ${cocMinProgress(c)}%)`} style={{ marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 700, color: '#B45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 6, padding: '2px 7px' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#F59E0B' }} />Below threshold</span>
+                          <span title={`Approved while a covered building is below 90% (lowest ${cocMinProgress(c)}%)`} style={{ marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9.5, fontWeight: 700, color: '#B45309', background: '#FAF3E3', border: '1px solid #EBDCB2', borderRadius: 6, padding: '2px 7px' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#B45309' }} />Below threshold</span>
                         )}
                       </td>
                       <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{scopeOf(c)}</td>

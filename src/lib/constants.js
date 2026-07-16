@@ -19,15 +19,15 @@ export const ROSTER = {
 
 // solid role colors — identical to the design's people{} colors (and our DB profiles)
 export const ROLE_COLOR = {
-  ceo: '#0F766E', pmo: '#2563EB', procm: '#7C3AED', proco: '#9333EA', progm: '#0891B2',
-  projm: '#D97706', proje: '#CA8A04', plane: '#DB2777', admin: '#475569',
+  ceo: '#0F766E', pmo: '#A0762B', procm: '#6D5A8E', proco: '#9333EA', progm: '#0891B2',
+  projm: '#B45309', proje: '#B45309', plane: '#DB2777', admin: '#56534B',
 }
 export const ROLE_FULL = {
   ceo: 'CEO', pmo: 'PMO', procm: 'Procurement Manager', proco: 'Procurement Officer',
   progm: 'Program Manager', projm: 'Project Manager', proje: 'Project Engineer',
   plane: 'Planning Engineer', admin: 'Admin',
 }
-export const roleColor = (r) => ROLE_COLOR[r] || '#475569'
+export const roleColor = (r) => ROLE_COLOR[r] || '#56534B'
 export const roleTitle = (r) => ROLE_FULL[r] || r
 
 // switch-role menu order (design uses Object.keys(people) order)
@@ -86,21 +86,21 @@ export const DOC_KIND_FULL = {
 
 // status -> {color, bg, label} chip metadata (design statusMeta style)
 export const STATUS = {
-  active: ['#10B981', '#ECFDF5', 'Active'], draft: ['#64748B', '#F1F5F9', 'Draft'],
-  on_hold: ['#F59E0B', '#FFFBEB', 'On-Hold'], closed: ['#475569', '#F1F5F9', 'Closed'],
-  signed: ['#10B981', '#ECFDF5', 'Signed'], in_progress: ['#2563EB', '#EFF6FF', 'In Progress'],
-  pending: ['#64748B', '#F1F5F9', 'Pending'],
-  approved: ['#10B981', '#ECFDF5', 'Approved'], pending_qa: ['#F59E0B', '#FFFBEB', 'Pending QA'],
-  rejected: ['#EF4444', '#FEF2F2', 'Rejected'],
-  open: ['#64748B', '#F1F5F9', 'Open'], blocked: ['#EF4444', '#FEF2F2', 'Blocked'],
-  done: ['#10B981', '#ECFDF5', 'Done'], cancelled: ['#475569', '#F1F5F9', 'Cancelled'],
-  acknowledged: ['#2563EB', '#EFF6FF', 'Acknowledged'], resolved: ['#10B981', '#ECFDF5', 'Resolved'],
-  delivered: ['#10B981', '#ECFDF5', 'Delivered'], scheduled: ['#F59E0B', '#FFFBEB', 'Scheduled'],
-  awaiting: ['#F59E0B', '#FFFBEB', 'Awaiting'], in_progress_b: ['#2563EB', '#EFF6FF', 'In Progress'],
-  low: ['#64748B', '#F1F5F9', 'Low'], medium: ['#2563EB', '#EFF6FF', 'Medium'],
-  high: ['#F59E0B', '#FFFBEB', 'High'], critical: ['#EF4444', '#FEF2F2', 'Critical'],
-  Approved: ['#10B981', '#ECFDF5', 'Approved'], 'In Review': ['#F59E0B', '#FFFBEB', 'In Review'],
-  Missing: ['#64748B', '#F1F5F9', 'Missing'], Draft: ['#64748B', '#F1F5F9', 'Draft'],
+  active: ['#217A54', '#E9F3EE', 'Active'], draft: ['#8A8577', '#F0EDE4', 'Draft'],
+  on_hold: ['#B45309', '#FAF3E3', 'On-Hold'], closed: ['#56534B', '#F0EDE4', 'Closed'],
+  signed: ['#217A54', '#E9F3EE', 'Signed'], in_progress: ['#A0762B', '#F5EEDF', 'In Progress'],
+  pending: ['#8A8577', '#F0EDE4', 'Pending'],
+  approved: ['#217A54', '#E9F3EE', 'Approved'], pending_qa: ['#B45309', '#FAF3E3', 'Pending QA'],
+  rejected: ['#B3362B', '#F9ECEA', 'Rejected'],
+  open: ['#8A8577', '#F0EDE4', 'Open'], blocked: ['#B3362B', '#F9ECEA', 'Blocked'],
+  done: ['#217A54', '#E9F3EE', 'Done'], cancelled: ['#56534B', '#F0EDE4', 'Cancelled'],
+  acknowledged: ['#A0762B', '#F5EEDF', 'Acknowledged'], resolved: ['#217A54', '#E9F3EE', 'Resolved'],
+  delivered: ['#217A54', '#E9F3EE', 'Delivered'], scheduled: ['#B45309', '#FAF3E3', 'Scheduled'],
+  awaiting: ['#B45309', '#FAF3E3', 'Awaiting'], in_progress_b: ['#A0762B', '#F5EEDF', 'In Progress'],
+  low: ['#8A8577', '#F0EDE4', 'Low'], medium: ['#A0762B', '#F5EEDF', 'Medium'],
+  high: ['#B45309', '#FAF3E3', 'High'], critical: ['#B3362B', '#F9ECEA', 'Critical'],
+  Approved: ['#217A54', '#E9F3EE', 'Approved'], 'In Review': ['#B45309', '#FAF3E3', 'In Review'],
+  Missing: ['#8A8577', '#F0EDE4', 'Missing'], Draft: ['#8A8577', '#F0EDE4', 'Draft'],
 }
-export const statusMeta = (s) => STATUS[s] || ['#64748B', '#F1F5F9', String(s ?? '—').replace(/_/g, ' ')]
+export const statusMeta = (s) => STATUS[s] || ['#8A8577', '#F0EDE4', String(s ?? '—').replace(/_/g, ' ')]
 export const labelize = (s) => (s == null ? '—' : String(s).replace(/_/g, ' '))

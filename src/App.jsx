@@ -12,6 +12,7 @@ import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import BuildingDetail from './pages/BuildingDetail'
 import DailyProgress from './pages/DailyProgress'
+import DesignSystem from './pages/DesignSystem'
 import Tasks from './pages/Tasks'
 import Escalations from './pages/Escalations'
 import ManageEsms from './pages/ManageEsms'
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/materials" element={<ManageEsms />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/design-system" element={<DesignSystem />} />
 
             {/* legacy flat paths → nearest nested equivalent (deep links keep working) */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />

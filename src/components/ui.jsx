@@ -6,7 +6,7 @@ import { statusMeta } from '../lib/constants'
 import { initials } from '../lib/format'
 
 // Solid-circle avatar (design uses role color + white mono initials)
-export function Avatar({ name, color = '#475569', size = 28, title }) {
+export function Avatar({ name, color = '#56534B', size = 28, title }) {
   return (
     <span title={title || name} style={{
       width: size, height: size, borderRadius: '50%', background: color, color: '#fff',
@@ -21,7 +21,7 @@ export function Chip({ status, label, color, bg }) {
   const [c, b, l] = statusMeta(status)
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6,
+      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 4,
       fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: '.3px',
       color: color || c, background: bg || b, whiteSpace: 'nowrap',
     }}>{label || l}</span>
@@ -29,16 +29,16 @@ export function Chip({ status, label, color, bg }) {
 }
 
 export function Card({ children, style, pad = 16, ...rest }) {
-  return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 14, padding: pad, ...style }} {...rest}>{children}</div>
+  return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: pad, ...style }} {...rest}>{children}</div>
 }
 
 export function ProgressBar({ value = 0, max = 100, color = 'var(--accent)', height = 9 }) {
   const w = max > 0 ? Math.min(100, (value / max) * 100) : 0
-  return <div style={{ height, borderRadius: 5, background: '#EFF2F6', overflow: 'hidden' }}><div style={{ height: '100%', width: w + '%', background: color }} /></div>
+  return <div style={{ height, borderRadius: 5, background: '#EDEAE0', overflow: 'hidden' }}><div style={{ height: '100%', width: w + '%', background: color }} /></div>
 }
 
 // SVG donut ring (KPI cards)
-export function RingChart({ value = 0, max = 100, size = 72, color = '#2563EB', track = '#EFF2F6', stroke = 8 }) {
+export function RingChart({ value = 0, max = 100, size = 72, color = '#A0762B', track = '#EDEAE0', stroke = 8 }) {
   const r = 26, circ = 2 * Math.PI * r
   const frac = max > 0 ? Math.min(1, value / max) : 0
   return (
@@ -59,7 +59,7 @@ export function Loading({ label = 'Loading…' }) {
 }
 
 export function Empty({ icon = 'doc', children = 'Nothing here yet.' }) {
-  return <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 13 }}><span style={{ color: '#CBD5E1' }}><Icon name={icon} size={22} /></span><span>{children}</span></div>
+  return <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 13 }}><span style={{ color: '#C9C3B4' }}><Icon name={icon} size={22} /></span><span>{children}</span></div>
 }
 
 // Section card header used across screens
@@ -89,10 +89,10 @@ export function PageTitle({ kicker, title, right }) {
 
 // Primary/secondary buttons matching the dc inline style
 export function Btn({ variant = 'secondary', icon, children, style, ...rest }) {
-  const base = { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 8, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
+  const base = { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 6, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
   const variants = {
     primary: { background: 'var(--accent)', color: '#fff' },
-    secondary: { background: '#fff', color: 'var(--text)', border: '1px solid var(--line)' },
+    secondary: { background: '#fff', color: 'var(--text)', border: '1px solid var(--line-ctrl)' },
     danger: { background: 'var(--bad)', color: '#fff' },
     ghost: { background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--line)' },
   }
@@ -115,11 +115,11 @@ export function Modal({ open, title, onClose, children, footer, width = 520 }) {
   // (tiles 200 / markers 600 / popup 700) at z-index 1000. Sprint 8J-1.
   return createPortal(
     <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,.55)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: width, background: '#fff', borderRadius: 16, boxShadow: '0 24px 60px rgba(15,23,42,.3)', display: 'flex', flexDirection: 'column', maxHeight: '86vh' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(16,26,36,.55)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
+      <div style={{ width: '100%', maxWidth: width, background: '#fff', borderRadius: 12, boxShadow: '0 24px 60px rgba(16,26,36,.3)', display: 'flex', flexDirection: 'column', maxHeight: '86vh' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
+          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
         </div>
         <div style={{ padding: 20, overflow: 'auto' }}>{children}</div>
         {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
@@ -140,14 +140,14 @@ export function Drawer({ open, title, subtitle, onClose, children, footer, width
   if (!open) return null
   return (
     <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(15,23,42,.5)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'flex-end' }}>
-      <div style={{ width: '100%', maxWidth: width, height: '100%', background: '#fff', boxShadow: '-16px 0 40px rgba(15,23,42,.25)', display: 'flex', flexDirection: 'column', animation: 'iesSlideR .2s ease' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(16,26,36,.5)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ width: '100%', maxWidth: width, height: '100%', background: '#fff', boxShadow: '-16px 0 40px rgba(16,26,36,.25)', display: 'flex', flexDirection: 'column', animation: 'iesSlideR .2s ease' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
             {subtitle && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</div>}
           </div>
-          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
+          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
         </div>
         <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>{children}</div>
         {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
@@ -157,10 +157,10 @@ export function Drawer({ open, title, subtitle, onClose, children, footer, width
 }
 
 export function Field({ label, children }) {
-  return <label style={{ display: 'block', marginBottom: 14 }}><span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>{label}</span>{children}</label>
+  return <label style={{ display: 'block', marginBottom: 14 }}><span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 6 }}>{label}</span>{children}</label>
 }
 
-export const inputStyle = { width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 8, background: '#fff', fontSize: 14 }
+export const inputStyle = { width: '100%', padding: '10px 12px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 13.5 }
 
 export function Toaster() {
   const [items, setItems] = useState([])
@@ -169,7 +169,7 @@ export function Toaster() {
   return (
     <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 500, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
       {items.map((t) => (
-        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 500, boxShadow: '0 12px 30px rgba(15,23,42,.3)', background: t.type === 'err' ? '#B91C1C' : '#0F172A', animation: 'iesToast .16s ease-out' }}>
+        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 500, boxShadow: '0 12px 30px rgba(16,26,36,.3)', background: t.type === 'err' ? '#96271E' : '#16222D', animation: 'iesToast .16s ease-out' }}>
           <Icon name={t.type === 'err' ? 'alert' : 'check'} size={15} />{t.message}
         </div>
       ))}
