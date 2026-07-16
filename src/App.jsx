@@ -6,7 +6,6 @@ import Shell from './components/Shell'
 import Login from './components/Login'
 import { Loading, Toaster } from './components/ui'
 
-import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
@@ -35,9 +34,10 @@ export default function App() {
       <BreadcrumbProvider>
         <Routes>
           <Route element={<Shell />}>
-            {/* dashboard is the landing route; index grid lives at /home (logo) */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/home" element={<Home />} />
+            {/* dashboard is the landing route; root + legacy /home redirect to it */}
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/home" element={<Navigate to="/dashboard" replace />} />
 
             {/* projects → project → building → install-item : the nested drill-down */}
             <Route path="/projects" element={<Projects />} />
@@ -53,9 +53,8 @@ export default function App() {
             <Route path="/design-system" element={<DesignSystem />} />
 
             {/* legacy flat paths → nearest nested equivalent (deep links keep working) */}
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
             <Route path="/esms" element={<Navigate to="/materials" replace />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
       </BreadcrumbProvider>
