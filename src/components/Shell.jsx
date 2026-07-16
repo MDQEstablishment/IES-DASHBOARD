@@ -51,7 +51,7 @@ export default function Shell() {
       {/* top header (dc lines 102-142) */}
       <header style={{ height: 58, background: 'var(--nav-bg)', borderBottom: '1px solid rgba(194,154,75,.25)', display: 'flex', alignItems: 'center', gap: 18, padding: '0 18px', position: 'sticky', top: 0, zIndex: 120 }}>
         <button className="ies-hamburger ies-hover-dark" onClick={() => setDrawer((d) => !d)} style={{ width: 34, height: 34, borderRadius: 6, border: '1px solid #2C4359', color: '#E3DFD3', alignItems: 'center', justifyContent: 'center' }}><Icon name="menu" size={18} /></button>
-        <Link to="/home" style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
+        <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
           <div style={{ width: 34, height: 34, borderRadius: 6, background: 'linear-gradient(135deg,#1B3A53,#10273B)', border: '1.5px solid rgba(194,154,75,.45)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: 12.5 }}>IES<span style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: '50%', background: 'var(--brass-bright)' }} /></div>
           <div style={{ lineHeight: 1.1 }}><div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>IES Control</div><div style={{ color: '#8DA0B1', fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '2px' }}>RETROFIT · V2</div></div>
         </Link>
@@ -61,7 +61,7 @@ export default function Shell() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="ies-topmeta" style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--live)' }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--live)', animation: 'iesBlink 1.6s infinite' }} />LIVE</div>
           <Clock />
-          <NavLink to="/" className="ies-hover-dark" style={{ position: 'relative', width: 34, height: 34, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8DA0B1' }}>
+          <NavLink to="/dashboard" className="ies-hover-dark" style={{ position: 'relative', width: 34, height: 34, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8DA0B1' }}>
             <Icon name="bell" size={17} />
           </NavLink>
           <div ref={menuRef} style={{ position: 'relative' }}>

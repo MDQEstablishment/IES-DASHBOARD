@@ -18,7 +18,7 @@ export const ROLE_NAV = {
 
 // nav id -> route + label + icon. `end` marks exact-match routes (dashboard).
 export const NAV_CATALOG = {
-  dashboard:  { id: 'dashboard',  label: 'Dashboard',    icon: 'dashboard',  to: '/', end: true },
+  dashboard:  { id: 'dashboard',  label: 'Dashboard',    icon: 'dashboard',  to: '/dashboard', end: true },
   projects:   { id: 'projects',   label: 'Projects',     icon: 'projects',   to: '/projects' },
   materials:  { id: 'materials',  label: 'Materials',    icon: 'materials',  to: '/materials' },
   tasks:      { id: 'tasks',      label: 'My Tasks',     icon: 'tasks',      to: '/tasks' },
@@ -66,7 +66,7 @@ export function crumbsFor(pathname, labels = {}) {
       }
     }
   } else {
-    const map = { home: 'All Pages', tasks: 'My Tasks', escalations: 'My Escalations', materials: 'Materials', reports: 'Reports', settings: 'Settings', dashboard: 'Dashboard' }
+    const map = { tasks: 'My Tasks', escalations: 'My Escalations', materials: 'Materials', reports: 'Reports', settings: 'Settings', dashboard: 'Dashboard' }
     crumbs.push({ label: map[root] || cap(root), to: '/' + root })
   }
   return finalize(crumbs)
