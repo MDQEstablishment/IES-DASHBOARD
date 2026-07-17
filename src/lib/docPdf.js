@@ -255,6 +255,20 @@ export async function renderCoc(rawData, assets) {
 
   const page = () => { st.page = pdf.addPage(A4); st.pageNo += 1; st.y = TOP }
   const ensure = (need) => { if (st.y - need < M + 30) page() }
+  // Word-based LTR wrapper (owner-approved: wrap, don't truncate). Returns lines.
+  const wrapLtr = (text, size, maxW, f = helv) => {
+    const words = safe(text).split(/\s+/).filter(Boolean)
+    if (!words.length) return ['']
+    const lines = []
+    let cur = ''
+    words.forEach((w) => {
+      const cand = cur ? cur + ' ' + w : w
+      if (f.widthOfTextAtSize(cand, size) <= maxW || !cur) cur = cand
+      else { lines.push(cur); cur = w }
+    })
+    lines.push(cur)
+    return lines
+  }
   const bar = (label) => {
     ensure(34)
     rect(M, st.y - 17, W, 17, TEAL, TEAL, 0)
@@ -285,37 +299,42 @@ export async function renderCoc(rawData, assets) {
     [AR.bldgType, data.buildingType], [AR.region, data.region],
     [AR.city, data.city], [AR.coords, data.coords],
   ]
-  const rowsN = Math.max(proj.length, bldg.length), boxH = rowsN * 14 + 8
+  // Per-row heights: long English values (project/entity names) wrap instead
+  // of truncating (Phase-2 owner decision).
+  const infoRowLines = (rows) => rows.map(([k, v]) => {
+    const labelW = arWidth(k + ' :', 8.5, true)
+    const val = v || ''
+    if (/[؀-ۿ]/.test(val)) return { k, val, labelW, lines: [val], rtlVal: true }
+    return { k, val, labelW, lines: wrapLtr(val, 8, half - labelW - 16), rtlVal: false }
+  })
+  const projR = infoRowLines(proj), bldgR = infoRowLines(bldg)
+  const rowH = (r) => Math.max(1, r.lines.length) * 11 + 3
+  const colH = (rs) => rs.reduce((s, r) => s + rowH(r), 0) + 8
+  const boxH = Math.max(colH(projR), colH(bldgR))
   ensure(boxH + 4)
   rect(M, st.y - boxH, half, boxH); rect(M + half, st.y - boxH, half, boxH)
-  let py = st.y - 14
-  proj.forEach(([k, v]) => {
-    rtl(k + ' :', right - 4, py, { size: 8.5, bold: true })
-    const labelW = arWidth(k + ' :', 8.5, true)
-    const val = v || ''
-    if (/[؀-ۿ]/.test(val)) rtl(val, right - 8 - labelW, py, { size: 8.5 })
-    else ltr(val, right - 8 - labelW, py, { size: 8, align: 'right', maxW: half - labelW - 14 })
-    py -= 14
-  })
-  let by = st.y - 14
-  bldg.forEach(([k, v]) => {
-    rtl(k + ' :', M + half - 4, by, { size: 8.5, bold: true })
-    const labelW = arWidth(k + ' :', 8.5, true)
-    const val = v || ''
-    if (/[؀-ۿ]/.test(val)) rtl(val, M + half - 8 - labelW, by, { size: 8.5 })
-    else ltr(val, M + half - 8 - labelW, by, { size: 8, align: 'right', maxW: half - labelW - 14 })
-    by -= 14
-  })
+  const drawInfoCol = (rows, xRight) => {
+    let y = st.y - 12
+    rows.forEach((r) => {
+      rtl(r.k + ' :', xRight - 4, y, { size: 8.5, bold: true })
+      if (r.rtlVal) rtl(r.val, xRight - 8 - r.labelW, y, { size: 8.5 })
+      else r.lines.forEach((ln, li) => ltr(ln, xRight - 8 - r.labelW, y - li * 11, { size: 8, align: 'right' }))
+      y -= rowH(r)
+    })
+  }
+  drawInfoCol(projR, right)
+  drawInfoCol(bldgR, M + half)
   st.y -= boxH + 8
 
   // ── work description: numbered English lines, right-aligned "text  -N" ────
   bar(AR.workDesc)
   const descLines = data.descriptionLines.length ? data.descriptionLines : ['']
   descLines.forEach((line, i) => {
-    ensure(15)
+    const lns = wrapLtr(line, 9, W - 44, helvB)
+    ensure(lns.length * 13 + 4)
     ltr(`-${i + 1}`, right - 4, st.y - 4, { size: 9, f: helvB, align: 'right' })
-    ltr(line, right - 22, st.y - 4, { size: 9, f: helvB, align: 'right', maxW: W - 40 })
-    st.y -= 15
+    lns.forEach((ln, li) => ltr(ln, right - 22, st.y - 4 - li * 13, { size: 9, f: helvB, align: 'right' }))
+    st.y -= lns.length * 13 + 2
   })
   st.y -= 4
 
@@ -345,19 +364,30 @@ export async function renderCoc(rawData, assets) {
       x -= widths[i]
     })
     st.y -= headH
+    // Body cells wrap long English text (owner-approved); the row grows to the
+    // tallest cell. Arabic values (نعم/لا) stay single-line.
     const drawRow = (vals) => {
-      ensure(15)
+      const cellLines = vals.map((v, ci) => {
+        const s = v == null ? '' : String(v)
+        if (!s || /[؀-ۿ]/.test(s)) return [s]
+        return wrapLtr(s, 7.5, widths[ci] - 8)
+      })
+      const nLines = Math.max(1, ...cellLines.map((l) => l.length))
+      const rh = nLines * 10 + 4
+      ensure(rh + 1)
       let cx = right
       widths.forEach((w, ci) => {
-        rect(cx - w, st.y - 14, w, 14)
-        const v = vals[ci]
-        if (v != null && v !== '') {
-          if (/[؀-ۿ]/.test(String(v))) rtlC(String(v), cx - w / 2, st.y - 10, { size: 7.5 })
-          else ltr(String(v), cx - w / 2, st.y - 10, { size: 7.5, align: 'center', maxW: w - 6 })
-        }
+        rect(cx - w, st.y - rh, w, rh)
+        const lines = cellLines[ci]
+        const yStart = st.y - 10 - ((nLines - lines.length) * 10) / 2
+        lines.forEach((ln, li) => {
+          if (!ln) return
+          if (/[؀-ۿ]/.test(ln)) rtlC(ln, cx - w / 2, yStart - li * 10, { size: 7.5 })
+          else ltr(ln, cx - w / 2, yStart - li * 10, { size: 7.5, align: 'center' })
+        })
         cx -= w
       })
-      st.y -= 14
+      st.y -= rh
     }
     rows.forEach(drawRow)
     for (let i = rows.length; i < minRows; i++) drawRow([String(i + 1), ...widths.slice(1).map(() => '')])
@@ -459,10 +489,17 @@ export async function renderCoc(rawData, assets) {
     { h: AR.tarshid, name: sig.tarshid.name, role: sig.tarshid.designation },
     { h: AR.govRep, name: sig.beneficiary.name, role: sig.beneficiary.designation },
   ]
+  // Name/role rows grow to fit wrapped English text (long designations wrap,
+  // never truncate — Phase-2 owner decision).
+  const wrapVal = (v, size) => (!v ? [''] : /[؀-ۿ]/.test(v) ? [v] : wrapLtr(v, size, orgColW - 10))
+  const nameLines = gridCols.map((c) => wrapVal(c.name, 8.5))
+  const roleLines = gridCols.map((c) => wrapVal(c.role, 8))
+  const nameH = Math.max(22, Math.max(...nameLines.map((l) => l.length)) * 11 + 10)
+  const roleH = Math.max(24, Math.max(...roleLines.map((l) => l.length)) * 10 + 10)
   const gridRows = [
     { label: '', h: 20, key: 'head' },
-    { label: AR.name, h: 22, key: 'name' },
-    { label: AR.role, h: 26, key: 'role' },
+    { label: AR.name, h: nameH, key: 'name' },
+    { label: AR.role, h: roleH, key: 'role' },
     { label: AR.signature, h: 34, key: 'sig' },
     { label: AR.date, h: 20, key: 'date' },
   ]
@@ -472,18 +509,21 @@ export async function renderCoc(rawData, assets) {
     rect(right - labelColW, st.y - row.h, labelColW, row.h)
     if (row.label) rtlC(row.label, right - labelColW / 2, st.y - row.h / 2 - 3, { size: 8.5, bold: true })
     let cx = right - labelColW
-    gridCols.forEach((c) => {
+    gridCols.forEach((c, gi) => {
       rect(cx - orgColW, st.y - row.h, orgColW, row.h)
       const cxm = cx - orgColW / 2
       if (row.key === 'head') rtlC(c.h, cxm, st.y - row.h / 2 - 3, { size: 8, bold: true })
-      if (row.key === 'name' && c.name) {
-        if (/[؀-ۿ]/.test(c.name)) rtlC(c.name, cxm, st.y - row.h / 2 - 3, { size: 8.5 })
-        else ltr(c.name, cxm, st.y - row.h / 2 - 3, { size: 8.5, align: 'center', maxW: orgColW - 8 })
+      const drawWrapped = (lines, size, lh) => {
+        const blockH = lines.length * lh
+        const yStart = st.y - (row.h - blockH) / 2 - lh + 3
+        lines.forEach((ln, li) => {
+          if (!ln) return
+          if (/[؀-ۿ]/.test(ln)) rtlC(ln, cxm, yStart - li * lh, { size })
+          else ltr(ln, cxm, yStart - li * lh, { size, align: 'center' })
+        })
       }
-      if (row.key === 'role' && c.role) {
-        if (/[؀-ۿ]/.test(c.role)) rtlC(c.role, cxm, st.y - row.h / 2 - 3, { size: 8 })
-        else ltr(c.role, cxm, st.y - row.h / 2 - 3, { size: 8, align: 'center', maxW: orgColW - 8 })
-      }
+      if (row.key === 'name') drawWrapped(nameLines[gi], 8.5, 11)
+      if (row.key === 'role') drawWrapped(roleLines[gi], 8, 10)
       cx -= orgColW
     })
     st.y -= row.h
