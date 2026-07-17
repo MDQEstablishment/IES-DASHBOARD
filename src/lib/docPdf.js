@@ -95,8 +95,12 @@ function primitives(pdf, rgb, fonts) {
     const xx = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x
     st.page.drawText(str, { x: xx, y, size, font: f, color: col(color) })
   }
-  // Arabic: reshape → reverse for RTL → draw ending at xRight (right-aligned).
+  // Arabic (8S P3.5): delegate to a real OpenType shaper (fonts.arabicDraw,
+  // supplied by renderCoc via fontkit) that lays out joined glyphs + bidi and
+  // paints them as vector paths, ending right-aligned at xRight. Legacy
+  // reshape+reverse via a pdf-lib font is the fallback if no shaper is given.
   const rtl = (s, xRight, y, { size = 9, bold = false, color = DARK } = {}) => {
+    if (fonts.arabicDraw) { fonts.arabicDraw(st.page, String(s ?? ''), xRight, y, size, bold, color); return }
     if (!fonts.ar) return
     const f = bold ? fonts.arB : fonts.ar
     const t = fonts.reshape(String(s ?? '')).split('').reverse().join('')
@@ -232,24 +236,72 @@ export async function renderInspection(kind, data, assets) {
 //          ctrlRefDesc, ctrlTotal } (legacy item rows are adapted below).
 export async function renderCoc(rawData, assets) {
   const data = normalizeCocData(rawData)
-  const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib')
+  const { PDFDocument, rgb, StandardFonts, pushGraphicsState, popGraphicsState,
+    setFillingColor, moveTo, lineTo, appendBezierCurve, closePath, fill } = await import('pdf-lib')
   const pdf = await PDFDocument.create()
-  const fontkit = (await import('@pdf-lib/fontkit')).default
-  const reshaperMod = (await import('arabic-reshaper'))
-  const reshaper = { convertArabic: reshaperMod.convertArabic || reshaperMod.default?.convertArabic || ((s) => s) }
-  pdf.registerFontkit(fontkit)
   const helv = await pdf.embedFont(StandardFonts.Helvetica)
   const helvB = await pdf.embedFont(StandardFonts.HelveticaBold)
-  const ar = await pdf.embedFont(assets.amiri.reg, { subset: false })
-  const arB = await pdf.embedFont(assets.amiri.bold, { subset: false })
   const logo = assets.logo ? await pdf.embedPng(assets.logo).catch(() => null) : null
-  const reshape = (s) => reshaper.convertArabic(String(s ?? ''))
-  const P = primitives(pdf, rgb, { helv, helvB, ar, arB, reshape })
+
+  // 8S P3.5 — real Arabic shaping. pdf-lib does NOT apply OpenType shaping or
+  // bidi, so drawing Amiri code points gave disconnected, wrongly-ordered
+  // letters. Instead we shape each Arabic run with fontkit (@pdf-lib/fontkit,
+  // already bundled, pure JS, no WASM): full GSUB+GPOS joining, then paint the
+  // resulting glyphs as vector paths. bidi-js mirrors paired brackets inside
+  // RTL runs. No Amiri font is embedded (glyphs are outlines) — smaller PDFs.
+  const fontkit = (await import('@pdf-lib/fontkit')).default
+  const bidi = ((await import('bidi-js')).default)()
+  const fkReg = fontkit.create(new Uint8Array(assets.amiri.reg))
+  const fkBold = fontkit.create(new Uint8Array(assets.amiri.bold))
+  const MIRROR = { '(': ')', ')': '(', '[': ']', ']': '[', '{': '}', '}': '{', '<': '>', '>': '<' }
+  const mirrorRtl = (str) => {
+    if (!/[()[\]{}<>]/.test(str)) return str
+    const lv = bidi.getEmbeddingLevels(str, 'rtl').levels
+    return [...str].map((ch, i) => (lv[i] % 2 === 1 && MIRROR[ch]) ? MIRROR[ch] : ch).join('')
+  }
+  const shapeRun = (str, bold) => (bold ? fkBold : fkReg).layout(mirrorRtl(String(str ?? '')))
+  const arabicWidth = (str, size, bold = false) => {
+    const f = bold ? fkBold : fkReg
+    return shapeRun(str, bold).positions.reduce((a, p) => a + p.xAdvance, 0) * size / f.unitsPerEm
+  }
+  // Draw a shaped Arabic string as filled vector glyph paths, right-aligned to
+  // xRight at baseline y. TrueType quadratics are converted to cubics.
+  const arabicDraw = (page, str, xRight, y, size, bold, color) => {
+    const f = bold ? fkBold : fkReg
+    const run = shapeRun(str, bold)
+    const s = size / f.unitsPerEm
+    const total = run.positions.reduce((a, p) => a + p.xAdvance, 0) * s
+    let penX = xRight - total
+    const fillCol = setFillingColor(rgb(color[0], color[1], color[2]))
+    run.glyphs.forEach((g, i) => {
+      const pos = run.positions[i]
+      const ox = penX + pos.xOffset * s, oy = y + pos.yOffset * s
+      const ops = [pushGraphicsState(), fillCol]
+      let cx = 0, cy = 0 // current point (font units) for quad→cubic
+      for (const c of g.path.commands) {
+        const a = c.args
+        if (c.command === 'moveTo') { cx = a[0]; cy = a[1]; ops.push(moveTo(ox + cx * s, oy + cy * s)) }
+        else if (c.command === 'lineTo') { cx = a[0]; cy = a[1]; ops.push(lineTo(ox + cx * s, oy + cy * s)) }
+        else if (c.command === 'bezierCurveTo') { ops.push(appendBezierCurve(ox + a[0] * s, oy + a[1] * s, ox + a[2] * s, oy + a[3] * s, ox + a[4] * s, oy + a[5] * s)); cx = a[4]; cy = a[5] }
+        else if (c.command === 'quadraticCurveTo') {
+          const qx = a[0], qy = a[1], ex = a[2], ey = a[3]
+          const c1x = cx + 2 / 3 * (qx - cx), c1y = cy + 2 / 3 * (qy - cy)
+          const c2x = ex + 2 / 3 * (qx - ex), c2y = ey + 2 / 3 * (qy - ey)
+          ops.push(appendBezierCurve(ox + c1x * s, oy + c1y * s, ox + c2x * s, oy + c2y * s, ox + ex * s, oy + ey * s))
+          cx = ex; cy = ey
+        } else if (c.command === 'closePath') ops.push(closePath())
+      }
+      ops.push(fill(), popGraphicsState())
+      page.pushOperators(...ops)
+      penX += pos.xAdvance * s
+    })
+  }
+
+  const P = primitives(pdf, rgb, { helv, helvB, arabicDraw })
   const { st, W, rect, ltr, rtl } = P
   const right = A4[0] - M
   const TOP = A4[1] - 96 // content starts below the per-page logo zone
-  const shaped = (s) => reshape(s).split('').reverse().join('')
-  const arWidth = (s, size, bold = false) => (bold ? arB : ar).widthOfTextAtSize(shaped(s), size)
+  const arWidth = (s, size, bold = false) => arabicWidth(s, size, bold)
   // Centered RTL helper (bars + table headers in the samples are centered)
   const rtlC = (s, xCenter, y, opts = {}) => rtl(s, xCenter + arWidth(s, opts.size || 9, opts.bold) / 2, y, opts)
 

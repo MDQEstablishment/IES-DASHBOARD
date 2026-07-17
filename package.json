@@ -15,6 +15,7 @@
     "@sentry/react": "^8.35.0",
     "@supabase/supabase-js": "^2.45.4",
     "arabic-reshaper": "^1.1.0",
+    "bidi-js": "^1.0.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.451.0",
     "pdf-lib": "^1.17.1",
