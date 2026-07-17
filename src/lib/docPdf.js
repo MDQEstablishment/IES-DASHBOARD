@@ -18,24 +18,30 @@ const LINE = [0.72, 0.76, 0.82]
 
 const ATTACH_INSPECTION = ['Specification', 'Sample', 'Approved Shop Drawing', 'BOQ Reference', 'Pictures', 'Valid SASO/Saber', 'Approved Material Submittal', 'Test Reports', 'Other']
 
-// Arabic label vocabulary for the COC (kept here so the rest reads cleanly).
+// Arabic label vocabulary for the COC — wording matches the signed MONG-D
+// samples verbatim (Sprint 8S authoritative templates).
 const AR = {
   title: 'محضر إكتمال أعمال التركيب',
   projInfo: 'معلومات المشروع',
   projName: 'اسم المشروع', projNo: 'رقم المشروع', contractDate: 'تاريخ توقيع العقد',
-  endDate: 'تاريخ انتهاء الأعمال', esco: 'شركة خدمات الطاقة', sub: 'مقاول الباطن (إن وجد)',
-  bldgNo: 'رقم المبنى', entity: 'اسم الجهة/المبنى', bldgType: 'نوع المبنى',
-  region: 'المنطقة التي يوجد بها المبنى', city: 'المدينة والحي', coords: 'إحداثيات المبنى',
-  workDesc: 'وصف العمل',
-  installedLighting: 'أنواع وكميات بنود الإنارة التي تم تركيبها',
-  installedControl: 'أنواع وكميات بنود التحكم بالإنارة التي تم تركيبها',
-  installedOther: 'أنواع وكميات البنود الأخرى التي تم تركيبها',
-  removedTitle: 'أنواع وكميات بنود الإنارة التي تم إزالتها',
+  endDate: 'تاريخ انتهاء الأعمال', esco: 'شركة خدمات الطاقة', sub: 'مقاول الباطن (ان وجد)',
+  bldgNo: 'رقم المبنى', entity: 'إسم الجهة/المبنى', bldgType: 'نوع المبنى',
+  region: 'المنطقة التي توجد بها المبنى', city: 'المدينة والحي الذي يوجد بها المبنى', coords: 'إحداثيات المبنى',
+  workDesc: 'وصف العمل', workDetails: 'تفاصيل العمل',
+  installedLighting: 'أنواع وكميات بنود الانارة التي تم تركيبها:',
+  installedControl: 'أنواع وكميات بنود التحكم بالإنارة الداخلية التي تم تركيبها:',
+  installedOther: 'أنواع وكميات البنود الأخرى التي تم تركيبها:',
+  installedAc: 'أنواع وكميات بنود التكييف التي تم تركيبها:',
+  removedLighting: 'أنواع وكميات بنود الإنارة التي تم إزالتها:',
+  removedAc: 'أنواع وكميات بنود التكييف التي تم إزالتها:',
+  removedBar: 'إزالة البنود السابقة (التابعة للمبنى)',
   itemNo: 'رقم البند', itemDesc: 'وصف البند', qty: 'الكمية', power: 'القدرة', returned: 'تم إعادتها إلى الجهة',
+  ctrlItem: 'بند التحكم بالإنارة', ctrlRefNo: 'رقم بند الانارة المتحكم بها', ctrlRefDesc: 'وصف بند الإنارة المتحكم بها', ctrlTotal: 'الكمية الاجمالية للإنارة المتحكم بها',
+  capacity: 'السعة', efficiency: 'الكفاءة',
   opHours: 'ساعات التشغيل', perLetter: 'حسب خطاب الجهة',
-  elec: 'معلومات شركة الكهرباء', meter: 'رقم عداد شركة الكهرباء', subscription: 'رقم الاشتراك بشركة الكهرباء', account: 'رقم حساب شركة الكهرباء',
+  elec: 'معلومات شركة الكهرباء', meter: 'رقم عداد شركة الكهرباء', subscription: 'رقم الاشتراك الخاص بشركة الكهرباء', account: 'رقم حساب شركة الكهرباء',
   attachments: 'مرفقات', approval: 'الاعتماد',
-  specs: 'مواصفات', samples: 'عينات', drawings: 'مخططات تفصيلية', photos: 'صور', boq: 'مرجع للكميات', testReport: 'تقرير إختبار عينات', inspReport: 'تقرير فحص عينات', other: 'أخرى',
+  specs: 'مواصفات', samples: 'عينات', drawings: 'مخططات تفصيلية', photos: 'صور', boq: 'مرجع للكميات', testReport: 'تقرير إختبار عينات', inspReport: 'تقرير فحص عينات', other: 'أخرى (  )',
   govRep: 'ممثل الجهة الحكومية', tarshid: 'الشركة الوطنية لخدمات كفاءة الطاقة', contractor: 'الشركة المنفذة',
   name: 'الإسم', role: 'الوظيفة', signature: 'التوقيع', date: 'التاريخ',
   yes: 'نعم', no: 'لا',
@@ -206,8 +212,26 @@ export async function renderInspection(kind, data, assets) {
   return await pdf.save()
 }
 
-// ── COC (bilingual Arabic, teal bars) ──────────────────────────────────────
-export async function renderCoc(data, assets) {
+// ── COC (bilingual Arabic, teal bars) — Sprint 8S rewrite ───────────────────
+// Layout matches the signed MONG-D samples: per-page Tarshid logo + outer
+// border + "Page N of M" footer; teal section bars; plain bold RTL table
+// headings; category table sets (lighting/controls/other vs AC kBTU+SEER);
+// removed-items bar; operating hours; electricity block; attachments
+// checkbox rows (5 + 3); 4-column signature grid with the row-label column on
+// the right edge, populated from coc_project_settings + beneficiary assignment.
+//
+// data contract (Phase 3 assembles it):
+//   referenceNo, date, projectName, projectRefNo, contractDate, endDate,
+//   escoOrg, subcontractor, buildingNos, entityName, buildingType, region,
+//   city, coords, descriptionLines[], kind 'lighting'|'ac'|'other',
+//   installed[], installedControls[], installedOther[], removed[],
+//   meterNo, subscriptionNo, accountNo, attachmentsChecked[],
+//   signatories { esco:{name,designation}, tarshid:{name,designation},
+//                 beneficiary:{name,designation} }
+// Items: { description, qty, power, kbtu, seer, returned, ctrlRefNo,
+//          ctrlRefDesc, ctrlTotal } (legacy item rows are adapted below).
+export async function renderCoc(rawData, assets) {
+  const data = normalizeCocData(rawData)
   const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib')
   const pdf = await PDFDocument.create()
   const fontkit = (await import('@pdf-lib/fontkit')).default
@@ -221,117 +245,309 @@ export async function renderCoc(data, assets) {
   const logo = assets.logo ? await pdf.embedPng(assets.logo).catch(() => null) : null
   const reshape = (s) => reshaper.convertArabic(String(s ?? ''))
   const P = primitives(pdf, rgb, { helv, helvB, ar, arB, reshape })
-  const { st, W, newPage, rect, ltr, rtl } = P
+  const { st, W, rect, ltr, rtl } = P
   const right = A4[0] - M
-  const ensure = (need) => { if (st.y - need < M + 26) { footer(); newPage() } }
-  const footer = () => { ltr(`Page ${st.pageNo}`, A4[0] / 2, 20, { size: 8, color: GREY, align: 'center' }); ltr(`${data.docNo || 'COC'}  ${data.date || ''}`, M, 20, { size: 7.5, color: GREY }) }
-  const bar = (label) => { ensure(31); rect(M, st.y - 17, W, 17, TEAL, TEAL, 0); rtl(label, right - 6, st.y - 13, { size: 9.5, bold: true, color: [1, 1, 1] }); st.y -= 31 } // 8pt breathing room under the bar
+  const TOP = A4[1] - 96 // content starts below the per-page logo zone
+  const shaped = (s) => reshape(s).split('').reverse().join('')
+  const arWidth = (s, size, bold = false) => (bold ? arB : ar).widthOfTextAtSize(shaped(s), size)
+  // Centered RTL helper (bars + table headers in the samples are centered)
+  const rtlC = (s, xCenter, y, opts = {}) => rtl(s, xCenter + arWidth(s, opts.size || 9, opts.bold) / 2, y, opts)
 
-  newPage()
-  if (logo) { const lw = 112, lh = (logo.height / logo.width) * lw; st.page.drawImage(logo, { x: A4[0] - M - lw, y: A4[1] - M - lh + 4, width: lw, height: lh }) }
-  st.y = A4[1] - M - 44
-  if (data.referenceNo) ltr(`Ref No: ${data.referenceNo}`, A4[0] - M, st.y, { size: 8.5, f: helvB, color: GREEN, align: 'right' })
-  st.y -= 8
-  rtl(AR.title, A4[0] / 2 + arB.widthOfTextAtSize(reshape(AR.title).split('').reverse().join(''), 15) / 2, st.y, { size: 15, bold: true })
-  st.y -= 20
+  const page = () => { st.page = pdf.addPage(A4); st.pageNo += 1; st.y = TOP }
+  const ensure = (need) => { if (st.y - need < M + 30) page() }
+  const bar = (label) => {
+    ensure(34)
+    rect(M, st.y - 17, W, 17, TEAL, TEAL, 0)
+    rtlC(label, M + W / 2, st.y - 13, { size: 9.5, bold: true, color: DARK })
+    st.y -= 25
+  }
+  // Plain bold right-aligned table heading (NOT a teal bar — matches samples).
+  // Reserves heading + table-header space so a heading never orphans at a
+  // page's bottom edge.
+  const heading = (label) => { ensure(52); rtl(label, right - 2, st.y - 4, { size: 9, bold: true }); st.y -= 18 }
 
-  // project information (two columns: right = project, left = building)
+  page()
+  // title (page 1 only)
+  if (data.referenceNo) { ltr(`Ref No: ${data.referenceNo}`, M, st.y + 26, { size: 7.5, color: GREY }) }
+  rtlC(AR.title, A4[0] / 2, st.y - 4, { size: 14.5, bold: true })
+  st.y -= 26
+
+  // ── project information: right box = project, left box = building ─────────
   bar(AR.projInfo)
   const half = W / 2
-  const proj = [[AR.projName, data.projectName], [AR.projNo, data.projectCode], [AR.contractDate, data.contractDate], [AR.endDate, data.endDate], [AR.esco, data.esco || 'Tarshid'], [AR.sub, data.subcontractor]]
-  const bldg = [[AR.bldgNo, data.buildingIds], [AR.entity, data.clientName], [AR.bldgType, data.buildingType], [AR.region, data.region], [AR.city, data.city], [AR.coords, data.coords]]
-  const rowsN = Math.max(proj.length, bldg.length), boxH = rowsN * 13 + 6
+  const proj = [
+    [AR.projName, data.projectName], [AR.projNo, data.projectRefNo],
+    [AR.contractDate, data.contractDate], [AR.endDate, data.endDate],
+    [AR.esco, data.escoOrg], [AR.sub, data.subcontractor],
+  ]
+  const bldg = [
+    [AR.bldgNo, data.buildingNos], [AR.entity, data.entityName],
+    [AR.bldgType, data.buildingType], [AR.region, data.region],
+    [AR.city, data.city], [AR.coords, data.coords],
+  ]
+  const rowsN = Math.max(proj.length, bldg.length), boxH = rowsN * 14 + 8
+  ensure(boxH + 4)
   rect(M, st.y - boxH, half, boxH); rect(M + half, st.y - boxH, half, boxH)
-  let py = st.y - 13
-  proj.forEach(([k, v]) => { rtl(k + ' :', right - 4, py, { size: 8, bold: true }); ltr(v || '', M + half + 6, py, { size: 8, maxW: half - 110 }); py -= 13 })
-  let by = st.y - 13
-  bldg.forEach(([k, v]) => { rtl(k + ' :', M + half - 4, by, { size: 8, bold: true }); ltr(v || '', M + 6, by, { size: 8, maxW: half - 110 }); by -= 13 })
-  st.y -= boxH + 6
+  let py = st.y - 14
+  proj.forEach(([k, v]) => {
+    rtl(k + ' :', right - 4, py, { size: 8.5, bold: true })
+    const labelW = arWidth(k + ' :', 8.5, true)
+    const val = v || ''
+    if (/[؀-ۿ]/.test(val)) rtl(val, right - 8 - labelW, py, { size: 8.5 })
+    else ltr(val, right - 8 - labelW, py, { size: 8, align: 'right', maxW: half - labelW - 14 })
+    py -= 14
+  })
+  let by = st.y - 14
+  bldg.forEach(([k, v]) => {
+    rtl(k + ' :', M + half - 4, by, { size: 8.5, bold: true })
+    const labelW = arWidth(k + ' :', 8.5, true)
+    const val = v || ''
+    if (/[؀-ۿ]/.test(val)) rtl(val, M + half - 8 - labelW, by, { size: 8.5 })
+    else ltr(val, M + half - 8 - labelW, by, { size: 8, align: 'right', maxW: half - labelW - 14 })
+    by -= 14
+  })
+  st.y -= boxH + 8
 
-  // work description
+  // ── work description: numbered English lines, right-aligned "text  -N" ────
   bar(AR.workDesc)
-  ensure(16); ltr(data.brief || data.workDescription || '', M + 6, st.y - 2, { size: 9, maxW: W - 12 }); st.y -= 18
-
-  // installed item tables, split by ESM bundle role
-  const ins = data.installed || []
-  const lighting = ins.filter((i) => i.esm_code === 'ESM1')
-  const control = ins.filter((i) => i.esm_code === 'ESM2')
-  const other = ins.filter((i) => !['ESM1', 'ESM2'].includes(i.esm_code))
-  // RTL item table: columns right→left = [no, desc, qty, power]
-  const itemTable = (titleAr, list, withReturned) => {
-    if (!list.length) return
-    bar(titleAr)
-    const cols = withReturned
-      ? [{ w: 40, h: AR.itemNo }, { w: W - 200, h: AR.itemDesc }, { w: 50, h: AR.qty }, { w: 50, h: AR.power }, { w: 60, h: AR.returned }]
-      : [{ w: 40, h: AR.itemNo }, { w: W - 150, h: AR.itemDesc }, { w: 50, h: AR.qty }, { w: 60, h: AR.power }]
-    // header row (right to left)
-    ensure(16); let x = right
-    cols.forEach((c) => { rect(x - c.w, st.y - 14, c.w, 14, LINE, [0.93, 0.96, 0.97]); rtl(c.h, x - 3, st.y - 10, { size: 7, bold: true }); x -= c.w })
-    st.y -= 14
-    list.forEach((it, i) => {
-      ensure(14); let cx = right
-      const vals = withReturned
-        ? [String(i + 1), `${it.item_description || ''}${it.model_code ? ' ' + it.model_code : ''}`, String(it.total_quantity ?? ''), `${it.capacity_value ?? ''}${it.capacity_unit || ''}`, it.returned_to_facility ? AR.yes : AR.no]
-        : [String(i + 1), `${it.item_description || ''}${it.model_code ? ' ' + it.model_code : ''}`, String(it.total_quantity ?? ''), `${it.capacity_value ?? ''}${it.capacity_unit || ''}`]
-      cols.forEach((c, ci) => {
-        rect(cx - c.w, st.y - 13, c.w, 13)
-        const v = vals[ci]
-        if (ci === 1) ltr(v, cx - c.w + 3, st.y - 10, { size: 7.5, maxW: c.w - 6 }) // description LTR (English)
-        else if (ci === 4) rtl(v, cx - 3, st.y - 10, { size: 7.5 }) // returned (Arabic yes/no)
-        else ltr(v, cx - c.w / 2, st.y - 10, { size: 7.5, align: 'center' })
-        cx -= c.w
-      })
-      st.y -= 13
-    })
-    st.y -= 4
-  }
-  itemTable(AR.installedLighting, lighting)
-  itemTable(AR.installedControl, control)
-  itemTable(AR.installedOther, other)
-  itemTable(AR.removedTitle, data.removed || [], true)
-
-  // operating hours + electricity company info
-  bar(AR.opHours); ensure(14); rtl(AR.perLetter, right - 6, st.y - 2, { size: 8 }); st.y -= 16
-  bar(AR.elec)
-  ;[[AR.meter, data.meterNo], [AR.subscription, data.subscriptionNo], [AR.account, data.accountNo]].forEach(([k, v]) => {
-    ensure(15); rect(M, st.y - 13, W, 14); rtl(k + ' :', right - 6, st.y - 10, { size: 8, bold: true }); ltr(v || '', M + 6, st.y - 10, { size: 8 }); st.y -= 14
+  const descLines = data.descriptionLines.length ? data.descriptionLines : ['']
+  descLines.forEach((line, i) => {
+    ensure(15)
+    ltr(`-${i + 1}`, right - 4, st.y - 4, { size: 9, f: helvB, align: 'right' })
+    ltr(line, right - 22, st.y - 4, { size: 9, f: helvB, align: 'right', maxW: W - 40 })
+    st.y -= 15
   })
   st.y -= 4
 
-  // attachments (Arabic checklist) — caller passes stable English ids to tick
-  bar(AR.attachments)
-  const cocAtt = [['specs', AR.specs], ['samples', AR.samples], ['drawings', AR.drawings], ['photos', AR.photos], ['boq', AR.boq], ['testReport', AR.testReport], ['inspReport', AR.inspReport], ['other', AR.other]]
-  const checked = new Set(data.attachmentsChecked || [])
-  ensure(36); const perRow = 4, cw = W / perRow
-  cocAtt.forEach(([id, label], i) => {
-    const row = Math.floor(i / perRow), cxR = right - (i % perRow) * cw, cy = st.y - row * 16
-    rect(cxR - 9, cy - 9, 9, 9); if (checked.has(id)) rect(cxR - 8, cy - 8, 7, 7, DARK, DARK)
-    rtl(label, cxR - 13, cy - 7, { size: 7.5 })
-  })
-  st.y -= Math.ceil(cocAtt.length / perRow) * 16 + 6
+  // ── work details: category tables ──────────────────────────────────────────
+  bar(AR.workDetails)
 
-  // approval — 3 columns (Govt entity / Tarshid / Contractor) × name/role/sig/date
-  bar(AR.approval)
-  ensure(96)
-  const colsApp = [AR.govRep, AR.tarshid, AR.contractor] // displayed right→left
-  const cwid = W / 3
-  const rowsApp = [[AR.name, [data.govName, data.tarshidName, data.contractorName]], [AR.role, [data.govRole, data.tarshidRole, data.contractorRole]], [AR.signature, ['', '', '']], [AR.date, [data.govDate, data.tarshidDate, data.contractorDate]]]
-  // header
-  let hx = right
-  colsApp.forEach((c, ci) => { rect(hx - cwid, st.y - 16, cwid, 16, LINE, [0.93, 0.96, 0.97]); rtl(c, hx - 4, st.y - 12, { size: 7.5, bold: true }); hx -= cwid })
-  st.y -= 16
-  rowsApp.forEach(([label, vals]) => {
-    ensure(18); let cx = right
-    colsApp.forEach((_, ci) => {
-      rect(cx - cwid, st.y - 18, cwid, 18)
-      const v = vals[ci]
-      if (v) { if (/[A-Za-z0-9]/.test(v)) ltr(v, cx - cwid + 4, st.y - 12, { size: 7.5, maxW: cwid - 8 }); else rtl(v, cx - 4, st.y - 12, { size: 7.5 }) }
-      cx -= cwid
+  // Generic RTL bordered table. cols listed right→left (first = rightmost);
+  // {w, h:[line1,line2?], en?} — en = Latin suffix in the header (e.g. "(kBTU)").
+  const table = (cols, rows, { minRows = 0 } = {}) => {
+    const flexW = W - cols.reduce((s, c) => s + (c.w || 0), 0)
+    const widths = cols.map((c) => c.w || flexW)
+    const headH = cols.some((c) => c.h.length > 1) ? 26 : 16
+    ensure(headH + 16)
+    let x = right
+    cols.forEach((c, i) => {
+      rect(x - widths[i], st.y - headH, widths[i], headH)
+      const cx = x - widths[i] / 2
+      c.h.forEach((ln, li) => {
+        const yy = st.y - (headH === 26 ? (li === 0 ? 10 : 21) : 11)
+        if (c.en && li === c.h.length - 1) {
+          const arW = arWidth(ln, 7, true), enW = helvB.widthOfTextAtSize(c.en, 6.5)
+          const total = arW + enW + 2
+          rtl(ln, cx + total / 2, yy, { size: 7, bold: true })
+          ltr(c.en, cx + total / 2 - arW - 2, yy, { size: 6.5, f: helvB, align: 'right' })
+        } else rtlC(ln, cx, yy, { size: 7, bold: true })
+      })
+      x -= widths[i]
     })
-    rtl(label, M - 2, st.y - 12, { size: 6.5, color: GREY }) // row label left margin
-    st.y -= 18
+    st.y -= headH
+    const drawRow = (vals) => {
+      ensure(15)
+      let cx = right
+      widths.forEach((w, ci) => {
+        rect(cx - w, st.y - 14, w, 14)
+        const v = vals[ci]
+        if (v != null && v !== '') {
+          if (/[؀-ۿ]/.test(String(v))) rtlC(String(v), cx - w / 2, st.y - 10, { size: 7.5 })
+          else ltr(String(v), cx - w / 2, st.y - 10, { size: 7.5, align: 'center', maxW: w - 6 })
+        }
+        cx -= w
+      })
+      st.y -= 14
+    }
+    rows.forEach(drawRow)
+    for (let i = rows.length; i < minRows; i++) drawRow([String(i + 1), ...widths.slice(1).map(() => '')])
+    st.y -= 8
+  }
+  // vals arrive right→left too: [no, then the rest matching the cols order]
+  const numbered = (list, mk) => list.map((it, i) => [String(i + 1), ...mk(it)])
+
+  const fmtQty = (q) => (q == null || q === '' ? '' : Number(q).toLocaleString('en-US'))
+  if (data.kind === 'ac') {
+    heading(AR.installedAc)
+    table(
+      [{ w: 46, h: [AR.itemNo] }, { h: [AR.itemDesc] }, { w: 60, h: [AR.qty] }, { w: 78, h: [AR.capacity], en: '(kBTU)' }, { w: 78, h: [AR.efficiency], en: '(SEER)' }],
+      numbered(data.installed, (it) => [it.description || '', fmtQty(it.qty), it.kbtu ?? '', it.seer ?? '']),
+    )
+    heading(AR.installedOther)
+    table(
+      [{ w: 46, h: [AR.itemNo] }, { h: [AR.itemDesc] }, { w: 120, h: [AR.qty] }],
+      numbered(data.installedOther, (it) => [it.description || '', fmtQty(it.qty)]),
+      { minRows: data.installedOther.length ? 0 : 5 },
+    )
+    bar(AR.removedBar)
+    heading(AR.removedAc)
+    table(
+      [{ w: 46, h: [AR.itemNo] }, { h: [AR.itemDesc] }, { w: 56, h: [AR.qty] }, { w: 72, h: [AR.capacity], en: '(kBTU)' }, { w: 72, h: [AR.efficiency], en: '(SEER)' }, { w: 64, h: [AR.returned] }],
+      numbered(data.removed, (it) => [it.description || '', fmtQty(it.qty), it.kbtu ?? '', it.seer ?? '', it.returned === false ? AR.no : AR.yes]),
+    )
+  } else {
+    heading(AR.installedLighting)
+    table(
+      [{ w: 46, h: [AR.itemNo] }, { h: [AR.itemDesc] }, { w: 70, h: [AR.qty] }, { w: 84, h: [AR.power] }],
+      numbered(data.installed, (it) => [it.description || '', fmtQty(it.qty), it.power || '']),
+    )
+    if (data.installedControls.length) {
+      heading(AR.installedControl)
+      table(
+        [{ w: 42, h: [AR.itemNo] }, { h: [AR.ctrlItem] }, { w: 56, h: [AR.qty] }, { w: 62, h: [AR.ctrlRefNo.slice(0, 12), AR.ctrlRefNo.slice(12)] }, { w: 110, h: [AR.ctrlRefDesc] }, { w: 84, h: [AR.ctrlTotal.slice(0, 15), AR.ctrlTotal.slice(15)] }],
+        numbered(data.installedControls, (it) => [it.description || '', fmtQty(it.qty), it.ctrlRefNo ?? '', it.ctrlRefDesc || '', fmtQty(it.ctrlTotal)]),
+      )
+    }
+    heading(AR.installedOther)
+    table(
+      [{ w: 46, h: [AR.itemNo] }, { h: [AR.itemDesc] }, { w: 120, h: [AR.qty] }],
+      numbered(data.installedOther, (it) => [it.description || '', fmtQty(it.qty)]),
+      { minRows: data.installedOther.length ? 0 : 4 },
+    )
+    bar(AR.removedBar)
+    heading(AR.removedLighting)
+    table(
+      [{ w: 46, h: [AR.itemNo] }, { h: [AR.itemDesc] }, { w: 64, h: [AR.qty] }, { w: 80, h: [AR.power] }, { w: 74, h: [AR.returned] }],
+      numbered(data.removed, (it) => [it.description || '', fmtQty(it.qty), it.power || '', it.returned === false ? AR.no : AR.yes]),
+    )
+  }
+
+  // ── operating hours ────────────────────────────────────────────────────────
+  bar(AR.opHours)
+  ensure(18); rect(M, st.y - 16, W, 16); rtl(AR.perLetter, right - 6, st.y - 12, { size: 8.5 }); st.y -= 24
+
+  // ── electricity company info: label cell right + wide value cell left ──────
+  bar(AR.elec)
+  const elecRows = [[AR.meter, data.meterNo], [AR.subscription, data.subscriptionNo], [AR.account, data.accountNo]]
+  const elecLabelW = 230
+  elecRows.forEach(([k, v]) => {
+    ensure(19)
+    rect(right - elecLabelW, st.y - 17, elecLabelW, 17)
+    rect(M + 40, st.y - 17, W - elecLabelW - 40, 17)
+    rtl(k, right - 6, st.y - 13, { size: 8.5 })
+    if (v) ltr(v, M + 46, st.y - 13, { size: 8.5 })
+    st.y -= 17
+  })
+  st.y -= 8
+
+  // ── attachments: 5 + 3 checkbox rows, box left of each Arabic label ───────
+  bar(AR.attachments)
+  const checked = new Set(data.attachmentsChecked || [])
+  const attRow = (items, y) => {
+    const cw = W / items.length
+    items.forEach(([id, label], i) => {
+      const cellR = right - i * cw
+      const labelW = arWidth(label, 8)
+      rtl(label, cellR - 8, y, { size: 8 })
+      rect(cellR - 8 - labelW - 16, y - 2, 9, 9)
+      if (checked.has(id)) rect(cellR - 8 - labelW - 15, y - 1, 7, 7, DARK, DARK)
+    })
+  }
+  ensure(44)
+  attRow([['specs', AR.specs], ['samples', AR.samples], ['drawings', AR.drawings], ['photos', AR.photos], ['boq', AR.boq]], st.y - 8)
+  attRow([['testReport', AR.testReport], ['inspReport', AR.inspReport], ['other', AR.other]], st.y - 28)
+  st.y -= 44
+
+  // ── approval grid: row-label column on the RIGHT edge, then ESCO | Tarshid
+  //    | Government-entity columns right→left (matches samples) ───────────────
+  bar(AR.approval)
+  const labelColW = 58
+  const orgColW = (W - labelColW) / 3
+  const sig = data.signatories
+  const gridCols = [ // right→left after the label column
+    { h: AR.contractor, name: sig.esco.name, role: sig.esco.designation },
+    { h: AR.tarshid, name: sig.tarshid.name, role: sig.tarshid.designation },
+    { h: AR.govRep, name: sig.beneficiary.name, role: sig.beneficiary.designation },
+  ]
+  const gridRows = [
+    { label: '', h: 20, key: 'head' },
+    { label: AR.name, h: 22, key: 'name' },
+    { label: AR.role, h: 26, key: 'role' },
+    { label: AR.signature, h: 34, key: 'sig' },
+    { label: AR.date, h: 20, key: 'date' },
+  ]
+  ensure(gridRows.reduce((s, r) => s + r.h, 0) + 4)
+  gridRows.forEach((row) => {
+    // label cell (right edge)
+    rect(right - labelColW, st.y - row.h, labelColW, row.h)
+    if (row.label) rtlC(row.label, right - labelColW / 2, st.y - row.h / 2 - 3, { size: 8.5, bold: true })
+    let cx = right - labelColW
+    gridCols.forEach((c) => {
+      rect(cx - orgColW, st.y - row.h, orgColW, row.h)
+      const cxm = cx - orgColW / 2
+      if (row.key === 'head') rtlC(c.h, cxm, st.y - row.h / 2 - 3, { size: 8, bold: true })
+      if (row.key === 'name' && c.name) {
+        if (/[؀-ۿ]/.test(c.name)) rtlC(c.name, cxm, st.y - row.h / 2 - 3, { size: 8.5 })
+        else ltr(c.name, cxm, st.y - row.h / 2 - 3, { size: 8.5, align: 'center', maxW: orgColW - 8 })
+      }
+      if (row.key === 'role' && c.role) {
+        if (/[؀-ۿ]/.test(c.role)) rtlC(c.role, cxm, st.y - row.h / 2 - 3, { size: 8 })
+        else ltr(c.role, cxm, st.y - row.h / 2 - 3, { size: 8, align: 'center', maxW: orgColW - 8 })
+      }
+      cx -= orgColW
+    })
+    st.y -= row.h
   })
 
-  footer()
+  // ── final pass: per-page border + logo + Page N of M ───────────────────────
+  const pages = pdf.getPages()
+  pages.forEach((pg, i) => {
+    pg.drawRectangle({ x: 16, y: 16, width: A4[0] - 32, height: A4[1] - 32, borderColor: rgb(LINE[0], LINE[1], LINE[2]), borderWidth: 0.8 })
+    if (logo) {
+      const lw = 96, lh = (logo.height / logo.width) * lw
+      pg.drawImage(logo, { x: A4[0] - M - lw, y: A4[1] - 30 - lh, width: lw, height: lh })
+    }
+    const t = `Page ${i + 1} of ${pages.length}`
+    pg.drawText(t, { x: A4[0] - M - helvB.widthOfTextAtSize(t, 9), y: 24, size: 9, font: helvB, color: rgb(DARK[0], DARK[1], DARK[2]) })
+  })
+
   return await pdf.save()
+}
+
+// Accept both the new 8S contract and the legacy CocWizard shape (the old UI
+// keeps calling generateDocPdf('coc', …) until Phase 4 replaces it).
+function normalizeCocData(d) {
+  const isLegacy = d.installed?.some?.((i) => i.esm_code !== undefined) || d.buildingIds !== undefined
+  if (!isLegacy) {
+    return {
+      referenceNo: d.referenceNo || '', date: d.date || '',
+      projectName: d.projectName || '', projectRefNo: d.projectRefNo || '',
+      contractDate: d.contractDate || '', endDate: d.endDate || '',
+      escoOrg: d.escoOrg || '', subcontractor: d.subcontractor || '',
+      buildingNos: d.buildingNos || '', entityName: d.entityName || '',
+      buildingType: d.buildingType || '', region: d.region || '', city: d.city || '', coords: d.coords || '',
+      descriptionLines: d.descriptionLines || [], kind: d.kind || 'lighting',
+      installed: d.installed || [], installedControls: d.installedControls || [], installedOther: d.installedOther || [],
+      removed: d.removed || [], meterNo: d.meterNo || '', subscriptionNo: d.subscriptionNo || '', accountNo: d.accountNo || '',
+      attachmentsChecked: d.attachmentsChecked || [],
+      signatories: {
+        esco: d.signatories?.esco || { name: '', designation: '' },
+        tarshid: d.signatories?.tarshid || { name: '', designation: '' },
+        beneficiary: d.signatories?.beneficiary || { name: '', designation: '' },
+      },
+    }
+  }
+  // legacy adapter: old item rows carry esm_code/capacity_value/total_quantity
+  const ins = d.installed || []
+  const mapItem = (it) => ({
+    description: [it.item_description, it.model_code].filter(Boolean).join(' '),
+    qty: it.total_quantity, power: it.capacity_value != null ? `${it.capacity_value}${it.capacity_unit || 'W'}` : '',
+    kbtu: it.capacity_value ?? '', seer: it.efficiency_value ?? '', returned: it.returned_to_facility !== false,
+  })
+  const isAc = /AC|تكييف/i.test(d.esmName || '') || (ins.length > 0 && ins.every((i) => i.esm_code === 'ESM3'))
+  return normalizeCocData({
+    referenceNo: d.referenceNo, date: d.date, projectName: d.projectName, projectRefNo: d.projectCode,
+    contractDate: d.contractDate, endDate: d.endDate, escoOrg: d.esco, subcontractor: d.subcontractor,
+    buildingNos: d.buildingIds, entityName: d.clientName, buildingType: d.buildingType,
+    region: d.region, city: d.city, coords: d.coords,
+    descriptionLines: [d.brief || d.workDescription || ''].filter(Boolean),
+    kind: isAc ? 'ac' : 'lighting',
+    installed: ins.filter((i) => (isAc ? true : i.esm_code === 'ESM1')).map(mapItem),
+    installedControls: isAc ? [] : ins.filter((i) => i.esm_code === 'ESM2').map((it) => ({ ...mapItem(it), ctrlRefNo: '', ctrlRefDesc: '', ctrlTotal: '' })),
+    installedOther: isAc ? [] : ins.filter((i) => !['ESM1', 'ESM2'].includes(i.esm_code)).map(mapItem),
+    removed: (d.removed || []).map(mapItem),
+    meterNo: d.meterNo, subscriptionNo: d.subscriptionNo, accountNo: d.accountNo,
+    attachmentsChecked: d.attachmentsChecked,
+    signatories: { esco: { name: '', designation: '' }, tarshid: { name: '', designation: '' }, beneficiary: { name: '', designation: '' } },
+  })
 }
