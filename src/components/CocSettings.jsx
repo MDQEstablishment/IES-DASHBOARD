@@ -1,5 +1,7 @@
 import { useLiveQuery } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../rbac'
+import { ROLE_FULL } from '../lib/constants'
 import { Drawer, Btn, inputStyle, Empty } from './ui'
 import { toast } from '../lib/toast'
 
@@ -7,6 +9,9 @@ import { toast } from '../lib/toast'
 // who signs, how certificates cover buildings, and who receives them per
 // building. The settings row itself is auto-created by CocHome on first open.
 export default function CocSettings({ open, projectId, buildings, onClose }) {
+  const { profile } = useAuth()
+  const meName = profile?.full_name || 'you'
+  const meRole = profile?.job_title || (profile?.role ? ROLE_FULL[profile.role] : '') || ''
   const { rows: settingsRows, refetch } = useLiveQuery('coc_project_settings',
     (q) => q.select('*').eq('project_id', projectId), [projectId])
   const settings = settingsRows[0]
@@ -37,14 +42,14 @@ export default function CocSettings({ open, projectId, buildings, onClose }) {
     else refetchAssigns()
   }
 
-  const sigBlock = (key, title, hint) => (
+  const sigBlock = (key, title, hint, ph = {}) => (
     <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 10 }}>
       <div style={{ fontWeight: 700, fontSize: 12.5 }}>{title}</div>
       {hint && <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 6 }}>{hint}</div>}
       <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-        <input lang="en" style={{ ...inputStyle, flex: 1.2, padding: '7px 10px', fontSize: 12.5 }} placeholder="Name"
+        <input lang="en" style={{ ...inputStyle, flex: 1.2, padding: '7px 10px', fontSize: 12.5 }} placeholder={ph.name || 'Name'}
           defaultValue={settings?.[key]?.name || ''} onBlur={(e) => saveSignatory(key, 'name', e.target.value.trim())} />
-        <input lang="en" style={{ ...inputStyle, flex: 1, padding: '7px 10px', fontSize: 12.5 }} placeholder="Job title"
+        <input lang="en" style={{ ...inputStyle, flex: 1, padding: '7px 10px', fontSize: 12.5 }} placeholder={ph.role || 'Job title'}
           defaultValue={settings?.[key]?.designation || ''} onBlur={(e) => saveSignatory(key, 'designation', e.target.value.trim())} />
       </div>
     </div>
@@ -68,7 +73,7 @@ export default function CocSettings({ open, projectId, buildings, onClose }) {
           </div>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '0 0 8px' }}>WHO SIGNS</div>
-          {sigBlock('esco_signatory', `IES signatory`, 'Printed in the "implementing company" column of every certificate.')}
+          {sigBlock('esco_signatory', 'IES signatory', `Defaults to whoever generates the certificate — leave blank to auto-use the engineer's own name and job title. Override only to force a fixed signatory.`, { name: `${meName} (auto)`, role: meRole ? `${meRole} (auto)` : 'Job title (auto)' })}
           {sigBlock('tarshid_spm', 'TARSHID project manager', 'Printed in the TARSHID column of every certificate.')}
           {sigBlock('tarshid_technical', 'TARSHID technical department', 'Kept on record; not printed on the certificate.')}
 
