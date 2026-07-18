@@ -82,7 +82,11 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
   const kind = coc.esm_codes.some((c) => AC_RE.test(esmName[c] || '')) && !coc.esm_codes.some((c) => /light/i.test(esmName[c] || ''))
     ? 'ac' : 'lighting'
 
-  const inScope = (it) => coc.esm_codes.includes(it.esm_code)
+  // Item is in scope when its ESM is on this certificate AND it is either
+  // project-wide (no building_id) or belongs to a building this COC covers —
+  // so a scattered per-building COC lists that building's own fixtures (8T-5).
+  const inScope = (it) => coc.esm_codes.includes(it.esm_code) &&
+    (!it.building_id || coveredBuildingIds.includes(it.building_id))
   const ins = ctx.installed.filter(inScope)
   const rem = ctx.removed.filter(inScope)
   const mapLight = (it) => ({
