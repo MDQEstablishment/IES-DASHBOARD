@@ -13,7 +13,7 @@ import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '..
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
 import MaterialDeliveries from '../components/MaterialDeliveries'
-import CocMatrix from '../components/CocMatrix'
+import CocHome from '../components/CocHome'
 import ProjectItems from '../components/ProjectItems'
 import ProjectWarehouse from '../components/ProjectWarehouse'
 
@@ -23,7 +23,6 @@ const DOC_COLS = [
   ['method_statement', 'Method Statement'],
   ['mir', 'MIR'],
   ['wir', 'WIR'],
-  ['coc', 'COC'],
 ]
 
 const TABS = [
@@ -32,7 +31,7 @@ const TABS = [
   ['items', 'Items & Replacements'],
   ['deliveries', 'Deliveries'],
   ['docs', 'Doc Tracker'],
-  ['coc', 'COC Matrix'],
+  ['coc', 'COCs'],
   ['map', 'Map'],
   ['warehouse', 'Project Warehouse'],
 ]
@@ -72,36 +71,22 @@ export default function ProjectDetail() {
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) =>
     q.select('id,project_id,custom_name,ordinal,esm:esms(id,code,name)').eq('project_id', id).order('ordinal'), [id])
-  // Single source of truth for the ESM Documentation Tracker + the COC click-through:
-  // all project_documents for this project (matrix uses project-level esm-tagged rows).
+  // Single source of truth for the ESM Documentation Tracker: all
+  // project_documents for this project (COCs live in their own `cocs` table
+  // now — see the COCs tab).
   const { rows: pdocs, refetch: refetchPdocs } = useLiveQuery('project_documents', (q) =>
-    q.select('id,esm_id,building_id,doc_type,status,name,reference_no,revision,storage_path,version,submitted_at,client_reviewer_name,client_response_date').eq('project_id', id), [id])
-  // COC↔ESM coverage so the COC cell's attachment count resolves bundle COCs.
-  const { rows: cocLinks, refetch: refetchCocLinks } = useLiveQuery('coc_esms', (q) =>
-    q.select('coc_id,esm_code,coc:project_documents!inner(project_id)').eq('coc.project_id', id), [id])
+    q.select('id,esm_id,building_id,doc_type,status,name,reference_no,revision,storage_path,version,submitted_at,client_reviewer_name,client_response_date').eq('project_id', id).neq('doc_type', 'coc'), [id])
   // Smart-matrix counts by cardinality (see migration 0046 view).
   const { rows: docProg, refetch: refetchProg } = useLiveQuery('v_project_doc_progress', (q) => q.select('*').eq('project_id', id), [id])
-  const refetchDocs = () => { refetchPdocs(); refetchProg(); refetchCocLinks() }
-  const cocIdsByEsm = {}
-  cocLinks.forEach((l) => { (cocIdsByEsm[l.esm_code] = cocIdsByEsm[l.esm_code] || new Set()).add(l.coc_id) })
-  const cellDocs = (row, k) => k === 'coc'
-    ? pdocs.filter((d) => d.doc_type === 'coc' && cocIdsByEsm[row.code]?.has(d.id))
-    : pdocs.filter((d) => d.esm_id === row.esmId && d.doc_type === k)
+  const refetchDocs = () => { refetchPdocs(); refetchProg() }
+  const cellDocs = (row, k) => pdocs.filter((d) => d.esm_id === row.esmId && d.doc_type === k)
   const [uploadReq, setUploadReq] = useState(null)
   const [drill, setDrill] = useState(null) // { esmId, esmCode, docType } for multi-kind drilldown
-  const cocByB = {}
-  pdocs.forEach((d) => { if (d.doc_type === 'coc' && d.building_id && !cocByB[d.building_id]) cocByB[d.building_id] = d })
 
   const openFile = async (d) => {
     if (!d?.storage_path) { toast('No file attached to this document', 'err'); return }
     const url = await signedUrlFor('project-docs', d.storage_path)
     if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the document", 'err')
-  }
-  const openCoc = async (b) => {
-    const doc = cocByB[b.id]
-    if (!doc) { setTab('docs'); toast('No COC document recorded yet — upload it in Doc Tracker'); return }
-    if (!doc.storage_path) { setTab('docs'); toast('COC recorded but no file attached — see Doc Tracker'); return }
-    openFile(doc)
   }
 
   if (loading && !project) return <Loading />
@@ -336,9 +321,7 @@ export default function ProjectDetail() {
                         <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, width: 34, textAlign: 'right' }}>{prog}%</span>
                       </div></td>
                       <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
-                        {b.approval_date
-                          ? <button title="Open the COC approval document" onClick={() => openCoc(b)} style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}>{fmtDate(b.approval_date)}</button>
-                          : <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>—</div>}
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: b.approval_date ? 'var(--text)' : 'var(--text-3)' }}>{b.approval_date ? fmtDate(b.approval_date) : '—'}</div>
                         <Chip status={b.approval_status || 'awaiting'} />
                       </td>
                       <td style={{ padding: '11px 8px' }} onClick={(e) => canManage && e.stopPropagation()}>
@@ -479,10 +462,9 @@ export default function ProjectDetail() {
         </>
       )}
 
-      {/* COC MATRIX tab — Buildings × ESMs */}
+      {/* COCs tab — completion certificates pipeline (8S) */}
       {tab === 'coc' && (
-        <CocMatrix projectId={id} project={project} buildings={buildings} projectEsms={projectEsms} pdocs={pdocs} canManage={canManage}
-          onChanged={refetchDocs} onUpload={(req) => { setTab('docs'); setUploadReq({ ...req, key: Date.now() }) }} onOpenFile={openFile} />
+        <CocHome projectId={id} project={project} buildings={buildings} projectEsms={projectEsms} canManage={canManage} />
       )}
 
       {/* MAP tab — real OpenStreetMap markers */}

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import { compressImage } from '../lib/image'
 import { toast } from '../lib/toast'
-import { buildInspectionPdf, commitInspectionDoc } from './CocWizard'
+import { buildInspectionPdf, commitInspectionDoc } from '../lib/inspectionDocs'
 
 // Multi-item MIR / WIR generator with a LIVE side-by-side PDF preview: the iframe
 // re-renders (debounced) as the user edits any field/item/photo. Project-level

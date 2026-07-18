@@ -9,6 +9,36 @@ import { generateDocPdf } from './docPdf'
 const AC_RE = /\ba\/?c\b|air.?cond|cool|hvac/i
 const CTRL_RE = /control|sensor/i
 
+// Display name for a certificate's scope: AC if every covered ESM is an AC
+// measure, Lighting otherwise. esmName maps code -> display name.
+export const kindLabel = (esmCodes, esmName) =>
+  (esmCodes || []).length && (esmCodes || []).every((c) => AC_RE.test(esmName[c] || '')) ? 'AC' : 'Lighting'
+
+// Owner-final business model: every non-AC ESM shares ONE lighting certificate;
+// every AC ESM gets its own. Derive that pairing from the project's ESM names.
+export function defaultEsmGroupings(esmOpts) {
+  // esmOpts: [{ code, name }]
+  const lighting = esmOpts.filter((e) => !AC_RE.test(e.name || '')).map((e) => e.code)
+  const groups = lighting.length > 1 ? [lighting] : []
+  esmOpts.filter((e) => AC_RE.test(e.name || '')).forEach((e) => groups.push([e.code]))
+  if (lighting.length === 1) groups.push(lighting)
+  return groups
+}
+
+// First-open auto-upsert: make sure coc_project_settings exists with the fixed
+// ESM pairing, so the plan preview RPC groups certificates correctly.
+export async function ensureCocSettings(projectId, esmOpts) {
+  const { data } = await supabase.from('coc_project_settings').select('project_id,esm_groupings').eq('project_id', projectId).maybeSingle()
+  if (data) {
+    if ((data.esm_groupings || []).length === 0 && esmOpts.length) {
+      await supabase.from('coc_project_settings').update({ esm_groupings: defaultEsmGroupings(esmOpts) }).eq('project_id', projectId)
+    }
+    return
+  }
+  await supabase.from('coc_project_settings').upsert(
+    { project_id: projectId, esm_groupings: defaultEsmGroupings(esmOpts) }, { onConflict: 'project_id' })
+}
+
 // One round trip for everything the PDF needs for a whole project — callers
 // generating in bulk reuse the same context across COCs.
 export async function fetchCocContext(projectId) {
@@ -104,7 +134,8 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
   }
 }
 
-// Render + upload + mark generated. Returns { ok, path } or { error }.
+// Render + upload + mark generated. Returns { ok, path, bytes, filename } or
+// { error } — bytes/filename let callers offer a client-side ZIP download.
 export async function generateAndUploadCocPdf(coc, coveredBuildingIds, ctx, userId) {
   const data = assembleCocPdfData(coc, coveredBuildingIds, ctx)
   const bytes = await generateDocPdf('coc', data)
@@ -116,5 +147,15 @@ export async function generateAndUploadCocPdf(coc, coveredBuildingIds, ctx, user
   const { data: res, error: rpcErr } = await supabase.rpc('mark_coc_generated', { p_coc_id: coc.id, p_pdf_path: path })
   if (rpcErr) return { error: rpcErr }
   if (!res?.ok) return { error: { message: res?.error || 'mark_coc_generated failed' } }
-  return { ok: true, path }
+  return { ok: true, path, bytes, filename }
+}
+
+// Preview a plan row (no COC row exists yet): fake a draft coc from the row.
+export async function renderCocPreview(row, ctx, code = 'PREVIEW') {
+  const coc = {
+    id: null, project_id: ctx.project?.id, code, reference_no: code,
+    revision: 1, esm_codes: row.esm_codes || [],
+  }
+  const data = assembleCocPdfData(coc, row.building_ids || [], ctx)
+  return await generateDocPdf('coc', data)
 }
