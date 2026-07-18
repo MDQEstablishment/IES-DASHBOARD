@@ -3,9 +3,9 @@
 //  • COC        — bilingual "محضر إكتمال أعمال التركيب" (Arabic labels, English values).
 // Faithful to the official templates: embedded Tarshid logo, pale-blue inspection
 // bars (#B9CCEA), teal COC bars (#6ECCCE), official field set, attachments and
-// signature blocks. Latin text uses Helvetica StandardFonts; Arabic uses the
-// embedded Amiri TTF (subset:false — the Sprint-5 garbage came from subsetting)
-// with arabic-reshaper for contextual joining + RTL ordering.
+// signature blocks. Latin text uses Helvetica StandardFonts; Arabic is shaped
+// by HarfBuzz WASM (harfbuzzjs) with the Amiri face and painted as vector
+// glyph paths (8S P3.5 v2).
 
 const A4 = [595.28, 841.89]
 const M = 34
@@ -66,6 +66,34 @@ async function loadLogo() {
   return _logo
 }
 
+// HarfBuzz font objects are created once per Amiri face and cached (the wasm
+// module exposes no destroy API; loadAmiri caches its bytes, so this runs once).
+let _hbFonts = null
+async function loadHbFonts(amiri) {
+  if (_hbFonts) return _hbFonts
+  const hb = await import('harfbuzzjs')
+  const toAB = (b) => (b instanceof ArrayBuffer ? b : b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength))
+  const mk = (bytes) => {
+    const face = new hb.Face(new hb.Blob(toAB(bytes)))
+    return { font: new hb.Font(face), upem: face.upem }
+  }
+  _hbFonts = { reg: mk(amiri.reg), bold: mk(amiri.bold) }
+  return _hbFonts
+}
+
+// Parse hb draw-API SVG path output: absolute M/L/Q/Z (C guarded for safety).
+function parseHbPath(d) {
+  const out = []
+  const re = /([MLQCZ])((?:[-\d.,\s]+)?)/g
+  let m
+  while ((m = re.exec(d)) !== null) {
+    const t = m[1]
+    const a = (m[2] || '').trim().split(/[\s,]+/).filter(Boolean).map(Number)
+    out.push({ t, a })
+  }
+  return out
+}
+
 export async function generateDocPdf(kind, data) {
   let photos = []
   if (Array.isArray(data.photoFiles) && data.photoFiles.length) {
@@ -95,17 +123,12 @@ function primitives(pdf, rgb, fonts) {
     const xx = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x
     st.page.drawText(str, { x: xx, y, size, font: f, color: col(color) })
   }
-  // Arabic (8S P3.5): delegate to a real OpenType shaper (fonts.arabicDraw,
-  // supplied by renderCoc via fontkit) that lays out joined glyphs + bidi and
-  // paints them as vector paths, ending right-aligned at xRight. Legacy
-  // reshape+reverse via a pdf-lib font is the fallback if no shaper is given.
+  // Arabic (8S P3.5 v2): delegate to the HarfBuzz-backed shaper supplied by
+  // renderCoc (fonts.arabicDraw) — real GSUB+GPOS joining + RTL layout, drawn
+  // as vector paths ending right-aligned at xRight. No-op without a shaper
+  // (renderInspection is English-only).
   const rtl = (s, xRight, y, { size = 9, bold = false, color = DARK } = {}) => {
-    if (fonts.arabicDraw) { fonts.arabicDraw(st.page, String(s ?? ''), xRight, y, size, bold, color); return }
-    if (!fonts.ar) return
-    const f = bold ? fonts.arB : fonts.ar
-    const t = fonts.reshape(String(s ?? '')).split('').reverse().join('')
-    const w = f.widthOfTextAtSize(t, size)
-    st.page.drawText(t, { x: xRight - w, y, size, font: f, color: col(color) })
+    if (fonts.arabicDraw) fonts.arabicDraw(st.page, String(s ?? ''), xRight, y, size, bold, color)
   }
   return { st, col, W, newPage, rect, ltr, rtl }
 }
@@ -243,58 +266,66 @@ export async function renderCoc(rawData, assets) {
   const helvB = await pdf.embedFont(StandardFonts.HelveticaBold)
   const logo = assets.logo ? await pdf.embedPng(assets.logo).catch(() => null) : null
 
-  // 8S P3.5 — real Arabic shaping. pdf-lib does NOT apply OpenType shaping or
-  // bidi, so drawing Amiri code points gave disconnected, wrongly-ordered
-  // letters. Instead we shape each Arabic run with fontkit (@pdf-lib/fontkit,
-  // already bundled, pure JS, no WASM): full GSUB+GPOS joining, then paint the
-  // resulting glyphs as vector paths. bidi-js mirrors paired brackets inside
-  // RTL runs. No Amiri font is embedded (glyphs are outlines) — smaller PDFs.
-  const fontkit = (await import('@pdf-lib/fontkit')).default
-  const bidi = ((await import('bidi-js')).default)()
-  const fkReg = fontkit.create(new Uint8Array(assets.amiri.reg))
-  const fkBold = fontkit.create(new Uint8Array(assets.amiri.bold))
-  const MIRROR = { '(': ')', ')': '(', '[': ']', ']': '[', '{': '}', '}': '{', '<': '>', '>': '<' }
-  const mirrorRtl = (str) => {
-    if (!/[()[\]{}<>]/.test(str)) return str
-    const lv = bidi.getEmbeddingLevels(str, 'rtl').levels
-    return [...str].map((ch, i) => (lv[i] % 2 === 1 && MIRROR[ch]) ? MIRROR[ch] : ch).join('')
+  // 8S P3.5 v2 — REAL Arabic shaping via HarfBuzz WASM (harfbuzzjs). This is
+  // the same shaping engine Chromium/Firefox use: full GSUB+GPOS joining,
+  // ligatures, mark positioning and RTL bracket mirroring, done natively by
+  // HarfBuzz itself. Each Arabic run is shaped to glyph ids + positions (in
+  // visual order, leftmost-first) and painted as vector paths — no Arabic font
+  // is embedded, no reshaper/bidi JS approximations. The wasm ships as a
+  // bundled same-origin asset (Vite rewrites new URL(...,import.meta.url)),
+  // so generation works offline in the built app.
+  const { reg: hbReg, bold: hbBold } = await loadHbFonts(assets.amiri)
+  const hb = await import('harfbuzzjs')
+  const shapeArabic = (str, bold) => {
+    const { font, upem } = bold ? hbBold : hbReg
+    const buf = new hb.Buffer()
+    buf.addText(String(str ?? ''))
+    buf.setDirection(hb.Direction.RTL)
+    buf.setScript('Arab')
+    buf.setLanguage('ar')
+    hb.shape(font, buf)
+    return { glyphs: buf.getGlyphInfosAndPositions(), font, upem }
   }
-  const shapeRun = (str, bold) => (bold ? fkBold : fkReg).layout(mirrorRtl(String(str ?? '')))
   const arabicWidth = (str, size, bold = false) => {
-    const f = bold ? fkBold : fkReg
-    return shapeRun(str, bold).positions.reduce((a, p) => a + p.xAdvance, 0) * size / f.unitsPerEm
+    const { glyphs, upem } = shapeArabic(str, bold)
+    return glyphs.reduce((a, g) => a + g.xAdvance, 0) * size / upem
   }
-  // Draw a shaped Arabic string as filled vector glyph paths, right-aligned to
-  // xRight at baseline y. TrueType quadratics are converted to cubics.
+  // Draw a HarfBuzz-shaped run as filled vector glyph paths, right-aligned to
+  // xRight at baseline y. Paths come from hb draw API (absolute M/L/Q/Z, font
+  // units, y-up); quadratics are converted to cubics for PDF.
+  const glyphPathCache = new Map()
   const arabicDraw = (page, str, xRight, y, size, bold, color) => {
-    const f = bold ? fkBold : fkReg
-    const run = shapeRun(str, bold)
-    const s = size / f.unitsPerEm
-    const total = run.positions.reduce((a, p) => a + p.xAdvance, 0) * s
+    const { glyphs, font, upem } = shapeArabic(str, bold)
+    const s = size / upem
+    const total = glyphs.reduce((a, g) => a + g.xAdvance, 0) * s
     let penX = xRight - total
     const fillCol = setFillingColor(rgb(color[0], color[1], color[2]))
-    run.glyphs.forEach((g, i) => {
-      const pos = run.positions[i]
-      const ox = penX + pos.xOffset * s, oy = y + pos.yOffset * s
-      const ops = [pushGraphicsState(), fillCol]
-      let cx = 0, cy = 0 // current point (font units) for quad→cubic
-      for (const c of g.path.commands) {
-        const a = c.args
-        if (c.command === 'moveTo') { cx = a[0]; cy = a[1]; ops.push(moveTo(ox + cx * s, oy + cy * s)) }
-        else if (c.command === 'lineTo') { cx = a[0]; cy = a[1]; ops.push(lineTo(ox + cx * s, oy + cy * s)) }
-        else if (c.command === 'bezierCurveTo') { ops.push(appendBezierCurve(ox + a[0] * s, oy + a[1] * s, ox + a[2] * s, oy + a[3] * s, ox + a[4] * s, oy + a[5] * s)); cx = a[4]; cy = a[5] }
-        else if (c.command === 'quadraticCurveTo') {
-          const qx = a[0], qy = a[1], ex = a[2], ey = a[3]
-          const c1x = cx + 2 / 3 * (qx - cx), c1y = cy + 2 / 3 * (qy - cy)
-          const c2x = ex + 2 / 3 * (qx - ex), c2y = ey + 2 / 3 * (qy - ey)
-          ops.push(appendBezierCurve(ox + c1x * s, oy + c1y * s, ox + c2x * s, oy + c2y * s, ox + ex * s, oy + ey * s))
-          cx = ex; cy = ey
-        } else if (c.command === 'closePath') ops.push(closePath())
+    for (const g of glyphs) {
+      const key = (bold ? 'b' : 'r') + g.codepoint
+      let cmds = glyphPathCache.get(key)
+      if (!cmds) { cmds = parseHbPath(font.glyphToPath(g.codepoint)); glyphPathCache.set(key, cmds) }
+      const ox = penX + g.xOffset * s, oy = y + g.yOffset * s
+      if (cmds.length) {
+        const ops = [pushGraphicsState(), fillCol]
+        let cx = 0, cy = 0
+        for (const c of cmds) {
+          const a = c.a
+          if (c.t === 'M') { cx = a[0]; cy = a[1]; ops.push(moveTo(ox + cx * s, oy + cy * s)) }
+          else if (c.t === 'L') { cx = a[0]; cy = a[1]; ops.push(lineTo(ox + cx * s, oy + cy * s)) }
+          else if (c.t === 'Q') {
+            const [qx, qy, ex, ey] = a
+            const c1x = cx + 2 / 3 * (qx - cx), c1y = cy + 2 / 3 * (qy - cy)
+            const c2x = ex + 2 / 3 * (qx - ex), c2y = ey + 2 / 3 * (qy - ey)
+            ops.push(appendBezierCurve(ox + c1x * s, oy + c1y * s, ox + c2x * s, oy + c2y * s, ox + ex * s, oy + ey * s))
+            cx = ex; cy = ey
+          } else if (c.t === 'C') { ops.push(appendBezierCurve(ox + a[0] * s, oy + a[1] * s, ox + a[2] * s, oy + a[3] * s, ox + a[4] * s, oy + a[5] * s)); cx = a[4]; cy = a[5] }
+          else if (c.t === 'Z') ops.push(closePath())
+        }
+        ops.push(fill(), popGraphicsState())
+        page.pushOperators(...ops)
       }
-      ops.push(fill(), popGraphicsState())
-      page.pushOperators(...ops)
-      penX += pos.xAdvance * s
-    })
+      penX += g.xAdvance * s
+    }
   }
 
   const P = primitives(pdf, rgb, { helv, helvB, arabicDraw })
@@ -333,8 +364,11 @@ export async function renderCoc(rawData, assets) {
   const heading = (label) => { ensure(52); rtl(label, right - 2, st.y - 4, { size: 9, bold: true }); st.y -= 18 }
 
   page()
-  // title (page 1 only)
-  if (data.referenceNo) { ltr(`Ref No: ${data.referenceNo}`, M, st.y + 26, { size: 7.5, color: GREY }) }
+  // title (page 1 only). Ref No sits at the far LEFT of the title line, well
+  // below the logo band (owner: it previously crowded the top-right logo zone).
+  // old: ltr(..., M, st.y + 26)  → y ≈ 772pt, inside the logo's 768–812pt band
+  // new: ltr(..., M, st.y - 4)   → y ≈ 742pt, left margin, 400pt clear of logo
+  if (data.referenceNo) { ltr(`Ref No: ${data.referenceNo}`, M, st.y - 4, { size: 7.5, color: GREY }) }
   rtlC(AR.title, A4[0] / 2, st.y - 4, { size: 14.5, bold: true })
   st.y -= 26
 

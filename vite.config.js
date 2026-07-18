@@ -6,5 +6,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/IES-DASHBOARD/',
-  build: { outDir: 'dist', sourcemap: true },
+  // target es2022: harfbuzzjs self-initializes its WASM via top-level await,
+  // which the default es2020 target rejects at build time.
+  build: { outDir: 'dist', sourcemap: true, target: 'es2022' },
 })
