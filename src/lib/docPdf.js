@@ -433,23 +433,28 @@ export async function renderCoc(rawData, assets) {
     const flexW = W - cols.reduce((s, c) => s + (c.w || 0), 0)
     const widths = cols.map((c) => c.w || flexW)
     const headH = cols.some((c) => c.h.length > 1) ? 26 : 16
-    ensure(headH + 16)
-    let x = right
-    cols.forEach((c, i) => {
-      rect(x - widths[i], st.y - headH, widths[i], headH)
-      const cx = x - widths[i] / 2
-      c.h.forEach((ln, li) => {
-        const yy = st.y - (headH === 26 ? (li === 0 ? 10 : 21) : 11)
-        if (c.en && li === c.h.length - 1) {
-          const arW = arWidth(ln, 7, true), enW = helvB.widthOfTextAtSize(c.en, 6.5)
-          const total = arW + enW + 2
-          rtl(ln, cx + total / 2, yy, { size: 7, bold: true })
-          ltr(c.en, cx + total / 2 - arW - 2, yy, { size: 6.5, f: helvB, align: 'right' })
-        } else rtlC(ln, cx, yy, { size: 7, bold: true })
+    // Column-header band. Redrawn at the top of every page a table spills onto,
+    // so a long item list stays readable across pages (8T item 3).
+    const drawHeader = () => {
+      let x = right
+      cols.forEach((c, i) => {
+        rect(x - widths[i], st.y - headH, widths[i], headH)
+        const cx = x - widths[i] / 2
+        c.h.forEach((ln, li) => {
+          const yy = st.y - (headH === 26 ? (li === 0 ? 10 : 21) : 11)
+          if (c.en && li === c.h.length - 1) {
+            const arW = arWidth(ln, 7, true), enW = helvB.widthOfTextAtSize(c.en, 6.5)
+            const total = arW + enW + 2
+            rtl(ln, cx + total / 2, yy, { size: 7, bold: true })
+            ltr(c.en, cx + total / 2 - arW - 2, yy, { size: 6.5, f: helvB, align: 'right' })
+          } else rtlC(ln, cx, yy, { size: 7, bold: true })
+        })
+        x -= widths[i]
       })
-      x -= widths[i]
-    })
-    st.y -= headH
+      st.y -= headH
+    }
+    ensure(headH + 16)
+    drawHeader()
     // Body cells wrap long English text (owner-approved); the row grows to the
     // tallest cell. Arabic values (نعم/لا) stay single-line.
     const drawRow = (vals) => {
@@ -460,7 +465,9 @@ export async function renderCoc(rawData, assets) {
       })
       const nLines = Math.max(1, ...cellLines.map((l) => l.length))
       const rh = nLines * 10 + 4
-      ensure(rh + 1)
+      // Break BEFORE the row and repeat the header on the fresh page — never
+      // split a table row across a page edge, never continue headerless.
+      if (st.y - rh < M + 30) { page(); ensure(headH + 16); drawHeader() }
       let cx = right
       widths.forEach((w, ci) => {
         rect(cx - w, st.y - rh, w, rh)
@@ -566,7 +573,6 @@ export async function renderCoc(rawData, assets) {
 
   // ── approval grid: row-label column on the RIGHT edge, then ESCO | Tarshid
   //    | Government-entity columns right→left (matches samples) ───────────────
-  bar(AR.approval)
   const labelColW = 58
   const orgColW = (W - labelColW) / 3
   const sig = data.signatories
@@ -589,7 +595,11 @@ export async function renderCoc(rawData, assets) {
     { label: AR.signature, h: 34, key: 'sig' },
     { label: AR.date, h: 20, key: 'date' },
   ]
-  ensure(gridRows.reduce((s, r) => s + r.h, 0) + 4)
+  // 8T item 4 — keep the الاعتماد header and its whole signature grid on one
+  // page: reserve the teal bar (~25pt) + full grid height BEFORE drawing the
+  // bar, so the header never orphans at a page bottom while the table breaks.
+  ensure(25 + gridRows.reduce((s, r) => s + r.h, 0) + 4)
+  bar(AR.approval)
   gridRows.forEach((row) => {
     // label cell (right edge)
     rect(right - labelColW, st.y - row.h, labelColW, row.h)
@@ -610,6 +620,9 @@ export async function renderCoc(rawData, assets) {
       }
       if (row.key === 'name') drawWrapped(nameLines[gi], 8.5, 11)
       if (row.key === 'role') drawWrapped(roleLines[gi], 8, 10)
+      // 8T item 2 — the COC signature date comes from the project, printed under
+      // every signatory column (never typed on the certificate itself).
+      if (row.key === 'date' && data.signatureDate) ltr(data.signatureDate, cxm, st.y - row.h / 2 - 3, { size: 8, align: 'center' })
       cx -= orgColW
     })
     st.y -= row.h
@@ -633,7 +646,7 @@ export async function renderCoc(rawData, assets) {
 // Default-fill the 8S COC data contract (assembled by src/lib/cocPdf.js).
 function normalizeCocData(d) {
   return {
-    referenceNo: d.referenceNo || '', date: d.date || '',
+    referenceNo: d.referenceNo || '', date: d.date || '', signatureDate: d.signatureDate || '',
     projectName: d.projectName || '', projectRefNo: d.projectRefNo || '',
     contractDate: d.contractDate || '', endDate: d.endDate || '',
     escoOrg: d.escoOrg || '', subcontractor: d.subcontractor || '',

@@ -22,6 +22,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const [f, setF] = useState({
     code: init('code'), name: init('name'), client: init('client'), region: init('region'),
     status: init('status', 'draft'), start_date: init('start_date'), end_date: init('end_date'),
+    contract_sign_date: init('contract_sign_date'), works_end_date: init('works_end_date'), coc_signature_date: init('coc_signature_date'),
     coc_layout: init('coc_layout', 'concatenated'),
     total_weeks: init('total_weeks'), pm_id: init('pm_id'), engineer_id: init('engineer_id'),
     location_address: init('location_address'), location_lat: init('location_lat'), location_lng: init('location_lng'),
@@ -53,6 +54,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     const payload = {
       code: f.code.trim(), name: f.name.trim(), client: f.client || null, region: f.region || null,
       status: f.status, start_date: f.start_date || null, end_date: f.end_date || null,
+      contract_sign_date: f.contract_sign_date || null, works_end_date: f.works_end_date || null, coc_signature_date: f.coc_signature_date || null,
       coc_layout: f.coc_layout || 'concatenated',
       total_weeks: num(f.total_weeks), pm_id: f.pm_id || null, engineer_id: f.engineer_id || null,
       location_address: f.location_address || null, location_lat: num(f.location_lat), location_lng: num(f.location_lng),
@@ -176,6 +178,14 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Start date"><DateInput style={inputStyle} value={f.start_date || ''} onChange={(e) => set('start_date', e.target.value)} /></Field>
         <Field label="End date"><DateInput style={inputStyle} value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
         <Field label="Total weeks"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="1" value={f.total_weeks || ''} onChange={(e) => set('total_weeks', e.target.value)} /></Field>
+      </Row>
+      {/* 8T item 2 — these three dates are the single source of truth for the
+          dates printed on generated COCs (contract, works completion, signature). */}
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 -4px' }}>CERTIFICATE DATES</div>
+      <Row>
+        <Field label="Contract signature date"><DateInput style={inputStyle} value={f.contract_sign_date || ''} onChange={(e) => set('contract_sign_date', e.target.value)} /></Field>
+        <Field label="Works completion date"><DateInput style={inputStyle} value={f.works_end_date || ''} onChange={(e) => set('works_end_date', e.target.value)} /></Field>
+        <Field label="COC signature date"><DateInput style={inputStyle} value={f.coc_signature_date || ''} onChange={(e) => set('coc_signature_date', e.target.value)} /></Field>
       </Row>
       <Row>
         <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
