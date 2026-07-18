@@ -10,13 +10,14 @@ import InspectionFormModal from './InspectionFormModal'
 import FileDropZone from './FileDropZone'
 
 // One vocabulary, shared with the ESM Documentation Tracker matrix.
+// (COCs moved to their own pipeline + `cocs` table in 8S — see the COCs tab.)
 export const DOC_TYPES = [
   ['material_submittal', 'Material Submittal'], ['method_statement', 'Method Statement'],
-  ['mir', 'MIR'], ['wir', 'WIR'], ['coc', 'COC'], ['other', 'Other…'],
+  ['mir', 'MIR'], ['wir', 'WIR'], ['other', 'Other…'],
 ]
 export const TYPE_LABEL = Object.fromEntries(DOC_TYPES)
 // Multi-per-ESM kinds (per delivery / per building) vs single-per-ESM kinds.
-export const MULTI_KINDS = new Set(['mir', 'wir', 'coc'])
+export const MULTI_KINDS = new Set(['mir', 'wir'])
 
 // Client-court status vocabulary: [label, color, bg, tooltip].
 export const DOC_STATUS = {
@@ -88,7 +89,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
   // resolve esm/building codes via separate maps, exactly like the Doc Tracker.
   const { rows, refetch } = useLiveQuery('project_documents',
     (q) => {
-      let b = q.select('*').eq('project_id', projectId)
+      let b = q.select('*').eq('project_id', projectId).neq('doc_type', 'coc')
       if (buildingId) b = b.eq('building_id', buildingId)
       return b.order('updated_at', { ascending: false, nullsFirst: false })
     }, [projectId, buildingId])
@@ -125,7 +126,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
         <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{headerExtra}{canWrite && <Btn icon="upload" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => { setPrefill(null); setUp(true) }}>Upload document</Btn>}</div>
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Every submittal for this project — MIR, WIR, COC, material submittals and method statements. Approved first, then most recently updated. Open any file directly.</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Every submittal for this project — MIR, WIR, material submittals and method statements. Approved first, then most recently updated. Open any file directly. Completion certificates live in the COCs tab.</div>
       {sortedRows.length === 0 ? <Empty icon="doc">No documents submitted yet.</Empty> : (
         <div className="ies-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 860 }}>
@@ -365,7 +366,7 @@ function UploadModal({ projectId, buildingId, esmOpts, bldgOpts, rows, prefill, 
   return (
     <Modal open width={560} title={replaceOf ? `Replace document · ${replaceOf.reference_no || ''} R${(replaceOf.rev_no || 0) + 1}` : 'Upload / submit document'} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !name.trim() || !esmId}>{busy ? 'Uploading…' : 'Submit'}</Btn></>}>
-      <Field label="Document name"><input lang="en" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. COC — Police HQ ESM1" /></Field>
+      <Field label="Document name"><input lang="en" style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Method Statement — ESM1" /></Field>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}><Field label="ESM">
           <select style={inputStyle} value={esmId} onChange={(e) => setEsmId(e.target.value)}>

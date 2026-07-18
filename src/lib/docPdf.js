@@ -630,50 +630,23 @@ export async function renderCoc(rawData, assets) {
   return await pdf.save()
 }
 
-// Accept both the new 8S contract and the legacy CocWizard shape (the old UI
-// keeps calling generateDocPdf('coc', …) until Phase 4 replaces it).
+// Default-fill the 8S COC data contract (assembled by src/lib/cocPdf.js).
 function normalizeCocData(d) {
-  const isLegacy = d.installed?.some?.((i) => i.esm_code !== undefined) || d.buildingIds !== undefined
-  if (!isLegacy) {
-    return {
-      referenceNo: d.referenceNo || '', date: d.date || '',
-      projectName: d.projectName || '', projectRefNo: d.projectRefNo || '',
-      contractDate: d.contractDate || '', endDate: d.endDate || '',
-      escoOrg: d.escoOrg || '', subcontractor: d.subcontractor || '',
-      buildingNos: d.buildingNos || '', entityName: d.entityName || '',
-      buildingType: d.buildingType || '', region: d.region || '', city: d.city || '', coords: d.coords || '',
-      descriptionLines: d.descriptionLines || [], kind: d.kind || 'lighting',
-      installed: d.installed || [], installedControls: d.installedControls || [], installedOther: d.installedOther || [],
-      removed: d.removed || [], meterNo: d.meterNo || '', subscriptionNo: d.subscriptionNo || '', accountNo: d.accountNo || '',
-      attachmentsChecked: d.attachmentsChecked || [],
-      signatories: {
-        esco: d.signatories?.esco || { name: '', designation: '' },
-        tarshid: d.signatories?.tarshid || { name: '', designation: '' },
-        beneficiary: d.signatories?.beneficiary || { name: '', designation: '' },
-      },
-    }
+  return {
+    referenceNo: d.referenceNo || '', date: d.date || '',
+    projectName: d.projectName || '', projectRefNo: d.projectRefNo || '',
+    contractDate: d.contractDate || '', endDate: d.endDate || '',
+    escoOrg: d.escoOrg || '', subcontractor: d.subcontractor || '',
+    buildingNos: d.buildingNos || '', entityName: d.entityName || '',
+    buildingType: d.buildingType || '', region: d.region || '', city: d.city || '', coords: d.coords || '',
+    descriptionLines: d.descriptionLines || [], kind: d.kind || 'lighting',
+    installed: d.installed || [], installedControls: d.installedControls || [], installedOther: d.installedOther || [],
+    removed: d.removed || [], meterNo: d.meterNo || '', subscriptionNo: d.subscriptionNo || '', accountNo: d.accountNo || '',
+    attachmentsChecked: d.attachmentsChecked || [],
+    signatories: {
+      esco: d.signatories?.esco || { name: '', designation: '' },
+      tarshid: d.signatories?.tarshid || { name: '', designation: '' },
+      beneficiary: d.signatories?.beneficiary || { name: '', designation: '' },
+    },
   }
-  // legacy adapter: old item rows carry esm_code/capacity_value/total_quantity
-  const ins = d.installed || []
-  const mapItem = (it) => ({
-    description: [it.item_description, it.model_code].filter(Boolean).join(' '),
-    qty: it.total_quantity, power: it.capacity_value != null ? `${it.capacity_value}${it.capacity_unit || 'W'}` : '',
-    kbtu: it.capacity_value ?? '', seer: it.efficiency_value ?? '', returned: it.returned_to_facility !== false,
-  })
-  const isAc = /AC|تكييف/i.test(d.esmName || '') || (ins.length > 0 && ins.every((i) => i.esm_code === 'ESM3'))
-  return normalizeCocData({
-    referenceNo: d.referenceNo, date: d.date, projectName: d.projectName, projectRefNo: d.projectCode,
-    contractDate: d.contractDate, endDate: d.endDate, escoOrg: d.esco, subcontractor: d.subcontractor,
-    buildingNos: d.buildingIds, entityName: d.clientName, buildingType: d.buildingType,
-    region: d.region, city: d.city, coords: d.coords,
-    descriptionLines: [d.brief || d.workDescription || ''].filter(Boolean),
-    kind: isAc ? 'ac' : 'lighting',
-    installed: ins.filter((i) => (isAc ? true : i.esm_code === 'ESM1')).map(mapItem),
-    installedControls: isAc ? [] : ins.filter((i) => i.esm_code === 'ESM2').map((it) => ({ ...mapItem(it), ctrlRefNo: '', ctrlRefDesc: '', ctrlTotal: '' })),
-    installedOther: isAc ? [] : ins.filter((i) => !['ESM1', 'ESM2'].includes(i.esm_code)).map(mapItem),
-    removed: (d.removed || []).map(mapItem),
-    meterNo: d.meterNo, subscriptionNo: d.subscriptionNo, accountNo: d.accountNo,
-    attachmentsChecked: d.attachmentsChecked,
-    signatories: { esco: { name: '', designation: '' }, tarshid: { name: '', designation: '' }, beneficiary: { name: '', designation: '' } },
-  })
 }
