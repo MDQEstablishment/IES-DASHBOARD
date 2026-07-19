@@ -5,6 +5,7 @@ import { useAuth } from '../rbac'
 import { Modal, Btn, Field, inputStyle } from './ui'
 import { toast } from '../lib/toast'
 import FileDropZone from './FileDropZone'
+import DateInput from './DateInput'
 
 // 8S screen 4 — record what TARSHID said about a sent certificate. Approval
 // happens outside the platform; this only logs the outcome + their response
@@ -86,7 +87,7 @@ export default function CocFeedbackModal({ coc, onClose, onDone }) {
         ))}
       </div>
       <Field label="Date of their response">
-        <input type="date" lang="en" style={inputStyle} value={date} onChange={(e) => setDate(e.target.value)} />
+        <DateInput style={inputStyle} value={date} onChange={(e) => setDate(e.target.value)} />
       </Field>
       <Field label={outcome === 'rejected' ? 'Their comments (required)' : 'Their comments (optional)'}>
         <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical' }} value={comments} onChange={(e) => setComments(e.target.value)} placeholder="What TARSHID said" />

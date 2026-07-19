@@ -5,7 +5,6 @@ import { useAuth } from '../rbac'
 import { Btn, Empty, Loading } from './ui'
 import { toast } from '../lib/toast'
 import { ensureCocSettings, fetchCocContext, generateAndUploadCocPdf, kindLabel } from '../lib/cocPdf'
-import CocSettings from './CocSettings'
 import CocGenerateWizard from './CocGenerateWizard'
 import CocFeedbackModal from './CocFeedbackModal'
 import CocDetailDrawer from './CocDetailDrawer'
@@ -25,7 +24,6 @@ const STATUS_META = {
 export default function CocHome({ projectId, project, buildings, projectEsms, canManage }) {
   const { user } = useAuth()
   const [plan, setPlan] = useState(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [wizardOpen, setWizardOpen] = useState(false)
   const [feedbackCoc, setFeedbackCoc] = useState(null)
   const [detailCoc, setDetailCoc] = useState(null)
@@ -55,6 +53,15 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
     if (!error) setPlan(Array.isArray(data) ? data : [])
   }, [projectId])
   useEffect(() => { loadPlan() }, [loadPlan, cocs.length, settings?.layout_mode, JSON.stringify(settings?.esm_groupings)]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 8X — coverage mode is chosen inline (the standalone settings drawer is gone).
+  // Writing layout_mode drives how many certificates the plan proposes; the live
+  // settings query + the loadPlan effect above pick the change up automatically.
+  const saveLayout = async (mode) => {
+    if ((settings?.layout_mode || 'concatenated') === mode) return
+    const { error } = await supabase.from('coc_project_settings').update({ layout_mode: mode }).eq('project_id', projectId)
+    if (error) toast("Couldn't save — " + error.message, 'err'); else toast('Saved')
+  }
 
   const active = cocs.filter((c) => c.status !== 'superseded')
   const toCreate = (plan || []).filter((r) => !r.exists_coc_id)
@@ -158,10 +165,24 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Completion certificates</div>
           <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 6, lineHeight: 1.5 }}>{headline}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
-            {scattered ? 'Certificates are issued per building' : 'Certificates cover all buildings together'}
-            {canManage && <> · <button onClick={() => setSettingsOpen(true)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--accent)', fontSize: 11.5, fontWeight: 700, textDecoration: 'underline' }}>Edit in settings</button></>}
-          </div>
+          {canManage ? (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
+                {[['concatenated', 'All buildings together'], ['scattered', 'Each building separately']].map(([v, label], i) => {
+                  const on = (settings?.layout_mode || 'concatenated') === v
+                  return (
+                    <button key={v} onClick={() => saveLayout(v)}
+                      style={{ padding: '6px 13px', fontSize: 11.5, fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : 'var(--text-3)', background: on ? '#F5EEDF' : '#fff', border: 'none', borderLeft: i > 0 ? '1px solid var(--line)' : 'none', cursor: on ? 'default' : 'pointer' }}>{label}</button>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.45 }}>Signatures are added by TARSHID after the certificate is issued — the الاعتماد (Approval) block prints blank.</div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
+              {scattered ? 'Certificates are issued per building' : 'Certificates cover all buildings together'}
+            </div>
+          )}
         </div>
         {canManage && needGenerate && (
           <Btn variant="primary" icon="doc" onClick={() => setWizardOpen(true)}>
@@ -190,7 +211,6 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
         </>
       )}
 
-      <CocSettings open={settingsOpen} projectId={projectId} onClose={() => setSettingsOpen(false)} />
       {wizardOpen && (
         <CocGenerateWizard projectId={projectId} project={project} esmName={esmName} plan={plan || []} drafts={missingPdf}
           coveredByCoc={coveredByCoc} buildings={buildings}
