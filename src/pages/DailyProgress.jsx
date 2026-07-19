@@ -21,7 +21,9 @@ export default function DailyProgress() {
   const { user, profile } = useAuth()
   const { id: routeProject, bid: routeBid } = useParams()
   const { setLabel } = useBreadcrumb()
-  const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id').order('code'))
+  // 8W — embed the project code (FK named to avoid the buildings->projects M2M
+  // ambiguity that 300s since 8T-5) so the project breadcrumb resolves here too.
+  const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id,project:projects!buildings_project_id_fkey(code)').order('code'))
 
   const [tab, setTab] = useState('quick')         // 'quick' | 'batch' | 'import'
   const [bid, setBid] = useState('')
@@ -59,7 +61,7 @@ export default function DailyProgress() {
   useEffect(() => {
     if (!routeBid || !buildings.length) return
     const b = buildings.find((x) => x.id === routeBid)
-    if (b) setLabel('building:' + routeBid, b.code)
+    if (b) { setLabel('building:' + routeBid, b.code); if (b.project_id) setLabel('project:' + b.project_id, b.project?.code) }
   }, [routeBid, buildings, setLabel])
 
   // load scopes for the selected building (planned counts live here)

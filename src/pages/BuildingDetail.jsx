@@ -60,7 +60,13 @@ export default function BuildingDetail() {
   const { rows: rooms } = useLiveQuery('rooms', (q) => q.select('*').eq('building_id', bid).order('name'), [bid])
   const { rows: audit } = useLiveQuery('audit_log', (q) => q.select('*').order('created_at', { ascending: false }).limit(80))
 
-  useEffect(() => { if (b) setLabel('building:' + bid, b.code || b.name) }, [b, bid, setLabel])
+  useEffect(() => {
+    if (!b) return
+    setLabel('building:' + bid, b.code || b.name)
+    // 8W — the project crumb resolves from this page's own embed (it only had the
+    // building label before, so the project crumb fell back to the raw UUID).
+    if (b.project) setLabel('project:' + id, b.project.code || b.project.name)
+  }, [b, bid, id, setLabel])
   useEffect(() => { if (itemId) setLabel('item:' + itemId, itemId.slice(0, 8)) }, [itemId, setLabel])
 
   if (loading && !b) return <Loading />
