@@ -5,7 +5,6 @@
 import { supabase } from './supabase'
 import { uploadToBucket } from './db'
 import { generateDocPdf } from './docPdf'
-import { ROLE_FULL } from './constants'
 
 const AC_RE = /\ba\/?c\b|air.?cond|cool|hvac/i
 const CTRL_RE = /control|sensor/i
@@ -43,26 +42,20 @@ export async function ensureCocSettings(projectId, esmOpts) {
 // One round trip for everything the PDF needs for a whole project — callers
 // generating in bulk reuse the same context across COCs.
 export async function fetchCocContext(projectId) {
-  const { data: auth } = await supabase.auth.getUser()
-  const [proj, settings, assignments, buildings, pesms, installed, removed, me] = await Promise.all([
+  const [proj, settings, buildings, pesms, installed, removed] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).single(),
     supabase.from('coc_project_settings').select('*').eq('project_id', projectId).maybeSingle(),
-    supabase.from('coc_beneficiary_assignments').select('*').eq('project_id', projectId),
     supabase.from('buildings').select('*').eq('project_id', projectId),
     supabase.from('project_esms').select('custom_name,archived,esm:esms(code,name)').eq('project_id', projectId).eq('archived', false),
     supabase.from('project_installed_items').select('*').eq('project_id', projectId),
     supabase.from('project_removed_items').select('*').eq('project_id', projectId),
-    auth?.user?.id
-      ? supabase.from('profiles').select('full_name,job_title,role').eq('id', auth.user.id).maybeSingle()
-      : Promise.resolve({ data: null }),
   ])
   const esmName = {}
   ;(pesms.data || []).forEach((pe) => { if (pe.esm) esmName[pe.esm.code] = pe.custom_name || pe.esm.name })
   return {
     project: proj.data, settings: settings.data || null,
-    assignments: assignments.data || [], buildings: buildings.data || [],
+    buildings: buildings.data || [],
     esmName, installed: installed.data || [], removed: removed.data || [],
-    currentUser: me.data || null,
   }
 }
 
@@ -74,7 +67,7 @@ const fmtDate = (d) => {
 
 // Map a cocs row (+ covered building ids) onto the renderCoc data contract.
 export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
-  const { project: p, settings: s, esmName } = ctx
+  const { project: p, esmName } = ctx
   const covered = ctx.buildings.filter((b) => coveredBuildingIds.includes(b.id))
     .sort((a, b) => (a.code || '').localeCompare(b.code || ''))
   const single = covered.length === 1 ? covered[0] : null
@@ -103,22 +96,10 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
   })
   const isCtrl = (it) => CTRL_RE.test(esmName[it.esm_code] || '')
 
-  // beneficiary: single building's assignment, or the uniform one across scope
-  const assigns = ctx.assignments.filter((a) => coveredBuildingIds.includes(a.building_id) && a.beneficiary_name)
-  const uniform = [...new Set(assigns.map((a) => a.beneficiary_name))]
-  const bene = uniform.length === 1 ? assigns[0] : null
-
-  // 8T item 1 — the IES ("implementing company") signatory defaults to whoever
-  // generates the certificate: their account name + job title (role label as a
-  // last resort). The saved settings value stays an optional override.
-  const me = ctx.currentUser
-  const escoName = s?.esco_signatory?.name || me?.full_name || ''
-  const escoRole = s?.esco_signatory?.designation || me?.job_title || (me?.role ? ROLE_FULL[me.role] : '') || ''
-  const sig = {
-    esco: { name: escoName, designation: escoRole },
-    tarshid: { name: s?.tarshid_spm?.name || '', designation: s?.tarshid_spm?.designation || '' },
-    beneficiary: { name: bene?.beneficiary_name || '', designation: bene?.beneficiary_designation || '' },
-  }
+  // 8U Issue 1 — signing (names, titles, date) is TARSHID's scope and happens on
+  // paper after this tool produces the PDF. The certificate carries no signer
+  // identities; the الاعتماد grid renders as a blank form. The platform is
+  // ESCO-only, so the implementing-company org is always IES.
 
   return {
     referenceNo: coc.reference_no || coc.code,
@@ -127,8 +108,7 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     projectRefNo: p?.project_reference_no || p?.code || '',
     contractDate: fmtDate(p?.contract_sign_date || p?.start_date),
     endDate: fmtDate(p?.works_end_date || p?.end_date),
-    signatureDate: fmtDate(p?.coc_signature_date),
-    escoOrg: s?.esco_signatory?.org || '',
+    escoOrg: 'IES',
     subcontractor: p?.subcontractor || '',
     buildingNos: covered.map((b) => b.code).join(', '),
     entityName: single ? single.name : (p?.beneficiary_entity || p?.client || ''),
@@ -147,7 +127,6 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     subscriptionNo: single?.elec_subscription_no || '',
     accountNo: single?.elec_account_no || '',
     attachmentsChecked: [],
-    signatories: sig,
   }
 }
 
