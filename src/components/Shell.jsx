@@ -1,12 +1,71 @@
 import { useState, useEffect, useRef } from 'react'
-import { Outlet, NavLink, Link, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import Icon from './Icon'
 import { Avatar } from './ui'
 import { ROLE_ORDER, ROSTER, roleColor, roleTitle } from '../lib/constants'
 import { navForRole, crumbsFor } from '../lib/nav'
 import { useAuth } from '../rbac'
 import { useBreadcrumb } from '../breadcrumbs'
-import { fmtClock } from '../lib/format'
+import { useLiveQuery, bgUpdate } from '../lib/db'
+import { fmtClock, ago } from '../lib/format'
+
+// 8W — the top-bar bell: live unread @mention notifications (0088). Each row
+// deep-links to the building whose chat holds the mention and marks itself read.
+function NotifBell() {
+  const { profile } = useAuth()
+  const nav = useNavigate()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const { rows: notifs, refetch } = useLiveQuery('notifications', (q) =>
+    q.select('*, actor:profiles!notifications_actor_id_fkey(full_name), building:buildings!notifications_building_id_fkey(code)')
+      .eq('recipient_id', profile?.id || '00000000-0000-0000-0000-000000000000')
+      .order('created_at', { ascending: false }).limit(20), [profile?.id])
+  useEffect(() => { const t = setInterval(() => refetch?.(), 60000); return () => clearInterval(t) }, [refetch])
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
+  }, [])
+  const unread = notifs.filter((n) => !n.read_at).length
+
+  const openOne = async (n) => {
+    setOpen(false)
+    if (!n.read_at) { await bgUpdate('notifications', n.id, { read_at: new Date().toISOString() }); refetch?.() }
+    if (n.project_id && n.building_id) nav(`/projects/${n.project_id}/buildings/${n.building_id}`)
+  }
+  const markAll = async () => {
+    await Promise.all(notifs.filter((n) => !n.read_at).map((n) => bgUpdate('notifications', n.id, { read_at: new Date().toISOString() })))
+    refetch?.()
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button className="ies-hover-dark" onClick={() => setOpen((o) => !o)} style={{ position: 'relative', width: 34, height: 34, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8DA0B1' }}>
+        <Icon name="bell" size={17} />
+        {unread > 0 && <span style={{ position: 'absolute', top: 3, right: 3, minWidth: 15, height: 15, padding: '0 3px', borderRadius: 8, background: 'var(--brass-bright)', color: '#16222D', fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)' }}>{unread > 9 ? '9+' : unread}</span>}
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', right: 0, top: 44, width: 320, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 12px 32px rgba(16,26,36,.16)', padding: 8, zIndex: 200, maxHeight: 420, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px 8px' }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1.5px', color: 'var(--text-3)' }}>NOTIFICATIONS</span>
+            {unread > 0 && <button onClick={markAll} style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>Mark all read</button>}
+          </div>
+          {notifs.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12.5, padding: '20px 8px' }}>No notifications</div>
+          ) : notifs.map((n) => (
+            <button key={n.id} className="ies-row-hover" onClick={() => openOne(n)} style={{ width: '100%', display: 'flex', gap: 9, padding: '8px 10px', borderRadius: 6, textAlign: 'left', background: n.read_at ? 'transparent' : '#F5EEDF' }}>
+              <Avatar name={n.actor?.full_name} size={26} />
+              <span style={{ lineHeight: 1.3, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 12 }}><b>{n.actor?.full_name || 'Someone'}</b> mentioned you{n.building?.code ? ` · ${n.building.code}` : ''}</span>
+                {n.body_preview && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body_preview}</span>}
+                <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)', marginTop: 1 }}>{ago(n.created_at)}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Clock() {
   const [now, setNow] = useState(new Date())
@@ -61,9 +120,7 @@ export default function Shell() {
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="ies-topmeta" style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--live)' }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--live)', animation: 'iesBlink 1.6s infinite' }} />LIVE</div>
           <Clock />
-          <NavLink to="/dashboard" className="ies-hover-dark" style={{ position: 'relative', width: 34, height: 34, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8DA0B1' }}>
-            <Icon name="bell" size={17} />
-          </NavLink>
+          <NotifBell />
           <div ref={menuRef} style={{ position: 'relative' }}>
             <button className="ies-hover-dark" onClick={() => setRoleMenu((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 8px 4px 4px', borderRadius: 8, border: '1px solid rgba(255,255,255,.16)' }}>
               <Avatar name={profile?.full_name} color={roleColor(role)} size={28} />
