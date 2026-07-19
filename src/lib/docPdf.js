@@ -244,17 +244,15 @@ export async function renderInspection(kind, data, assets) {
 // border + "Page N of M" footer; teal section bars; plain bold RTL table
 // headings; category table sets (lighting/controls/other vs AC kBTU+SEER);
 // removed-items bar; operating hours; electricity block; attachments
-// checkbox rows (5 + 3); 4-column signature grid with the row-label column on
-// the right edge, populated from coc_project_settings + beneficiary assignment.
+// checkbox rows (5 + 3); 4-column الاعتماد grid — 8U: rendered BLANK (headers +
+// row labels only), signed by TARSHID on paper after this tool hands over the PDF.
 //
 // data contract (Phase 3 assembles it):
 //   referenceNo, date, projectName, projectRefNo, contractDate, endDate,
 //   escoOrg, subcontractor, buildingNos, entityName, buildingType, region,
 //   city, coords, descriptionLines[], kind 'lighting'|'ac'|'other',
 //   installed[], installedControls[], installedOther[], removed[],
-//   meterNo, subscriptionNo, accountNo, attachmentsChecked[],
-//   signatories { esco:{name,designation}, tarshid:{name,designation},
-//                 beneficiary:{name,designation} }
+//   meterNo, subscriptionNo, accountNo, attachmentsChecked[]
 // Items: { description, qty, power, kbtu, seer, returned, ctrlRefNo,
 //          ctrlRefDesc, ctrlTotal } (legacy item rows are adapted below).
 export async function renderCoc(rawData, assets) {
@@ -573,56 +571,31 @@ export async function renderCoc(rawData, assets) {
 
   // ── approval grid: row-label column on the RIGHT edge, then ESCO | Tarshid
   //    | Government-entity columns right→left (matches samples) ───────────────
+  // 8U Issue 1 — signing is TARSHID's scope, done on paper after this tool hands
+  // over the PDF. So the الاعتماد grid prints as a BLANK form: the three column
+  // headers + the row labels only. The الإسم/الوظيفة/التوقيع/التاريخ cells stay
+  // empty (the date is written by hand at signing). No signer identities here.
   const labelColW = 58
   const orgColW = (W - labelColW) / 3
-  const sig = data.signatories
-  const gridCols = [ // right→left after the label column
-    { h: AR.contractor, name: sig.esco.name, role: sig.esco.designation },
-    { h: AR.tarshid, name: sig.tarshid.name, role: sig.tarshid.designation },
-    { h: AR.govRep, name: sig.beneficiary.name, role: sig.beneficiary.designation },
-  ]
-  // Name/role rows grow to fit wrapped English text (long designations wrap,
-  // never truncate — Phase-2 owner decision).
-  const wrapVal = (v, size) => (!v ? [''] : /[؀-ۿ]/.test(v) ? [v] : wrapLtr(v, size, orgColW - 10))
-  const nameLines = gridCols.map((c) => wrapVal(c.name, 8.5))
-  const roleLines = gridCols.map((c) => wrapVal(c.role, 8))
-  const nameH = Math.max(22, Math.max(...nameLines.map((l) => l.length)) * 11 + 10)
-  const roleH = Math.max(24, Math.max(...roleLines.map((l) => l.length)) * 10 + 10)
+  const gridHeads = [AR.contractor, AR.tarshid, AR.govRep] // right→left after the label column
   const gridRows = [
     { label: '', h: 20, key: 'head' },
-    { label: AR.name, h: nameH, key: 'name' },
-    { label: AR.role, h: roleH, key: 'role' },
+    { label: AR.name, h: 24, key: 'name' },
+    { label: AR.role, h: 24, key: 'role' },
     { label: AR.signature, h: 34, key: 'sig' },
-    { label: AR.date, h: 20, key: 'date' },
+    { label: AR.date, h: 22, key: 'date' },
   ]
-  // 8T item 4 — keep the الاعتماد header and its whole signature grid on one
-  // page: reserve the teal bar (~25pt) + full grid height BEFORE drawing the
-  // bar, so the header never orphans at a page bottom while the table breaks.
+  // 8T item 4 — keep the الاعتماد header and its whole (now fixed-height) grid on
+  // one page: reserve the teal bar (~25pt) + full grid height BEFORE the bar.
   ensure(25 + gridRows.reduce((s, r) => s + r.h, 0) + 4)
   bar(AR.approval)
   gridRows.forEach((row) => {
-    // label cell (right edge)
-    rect(right - labelColW, st.y - row.h, labelColW, row.h)
+    rect(right - labelColW, st.y - row.h, labelColW, row.h) // label cell (right edge)
     if (row.label) rtlC(row.label, right - labelColW / 2, st.y - row.h / 2 - 3, { size: 8.5, bold: true })
     let cx = right - labelColW
-    gridCols.forEach((c, gi) => {
+    gridHeads.forEach((h) => {
       rect(cx - orgColW, st.y - row.h, orgColW, row.h)
-      const cxm = cx - orgColW / 2
-      if (row.key === 'head') rtlC(c.h, cxm, st.y - row.h / 2 - 3, { size: 8, bold: true })
-      const drawWrapped = (lines, size, lh) => {
-        const blockH = lines.length * lh
-        const yStart = st.y - (row.h - blockH) / 2 - lh + 3
-        lines.forEach((ln, li) => {
-          if (!ln) return
-          if (/[؀-ۿ]/.test(ln)) rtlC(ln, cxm, yStart - li * lh, { size })
-          else ltr(ln, cxm, yStart - li * lh, { size, align: 'center' })
-        })
-      }
-      if (row.key === 'name') drawWrapped(nameLines[gi], 8.5, 11)
-      if (row.key === 'role') drawWrapped(roleLines[gi], 8, 10)
-      // 8T item 2 — the COC signature date comes from the project, printed under
-      // every signatory column (never typed on the certificate itself).
-      if (row.key === 'date' && data.signatureDate) ltr(data.signatureDate, cxm, st.y - row.h / 2 - 3, { size: 8, align: 'center' })
+      if (row.key === 'head') rtlC(h, cx - orgColW / 2, st.y - row.h / 2 - 3, { size: 8, bold: true })
       cx -= orgColW
     })
     st.y -= row.h
@@ -646,7 +619,7 @@ export async function renderCoc(rawData, assets) {
 // Default-fill the 8S COC data contract (assembled by src/lib/cocPdf.js).
 function normalizeCocData(d) {
   return {
-    referenceNo: d.referenceNo || '', date: d.date || '', signatureDate: d.signatureDate || '',
+    referenceNo: d.referenceNo || '', date: d.date || '',
     projectName: d.projectName || '', projectRefNo: d.projectRefNo || '',
     contractDate: d.contractDate || '', endDate: d.endDate || '',
     escoOrg: d.escoOrg || '', subcontractor: d.subcontractor || '',
@@ -656,10 +629,7 @@ function normalizeCocData(d) {
     installed: d.installed || [], installedControls: d.installedControls || [], installedOther: d.installedOther || [],
     removed: d.removed || [], meterNo: d.meterNo || '', subscriptionNo: d.subscriptionNo || '', accountNo: d.accountNo || '',
     attachmentsChecked: d.attachmentsChecked || [],
-    signatories: {
-      esco: d.signatories?.esco || { name: '', designation: '' },
-      tarshid: d.signatories?.tarshid || { name: '', designation: '' },
-      beneficiary: d.signatories?.beneficiary || { name: '', designation: '' },
-    },
+    // 8U Issue 1 — signatures/date are TARSHID's (post-generation, on paper); the
+    // approval grid renders blank, so the renderer no longer reads signatory data.
   }
 }

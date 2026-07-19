@@ -190,7 +190,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
         </>
       )}
 
-      <CocSettings open={settingsOpen} projectId={projectId} buildings={buildings} onClose={() => setSettingsOpen(false)} />
+      <CocSettings open={settingsOpen} projectId={projectId} onClose={() => setSettingsOpen(false)} />
       {wizardOpen && (
         <CocGenerateWizard projectId={projectId} project={project} esmName={esmName} plan={plan || []} drafts={missingPdf}
           coveredByCoc={coveredByCoc} buildings={buildings}
