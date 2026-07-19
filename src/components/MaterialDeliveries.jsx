@@ -59,10 +59,9 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
         canWrite ? (
           <div style={{ textAlign: 'center', padding: '34px 16px' }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>No deliveries yet</div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '4px 0 16px' }}>Add a delivery to bring materials into the project warehouse.</div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Btn variant="primary" icon="plus" onClick={() => openAdd('pdf')}>Upload delivery PDF</Btn>
-              <Btn icon="plus" onClick={() => openAdd('manual')}>Enter manually</Btn>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '4px auto 16px', maxWidth: 440 }}>Add a delivery to bring materials into the project warehouse — upload a delivery-note PDF for automatic extraction, or switch to Manual entry inside.</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <Btn variant="primary" icon="plus" onClick={() => openAdd('pdf')}>Add delivery</Btn>
             </div>
           </div>
         ) : <Empty icon="box">No deliveries scheduled.</Empty>
