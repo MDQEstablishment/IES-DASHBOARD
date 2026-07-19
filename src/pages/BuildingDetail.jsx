@@ -46,7 +46,11 @@ export default function BuildingDetail() {
   const activeTab = isInstallItem ? '' : (seg[0] || '')
   const itemId = isInstallItem ? seg[1] : null
 
-  const { rows: bRows, loading } = useLiveQuery('buildings', (q) => q.select('*,project:projects(id,code,name,region,client,project_reference_no,beneficiary_entity,contractor_name,doc_rev)').eq('id', bid), [bid])
+  // 8U: name the FK on the embed. project_installed_items / project_removed_items
+  // each reference BOTH projects and buildings (8T-5 building_id), so PostgREST
+  // sees a buildings↔projects M2M path in addition to the direct FK and 300s an
+  // unqualified project:projects(...) embed. The !fkey hint pins the direct FK.
+  const { rows: bRows, loading } = useLiveQuery('buildings', (q) => q.select('*,project:projects!buildings_project_id_fkey(id,code,name,region,client,project_reference_no,beneficiary_entity,contractor_name,doc_rev)').eq('id', bid), [bid])
   const b = bRows[0]
   const [wirOpen, setWirOpen] = useState(false)
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) =>
