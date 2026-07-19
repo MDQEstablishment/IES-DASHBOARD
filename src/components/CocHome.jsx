@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useLiveQuery, signedUrlFor } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
-import { Btn, Empty, Loading } from './ui'
+import { Btn, Empty, Loading, Modal } from './ui'
 import { toast } from '../lib/toast'
 import { ensureCocSettings, fetchCocContext, generateAndUploadCocPdf, kindLabel } from '../lib/cocPdf'
 import CocGenerateWizard from './CocGenerateWizard'
@@ -27,6 +27,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
   const [wizardOpen, setWizardOpen] = useState(false)
   const [feedbackCoc, setFeedbackCoc] = useState(null)
   const [detailCoc, setDetailCoc] = useState(null)
+  const [delCoc, setDelCoc] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
   const esmOpts = useMemo(() => projectEsms.filter((pe) => pe.esm)
@@ -66,21 +67,8 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
   const active = cocs.filter((c) => c.status !== 'superseded')
   const toCreate = (plan || []).filter((r) => !r.exists_coc_id)
   const missingPdf = active.filter((c) => c.status === 'draft')
-  const needGenerate = toCreate.length > 0 || missingPdf.length > 0
 
-  // ── plain-language headline ─────────────────────────────────────────────
-  const groups = useMemo(() => {
-    const seen = new Map()
-    ;(plan || []).forEach((r) => { const k = (r.esm_codes || []).join('+'); if (!seen.has(k)) seen.set(k, r.esm_codes) })
-    return [...seen.values()]
-  }, [plan])
   const scattered = settings?.layout_mode === 'scattered'
-  const groupPhrase = groups.map((g) => `${kindLabel(g, esmName)} (${g.join(' + ')})`).join(' and one ')
-  const headline = plan === null ? '' : plan.length === 0
-    ? 'Nothing to certify yet — this project has no active buildings or ESMs.'
-    : scattered
-      ? `Each of the ${buildings.length} buildings gets its own certificates — one ${groupPhrase} — ${plan.length} in total.`
-      : `This project needs ${plan.length === 1 ? 'one certificate' : plan.length + ' certificates'} — one ${groupPhrase} — covering all ${buildings.length} building${buildings.length === 1 ? '' : 's'} together.`
 
   // ── open helpers ────────────────────────────────────────────────────────
   const openPdf = async (c) => {
@@ -110,6 +98,23 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
     setBusyId(null)
     if (error || !data?.ok) { toast("Couldn't create the revision — " + (error?.message || data?.error || ''), 'err'); return }
     toast(`${c.code} Rev ${data.revision} created — generate its PDF next`); refetchCocs()
+  }
+  // 8Y — delete a certificate (managers only per cocs RLS). Junction rows cascade;
+  // the PDF + any feedback doc are removed from storage (0089 delete policy). If
+  // this row supersedes a prior revision, that prior rev is resurfaced with its
+  // feedback status so the chain stays consistent. Freed scope re-enters the plan.
+  const deleteCoc = async (c) => {
+    setBusyId(c.id)
+    try {
+      const prior = cocs.find((x) => x.superseded_by_coc_id === c.id)
+      if (prior) await supabase.from('cocs').update({ superseded_by_coc_id: null, status: prior.feedback_outcome || 'rejected' }).eq('id', prior.id)
+      const { error } = await supabase.from('cocs').delete().eq('id', c.id)
+      if (error) { toast("Couldn't delete — " + error.message, 'err'); return }
+      if (c.pdf_path) await supabase.storage.from('coc-pdfs').remove([c.pdf_path]).catch(() => {})
+      if (c.feedback_doc_path) await supabase.storage.from('coc-responses').remove([c.feedback_doc_path]).catch(() => {})
+      toast(`${c.code}${c.revision > 1 ? ` Rev ${c.revision}` : ''} deleted`)
+      setDelCoc(null); refetchCocs(); loadPlan()
+    } finally { setBusyId(null) }
   }
 
   // ── pipeline grouping ───────────────────────────────────────────────────
@@ -145,7 +150,9 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
           </span>
         </button>
         {c.pdf_path && <Btn style={rowBtn} onClick={() => openPdf(c)}>Open PDF</Btn>}
+        {canManage && c.status === 'generated' && <Btn style={rowBtn} disabled={busyId === c.id} onClick={() => generateOne(c)}>{busyId === c.id ? 'Regenerating…' : 'Regenerate PDF'}</Btn>}
         {actionFor(c)}
+        {canManage && <button onClick={() => setDelCoc(c)} disabled={busyId === c.id} style={{ background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', color: 'var(--bad)', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Delete</button>}
       </div>
     )
   }
@@ -164,7 +171,6 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Completion certificates</div>
-          <div style={{ fontSize: 13, color: 'var(--text)', marginTop: 6, lineHeight: 1.5 }}>{headline}</div>
           {canManage ? (
             <div style={{ marginTop: 8 }}>
               <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
@@ -176,7 +182,6 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
                   )
                 })}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.45 }}>Signatures are added by TARSHID after the certificate is issued — the الاعتماد (Approval) block prints blank.</div>
             </div>
           ) : (
             <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
@@ -184,9 +189,11 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
             </div>
           )}
         </div>
-        {canManage && needGenerate && (
+        {canManage && (
           <Btn variant="primary" icon="doc" onClick={() => setWizardOpen(true)}>
-            {toCreate.length > 0 ? `Generate ${toCreate.length} certificate${toCreate.length === 1 ? '' : 's'}` : 'Finish generating PDFs'}
+            {toCreate.length > 0
+              ? `Generate ${toCreate.length} certificate${toCreate.length === 1 ? '' : 's'}`
+              : missingPdf.length > 0 ? 'Finish generating PDFs' : 'Generate certificates'}
           </Btn>
         )}
       </div>
@@ -223,6 +230,19 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
       {detailCoc && (
         <CocDetailDrawer coc={detailCoc} buildings={buildings} esmName={esmName}
           onClose={() => setDetailCoc(null)} />
+      )}
+      {delCoc && (
+        <Modal open width={460} title={`Delete ${delCoc.code}${delCoc.revision > 1 ? ` Rev ${delCoc.revision}` : ''}?`} onClose={() => setDelCoc(null)}
+          footer={<>
+            <Btn onClick={() => setDelCoc(null)}>Cancel</Btn>
+            <Btn variant="primary" disabled={busyId === delCoc.id} style={{ background: 'var(--bad)' }} onClick={() => deleteCoc(delCoc)}>{busyId === delCoc.id ? 'Deleting…' : 'Delete certificate'}</Btn>
+          </>}>
+          <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+            {['sent', 'approved', 'accepted_with_comments'].includes(delCoc.status)
+              ? `${delCoc.code} was already sent to TARSHID — deleting removes the certificate record and its feedback history, and the PDF from storage. This can't be undone.`
+              : `This removes the certificate and its PDF. Its scope will be offered again in the plan.`}
+          </div>
+        </Modal>
       )}
     </div>
   )
