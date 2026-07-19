@@ -104,15 +104,13 @@ export default function ProjectDetail() {
   projectEsms.forEach((pe) => { peCode[pe.id] = (pe.esm?.code || '').toUpperCase() })
 
   const perB = {}
-  let planned = 0, installed = 0, acP = 0, acI = 0
+  let planned = 0, installed = 0
   // rollup keyed by esm code: planned vs installed
   const rollup = {}
   scopes.filter((s) => bIds.has(s.building_id)).forEach((s) => {
     const ins = Math.min(s.planned_qty || 0, insByScope[s.id] || 0)
     planned += s.planned_qty || 0
     installed += ins
-    const code = (s.material_code || '').toUpperCase()
-    if (code.startsWith('AC')) { acP += s.planned_qty || 0; acI += ins }
     perB[s.building_id] = perB[s.building_id] || { planned: 0, installed: 0 }
     perB[s.building_id].planned += s.planned_qty || 0
     perB[s.building_id].installed += ins
@@ -259,12 +257,6 @@ export default function ProjectDetail() {
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{projectEsms.length}</div>
           </div>
         </div>
-      </div>
-
-      {/* secondary KPI strip: AC units installed/planned */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14, fontSize: 12, color: 'var(--text-3)' }}>
-        <span style={{ fontFamily: 'var(--mono)' }}>AC UNITS {num(acI)} / {num(acP)}</span>
-        <span style={{ fontFamily: 'var(--mono)' }}>· UNITS {num(installed)} / {num(planned)}</span>
       </div>
 
       {/* tab row */}
