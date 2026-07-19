@@ -11,7 +11,7 @@ export default function Buildings() {
   const [sel, setSel] = useState(null)
 
   const { rows: buildings, loading } = useLiveQuery('buildings',
-    (q) => { let b = q.select('*,project:projects(code,name)').order('code'); if (projectId !== 'ALL') b = b.eq('project_id', projectId); return b },
+    (q) => { let b = q.select('*,project:projects!buildings_project_id_fkey(code,name)').order('code'); if (projectId !== 'ALL') b = b.eq('project_id', projectId); return b },
     [projectId])
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
