@@ -571,10 +571,11 @@ export async function renderCoc(rawData, assets) {
 
   // ── approval grid: row-label column on the RIGHT edge, then ESCO | Tarshid
   //    | Government-entity columns right→left (matches samples) ───────────────
-  // 8U Issue 1 — signing is TARSHID's scope, done on paper after this tool hands
-  // over the PDF. So the الاعتماد grid prints as a BLANK form: the three column
-  // headers + the row labels only. The الإسم/الوظيفة/التوقيع/التاريخ cells stay
-  // empty (the date is written by hand at signing). No signer identities here.
+  // 8U/8V — signing is TARSHID's scope, done on paper after this tool hands over
+  // the PDF. 8V auto-fills ONLY the ESCO column (الشركة المنفذة, index 0): the
+  // generating engineer's name in الإسم and the generation date in التاريخ. Its
+  // الوظيفة/التوقيع cells and the entire TARSHID + government-entity columns stay
+  // blank (name, title, signature and date all filled by TARSHID at signing).
   const labelColW = 58
   const orgColW = (W - labelColW) / 3
   const gridHeads = [AR.contractor, AR.tarshid, AR.govRep] // right→left after the label column
@@ -585,17 +586,26 @@ export async function renderCoc(rawData, assets) {
     { label: AR.signature, h: 34, key: 'sig' },
     { label: AR.date, h: 22, key: 'date' },
   ]
-  // 8T item 4 — keep the الاعتماد header and its whole (now fixed-height) grid on
-  // one page: reserve the teal bar (~25pt) + full grid height BEFORE the bar.
+  const drawCell = (txt, cxm, yMid) => {
+    if (!txt) return
+    if (/[؀-ۿ]/.test(txt)) rtlC(txt, cxm, yMid, { size: 8.5 })
+    else ltr(txt, cxm, yMid, { size: 8.5, align: 'center' })
+  }
+  // 8T item 4 — keep the الاعتماد header and its whole (fixed-height) grid on one
+  // page: reserve the teal bar (~25pt) + full grid height BEFORE the bar.
   ensure(25 + gridRows.reduce((s, r) => s + r.h, 0) + 4)
   bar(AR.approval)
   gridRows.forEach((row) => {
     rect(right - labelColW, st.y - row.h, labelColW, row.h) // label cell (right edge)
     if (row.label) rtlC(row.label, right - labelColW / 2, st.y - row.h / 2 - 3, { size: 8.5, bold: true })
     let cx = right - labelColW
-    gridHeads.forEach((h) => {
+    gridHeads.forEach((h, gi) => {
       rect(cx - orgColW, st.y - row.h, orgColW, row.h)
-      if (row.key === 'head') rtlC(h, cx - orgColW / 2, st.y - row.h / 2 - 3, { size: 8, bold: true })
+      const cxm = cx - orgColW / 2, yMid = st.y - row.h / 2 - 3
+      if (row.key === 'head') rtlC(h, cxm, yMid, { size: 8, bold: true })
+      // ESCO column only (gi === 0): name + generation date; everything else blank.
+      else if (gi === 0 && row.key === 'name') drawCell(data.escoSignerName, cxm, yMid)
+      else if (gi === 0 && row.key === 'date') drawCell(data.generationDate, cxm, yMid)
       cx -= orgColW
     })
     st.y -= row.h
@@ -629,7 +639,8 @@ function normalizeCocData(d) {
     installed: d.installed || [], installedControls: d.installedControls || [], installedOther: d.installedOther || [],
     removed: d.removed || [], meterNo: d.meterNo || '', subscriptionNo: d.subscriptionNo || '', accountNo: d.accountNo || '',
     attachmentsChecked: d.attachmentsChecked || [],
-    // 8U Issue 1 — signatures/date are TARSHID's (post-generation, on paper); the
-    // approval grid renders blank, so the renderer no longer reads signatory data.
+    // 8U/8V — the approval grid's ESCO column (only) auto-fills with the generating
+    // engineer's name + generation date; TARSHID/entity columns stay blank.
+    escoSignerName: d.escoSignerName || '', generationDate: d.generationDate || '',
   }
 }

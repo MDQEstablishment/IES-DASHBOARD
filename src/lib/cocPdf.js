@@ -42,13 +42,19 @@ export async function ensureCocSettings(projectId, esmOpts) {
 // One round trip for everything the PDF needs for a whole project — callers
 // generating in bulk reuse the same context across COCs.
 export async function fetchCocContext(projectId) {
-  const [proj, settings, buildings, pesms, installed, removed] = await Promise.all([
+  const { data: auth } = await supabase.auth.getUser()
+  const [proj, settings, buildings, pesms, installed, removed, me] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).single(),
     supabase.from('coc_project_settings').select('*').eq('project_id', projectId).maybeSingle(),
     supabase.from('buildings').select('*').eq('project_id', projectId),
     supabase.from('project_esms').select('custom_name,archived,esm:esms(code,name)').eq('project_id', projectId).eq('archived', false),
     supabase.from('project_installed_items').select('*').eq('project_id', projectId),
     supabase.from('project_removed_items').select('*').eq('project_id', projectId),
+    // 8V Issue 2 — the ESCO column of the approval grid auto-fills with the
+    // generating engineer's name; nothing else about the signer is read.
+    auth?.user?.id
+      ? supabase.from('profiles').select('full_name').eq('id', auth.user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
   const esmName = {}
   ;(pesms.data || []).forEach((pe) => { if (pe.esm) esmName[pe.esm.code] = pe.custom_name || pe.esm.name })
@@ -56,6 +62,7 @@ export async function fetchCocContext(projectId) {
     project: proj.data, settings: settings.data || null,
     buildings: buildings.data || [],
     esmName, installed: installed.data || [], removed: removed.data || [],
+    currentUserName: me.data?.full_name || '',
   }
 }
 
@@ -63,6 +70,46 @@ const fmtDate = (d) => {
   if (!d) return ''
   const [y, m, day] = String(d).slice(0, 10).split('-')
   return y ? `${Number(day)}-${Number(m)}-${y}` : String(d)
+}
+
+// 8V Issue 1 — a COC can cover hundreds of buildings; printing every code as a
+// comma list blows up the project-info box. Collapse consecutive runs into
+// ranges keeping the source zero-padding, prefix emitted once:
+//   all 709 → "MOI-ASIR-001-709"; with gaps → "MOI-ASIR-001-057, 059, 061-709".
+// Mixed prefixes are grouped and joined with "; ". Any code that doesn't parse
+// as <prefix><digits> falls back to the plain comma join (correctness first).
+export function formatBuildingCodes(codes) {
+  const list = (codes || []).filter(Boolean)
+  if (list.length === 0) return ''
+  const parsed = list.map((c) => {
+    const m = /^(.*?)(\d+)$/.exec(String(c))
+    return m ? { prefix: m[1], num: Number(m[2]), pad: m[2].length, raw: String(c) } : null
+  })
+  if (parsed.some((p) => !p)) return list.join(', ') // non-numeric code somewhere
+
+  const byPrefix = new Map()
+  parsed.forEach((p) => { if (!byPrefix.has(p.prefix)) byPrefix.set(p.prefix, []); byPrefix.get(p.prefix).push(p) })
+
+  const groups = [...byPrefix.entries()].map(([prefix, items]) => {
+    items.sort((a, b) => a.num - b.num)
+    const padOf = (p) => String(p.num).padStart(p.pad, '0')
+    const segs = []
+    let run = [items[0]]
+    // The prefix is emitted once (on the first segment of the group); later
+    // segments are bare padded numbers: "MOI-ASIR-001-057, 059, 061-709".
+    const flush = () => {
+      const head = segs.length === 0 ? prefix : ''
+      const s = padOf(run[0])
+      segs.push(run.length >= 2 ? `${head}${s}-${padOf(run[run.length - 1])}` : `${head}${s}`)
+    }
+    for (let i = 1; i < items.length; i++) {
+      if (items[i].num === run[run.length - 1].num + 1) run.push(items[i])
+      else { flush(); run = [items[i]] }
+    }
+    flush()
+    return segs.join(', ')
+  })
+  return groups.join('; ')
 }
 
 // Map a cocs row (+ covered building ids) onto the renderCoc data contract.
@@ -110,7 +157,7 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     endDate: fmtDate(p?.works_end_date || p?.end_date),
     escoOrg: 'IES',
     subcontractor: p?.subcontractor || '',
-    buildingNos: covered.map((b) => b.code).join(', '),
+    buildingNos: formatBuildingCodes(covered.map((b) => b.code)),
     entityName: single ? single.name : (p?.beneficiary_entity || p?.client || ''),
     buildingType: single?.building_type || p?.building_type || '',
     region: single?.region || p?.region || '',
@@ -127,6 +174,11 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     subscriptionNo: single?.elec_subscription_no || '',
     accountNo: single?.elec_account_no || '',
     attachmentsChecked: [],
+    // 8V Issue 2 — only the ESCO column of the الاعتماد grid is auto-filled:
+    // the generating engineer's name + the generation date. TARSHID and the
+    // government-entity columns stay blank (signed later, on paper, by TARSHID).
+    escoSignerName: ctx.currentUserName || '',
+    generationDate: fmtDate(new Date().toISOString().slice(0, 10)),
   }
 }
 
