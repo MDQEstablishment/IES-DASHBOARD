@@ -7,6 +7,7 @@ import { ROLE_ORDER, ROSTER, roleTitle, roleColor } from '../lib/constants'
 import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
 import { fmtDateTime } from '../lib/format'
 import { toast } from '../lib/toast'
+import EquipmentCatalogs from '../components/EquipmentCatalogs'
 
 // Permission matrix reflects the REAL RBAC nav map (lib/nav roleNav), read-only.
 const NAV_IDS = ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings']
@@ -27,6 +28,7 @@ const ROLE_DESC = {
 const CATS = [
   { key: 'users', label: 'Users' },
   { key: 'roles', label: 'Roles & Permissions' },
+  { key: 'catalogs', label: 'Approved Equipment' },
   { key: 'audit', label: 'Audit Log' },
 ]
 
@@ -196,6 +198,8 @@ export default function Settings() {
               </div>
             </div>
           )}
+
+          {cat === 'catalogs' && <EquipmentCatalogs role={role} />}
 
           {cat === 'audit' && (
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
