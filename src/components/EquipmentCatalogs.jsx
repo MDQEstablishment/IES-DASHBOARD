@@ -105,6 +105,10 @@ const CATALOGS = {
     // A row must carry SEER or IEER (matches the DB check constraint).
     validate: (v) => (v.seer == null && v.ieer == null) ? 'Enter SEER or IEER (at least one is required).' : null,
   },
+  // Misc = physical consumables/accessories only. NOTE: the TDS "Lights Live
+  // Stock / 2% from each type" entry is a spare-stock RULE, not a material, so it
+  // is intentionally excluded here — that stocking rule belongs to warehouse/BOQ
+  // logic in a later sprint, not this catalog. (9A-fix)
   misc: {
     label: 'Misc',
     table: 'misc_catalog',
@@ -126,10 +130,21 @@ const CATALOGS = {
   },
 }
 
+// Form control that never exceeds its grid cell (border-box + full width).
+const fieldControl = { ...inputStyle, boxSizing: 'border-box', width: '100%', maxWidth: '100%' }
+
 const chipStyle = (on) => ({ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
   color: on ? '#A0762B' : '#A39D8E', background: on ? '#F5EEDF' : '#F0EDE4' })
 
-const num = (v) => v == null || v === '' ? '—' : Number(v).toLocaleString()
+// Latin/Western digits are mandatory in these catalogs (9A-fix). Number inputs
+// and toLocaleString() otherwise render Arabic-Indic numerals on ar-locale OS —
+// same class of bug the 8X DateInput fix solved. Pin en-US for display, and
+// coerce any Arabic-Indic/Persian digits the user types back to Latin.
+const num = (v) => v == null || v === '' ? '—' : Number(v).toLocaleString('en-US')
+const toLatinDigits = (s) => String(s)
+  .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+  .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+const numFilter = (s) => toLatinDigits(s).replace(/[^\d.-]/g, '')
 
 export default function EquipmentCatalogs({ role }) {
   const canWrite = ['admin', 'pmo'].includes(role)
@@ -344,9 +359,14 @@ function CatalogFormModal({ cfg, row, userId, onClose, onDone }) {
         <Btn onClick={onClose}>Cancel</Btn>
         <Btn variant="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : isNew ? 'Add item' : 'Save changes'}</Btn>
       </>}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-        {cfg.fields.map((f) => (
-          <div key={f.key} style={{ gridColumn: f.bool || f.help ? '1 / -1' : 'auto' }}>
+      {/* Responsive two-up grid. minWidth:0 stops long values/labels from blowing
+          out their track (grid children default to min-width:auto and spill past
+          the field box); box-sizing keeps width:100% inputs inside the cell. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0 14px' }}>
+        {cfg.fields.map((f) => {
+          const numeric = f.num || f.int
+          return (
+          <div key={f.key} style={{ minWidth: 0, gridColumn: f.bool || f.help ? '1 / -1' : 'auto' }}>
             {f.bool ? (
               <label style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14, fontSize: 13, cursor: 'pointer' }}>
                 <input type="checkbox" checked={!!form[f.key]} onChange={(e) => set(f.key, e.target.checked)} />
@@ -355,19 +375,23 @@ function CatalogFormModal({ cfg, row, userId, onClose, onDone }) {
             ) : (
               <Field label={f.label + (f.required ? ' *' : '')}>
                 {f.select ? (
-                  <select style={inputStyle} value={form[f.key] || ''} onChange={(e) => set(f.key, e.target.value)}>
+                  <select style={fieldControl} value={form[f.key] || ''} onChange={(e) => set(f.key, e.target.value)}>
                     <option value="">—</option>
                     {f.select.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 ) : (
-                  <input style={inputStyle} type={f.num || f.int ? 'number' : 'text'} inputMode={f.num || f.int ? 'decimal' : undefined}
-                    value={form[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} />
+                  // type=text (not number) + digit coercion => always Latin numerals.
+                  <input style={fieldControl} type="text" lang="en" dir="ltr"
+                    inputMode={numeric ? 'decimal' : undefined}
+                    value={form[f.key] ?? ''}
+                    onChange={(e) => set(f.key, numeric ? numFilter(e.target.value) : e.target.value)} />
                 )}
-                {f.help && <span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-3)', marginTop: 4 }}>{f.help}</span>}
+                {f.help && <span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.35 }}>{f.help}</span>}
               </Field>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
     </Modal>
   )
