@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Avatar, Chip, Loading, Empty, Drawer, Btn } from '../components/ui'
@@ -6,9 +6,10 @@ import { useLiveQuery, bgUpdate, signedUrlFor } from '../lib/db'
 import { useAuth, can } from '../rbac'
 import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
-import { statusMeta, MANAGERS } from '../lib/constants'
+import { statusMeta, MANAGERS, PROJECT_PHASE_META } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
-import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../components/ProjectModals'
+import { ProjectFormModal, StatusChangeModal, AssignEngineerModal, PhaseAdvanceModal } from '../components/ProjectModals'
+import SurveyTab from '../components/SurveyTab'
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
@@ -26,6 +27,7 @@ const DOC_COLS = [
 ]
 
 const TABS = [
+  ['survey', 'Survey'],
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
   ['items', 'Items & Replacements'],
@@ -42,6 +44,8 @@ export default function ProjectDetail() {
   const { setLabel } = useBreadcrumb()
   const { role } = useAuth()
   const [tab, setTab] = useState('buildings')
+  const [phaseOpen, setPhaseOpen] = useState(false)
+  const landedRef = useRef(false)
   const [esmPanel, setEsmPanel] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [statusOpen, setStatusOpen] = useState(false)
@@ -54,11 +58,14 @@ export default function ProjectDetail() {
   const [bldgQ, setBldgQ] = useState('')         // debounced (150ms)
   useEffect(() => { const t = setTimeout(() => setBldgQ(bldgQuery.trim().toLowerCase()), 150); return () => clearTimeout(t) }, [bldgQuery])
   const canManage = can(role, MANAGERS) || role === 'admin'
+  const canPhase = ['pmo', 'admin'].includes(role)
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
     q.select('*,pm:profiles!projects_pm_id_fkey(full_name),engineer:profiles!projects_engineer_id_fkey(full_name)').eq('id', id).is('deleted_at', null), [id])
   const project = projects[0]
   useEffect(() => { if (project) setLabel('project:' + id, project.code) }, [project, id, setLabel])
+  // 9B — land on the Survey tab once when the project is in the survey phase
+  useEffect(() => { if (project && !landedRef.current) { landedRef.current = true; if (project.phase === 'survey') setTab('survey') } }, [project])
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
   // 8K-1 — debounced live filter across code / name / engineer / region / city / contractor
@@ -185,6 +192,7 @@ export default function ProjectDetail() {
             <Btn icon="plus" variant="primary" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setAddBldgOpen(true)}>Add building</Btn>
             <Btn icon="edit" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setEditOpen(true)}>Edit project</Btn>
             <Btn icon="settings" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setStatusOpen(true)}>Change status</Btn>
+            {canPhase && <Btn icon="chevronr" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setPhaseOpen(true)}>Next phase</Btn>}
           </div>
         )}
       </div>
@@ -198,6 +206,9 @@ export default function ProjectDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '1px', color: '#8DA0B1' }}>{project.code}</span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pillColor, background: pillBg }}>{pillLabel}</span>
+                {(() => { const pm = PROJECT_PHASE_META[project.phase] || { label: project.phase, color: '#8DA0B1', bg: 'rgba(255,255,255,.10)' }; return (
+                  <span title="Retrofit lifecycle phase" style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pm.color, background: pm.bg }}>{pm.label}</span>
+                ) })()}
                 {anyShortage && <span title="One or more material categories are below their remaining planned quantity — open the Warehouse tab" onClick={() => setTab('warehouse')} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: '#fff', background: '#B3362B' }}>⚠ LOW STOCK</span>}
               </div>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: '8px 0 8px', color: '#fff', letterSpacing: '-.3px' }}>{project.name}</h1>
@@ -272,6 +283,9 @@ export default function ProjectDetail() {
           )
         })}
       </div>
+
+      {/* SURVEY tab (9B) */}
+      {tab === 'survey' && <SurveyTab project={project} buildings={buildings} />}
 
       {/* BUILDINGS tab */}
       {tab === 'buildings' && (
@@ -494,6 +508,7 @@ export default function ProjectDetail() {
       {editOpen && <ProjectFormModal mode="edit" project={project} onClose={() => setEditOpen(false)} />}
       {statusOpen && <StatusChangeModal project={project} onClose={() => setStatusOpen(false)} />}
       {engOpen && <AssignEngineerModal project={project} onClose={() => setEngOpen(false)} />}
+      {phaseOpen && <PhaseAdvanceModal project={project} onClose={() => setPhaseOpen(false)} />}
       {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
       {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
       {archiveBldg && <ArchiveBuildingModal building={archiveBldg} onClose={() => setArchiveBldg(null)} />}
