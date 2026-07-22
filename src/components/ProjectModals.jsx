@@ -8,6 +8,7 @@ import { compressImage } from '../lib/image'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { toast } from '../lib/toast'
+import { PROJECT_PHASE_ORDER, PROJECT_PHASE_META } from '../lib/constants'
 import { read, utils } from 'xlsx'
 
 const STATUSES = ['active', 'draft', 'on_hold', 'closed']
@@ -618,3 +619,34 @@ function EsmBundles({ projectId }) {
   )
 }
 function statusLabel(s) { return ({ active: 'Active', draft: 'Draft', on_hold: 'On-Hold', closed: 'Closed', deleted: 'Deleted' })[s] || s }
+
+// ── 9B: advance the retrofit lifecycle phase (pmo/admin only) ────────────────
+export function PhaseAdvanceModal({ project, onClose }) {
+  const [busy, setBusy] = useState(false)
+  const order = PROJECT_PHASE_ORDER
+  const cur = project.phase || 'survey'
+  const next = order[order.indexOf(cur) + 1]
+  const meta = (p) => PROJECT_PHASE_META[p] || { label: p }
+  const go = async () => {
+    setBusy(true)
+    const { error } = await supabase.rpc('advance_project_phase', { p_project_id: project.id })
+    setBusy(false)
+    if (error) { toast("Couldn't advance phase — " + error.message, 'err'); return }
+    toast(`Project moved to ${meta(next).label}`)
+    onClose?.()
+  }
+  return (
+    <Modal open width={460} title={`Move to next phase · ${project.code}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn>
+        {next && <Btn variant="primary" disabled={busy} onClick={go}>{busy ? 'Moving…' : `Move to ${meta(next).label}`}</Btn>}</>}>
+      {next ? (
+        <div style={{ fontSize: 13, lineHeight: 1.55 }}>
+          Move <b>{project.name}</b> from <b>{meta(cur).label}</b> to <b>{meta(next).label}</b>?
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-3)' }}>
+            Phases are informational in v1 and do not hide any tabs. A later sprint (9C) will gate the Saving&nbsp;Sheet&nbsp;&rarr;&nbsp;Monitoring move on TARSHID approval.
+          </div>
+        </div>
+      ) : <div style={{ fontSize: 13 }}>This project is already at the final phase (<b>{meta(cur).label}</b>).</div>}
+    </Modal>
+  )
+}

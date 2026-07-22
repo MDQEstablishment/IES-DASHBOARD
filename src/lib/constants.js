@@ -104,3 +104,15 @@ export const STATUS = {
 }
 export const statusMeta = (s) => STATUS[s] || ['#8A8577', '#F0EDE4', String(s ?? '—').replace(/_/g, ' ')]
 export const labelize = (s) => (s == null ? '—' : String(s).replace(/_/g, ' '))
+
+// 9B — retrofit lifecycle phase (survey -> saving_sheet -> monitoring -> closeout)
+export const PROJECT_PHASE_ORDER = ['survey', 'saving_sheet', 'monitoring', 'closeout']
+export const PROJECT_PHASE_META = {
+  survey: { label: 'Survey', color: '#A0762B', bg: '#F5EEDF' },
+  saving_sheet: { label: 'Saving Sheet', color: '#B45309', bg: '#FAF3E3' },
+  monitoring: { label: 'Monitoring', color: '#217A54', bg: '#E9F3EE' },
+  closeout: { label: 'Close-out', color: '#3B6C8F', bg: '#EAF1F6' },
+}
+// Survey capture roles (client gate; RLS w_bld/w_proj is the real enforcement)
+export const CAN_SURVEY = ['proje', 'projm', 'progm', 'pmo', 'admin']
+export const SURVEY_CATEGORIES = [['lighting', 'Lighting'], ['ac', 'AC'], ['sensor', 'Sensor'], ['other', 'Other']]
