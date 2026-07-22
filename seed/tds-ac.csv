@@ -1,0 +1,284 @@
+description,equipment_type,model,make,size_category,capacity_btu,capacity_tr,seer,ieer,voltage_class,ch_mode,mandatory,local
+Window Midea  1.47TR SEER 11.05,Window,WDV18HWG,Midea ,1.5 TR Window AC Models List (Inverter Units only),17600,1.47,11.05,,,cooling_heating,Yes,No
+Window Zamil 1.5TR SEER 11.15C&H,Window,ZHT18CSEDMNW,Zamil,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.15,,,cooling_heating,Yes,No
+Window Midea  1.5TR SEER 11.4,Window,WDV18CWG,Midea ,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.4,,,cooling_only,Yes,No
+Window Zamil 1.5TR SEER 11.2,Window,RCT18CSXDMNNW,Zamil,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.2,,,cooling_only,Yes,No
+Window Zamil 1.5TR SEER 11.2v2,Window,ZCT18CSXDMNNW,Zamil,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.2,,,cooling_only,Yes,No
+Window Ugine 1.5TR SEER 11.2,Window,UAWT18C,Ugine,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.2,,,cooling_only,Yes,No
+Window TCL 1.5TR SEER 11.2,Window,CW-TW18CI/V1,TCL,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.2,,,cooling_only,Yes,No
+Window Zamil 1.5TR SEER 11.15,Window,RHT18CSEDMNNW,Zamil,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.15,,,cooling_heating,Yes,No
+Window TCL 1.5TR SEER 11.15,Window,CW‐TW18HI/V1,TCL,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.15,,,cooling_heating,Yes,No
+Window Basic 1.54TR SEER 11.25,Window,BIWAC-T18CD,Basic,1.5 TR Window AC Models List (Inverter Units only),18500,1.54,11.25,,,cooling_only,Yes,No
+Window Basic 1.54TR SEER 11.25C&H,Window,BIWAC-T18HD,Basic,1.5 TR Window AC Models List (Inverter Units only),18500,1.54,11.25,,,cooling_heating,Yes,No
+Window York 1.54TR SEER 11.25C&H,Window,YWLF20ZT2GTUJG‐R3,York,1.5 TR Window AC Models List (Inverter Units only),18500,1.54,11.25,,,cooling_heating,Yes,No
+Window Midea  1.5TR SEER 11.4 Cooling Only,Window,WDV18CDWGKSA,Midea ,1.5 TR Window AC Models List (Inverter Units only),18000,1.5,11.4,,,cooling_only,Yes,Yes
+Window Midea  1.46TR SEER 11C&H,Window,WDV18EDWGKSA,Midea ,1.5 TR Window AC Models List (Inverter Units only),17600,1.46,11,,,cooling_heating,Yes,Yes
+Window Midea  1.71TR SEER 11.1,Window,WDV24CWG,Midea ,2.0 TR Window AC Models List,20500,1.71,11.1,,,cooling_only,Yes,No
+Window Zamil 1.8TR SEER 8.6 v1,Window,LHH24CGEFMNNW,Zamil,2.0 TR Window AC Models List,21600,1.8,8.6,,,cooling_heating,Yes,No
+Window Basic 1.8TR SEER 8.65,Window,BWAC-H24HF,Basic,2.0 TR Window AC Models List,21600,1.8,8.65,,,cooling_heating,Yes,No
+Window Basic 1.82TR SEER 8.65,Window,BWAC-H24CF,Basic,2.0 TR Window AC Models List,21800,1.82,8.65,,,cooling_only,Yes,No
+Window Hisense 1.82TR SEER 8.65,Window,HW24CA23,Hisense,2.0 TR Window AC Models List,21800,1.82,8.65,,,cooling_only,Yes,No
+Window LG 1.85TR SEER 8.75,Window,H242EC.SN2,LG,2.0 TR Window AC Models List,22200,1.85,8.75,,,cooling_only,Yes,Yes
+Window Hisense 1.8TR SEER 8.65,Window,HW24HA23,Hisense,2.0 TR Window AC Models List,21600,1.8,8.65,,,cooling_heating,Yes,No
+Window LG 1.81TR SEER 8.65,Window,H242EH.SN2,LG,2.0 TR Window AC Models List,21700,1.81,8.65,,,cooling_heating,Yes,Yes
+Window Midea  1.68TR SEER 11.15,Window,WDV24HWG,Midea ,2.0 TR Window AC Models List,20200,1.68,11.15,,,cooling_heating,Yes,No
+Window Midea  2.02TR SEER 10.6,Window,WDV25CWG,Midea ,2.0 TR Window AC Models List,24200,2.02,10.6,,,cooling_only,Yes,No
+Window Zamil 1.8TR SEER 8.6v2,Window,LCH24CGXFMNNW1,Zamil,2.0 TR Window AC Models List,21600,1.8,8.6,,,cooling_only,Yes,No
+Window Zamil 1.75TR SEER 8.65,Window,ZCM24CGXFMNNW1,Zamil,2.0 TR Window AC Models List,21000,1.75,8.65,,,cooling_only,Yes,No
+Window Zamil 1.73TR SEER 8.65,Window,ZHM24CGEFMNNW1,Zamil,2.0 TR Window AC Models List,20800,1.73,8.65,,,cooling_heating,Yes,No
+Window Zamil 1.8TR SEER 8.6v2.1,Window,ZCP24CRXFMKHW,Zamil,2.0 TR Window AC Models List,21600,1.8,8.6,,,cooling_only,Yes,No
+Window Zamil 1.8TR SEER 8.6,Window,ZHP24CREFMKHW,Zamil,2.0 TR Window AC Models List,21600,1.8,8.6,,,cooling_heating,Yes,No
+Window Ugine 1.72TR SEER 10.5,Window,UAWT24C,Ugine,2.0 TR Window AC Models List,20600,1.72,10.5,,,cooling_only,Yes,No
+Window Zamil 1.72TR SEER 10.5,Window,RCT24C,Zamil,2.0 TR Window AC Models List,20600,1.72,10.5,,,cooling_only,Yes,No
+Window TCL 1.67TR SEER 8.6,Window,CW-TW24CW1,TCL,2.0 TR Window AC Models List,20000,1.67,8.6,,,cooling_only,Yes,No
+Window TCL 1.67TR SEER 8.6C&H,Window,CW-TW24HW1,TCL,2.0 TR Window AC Models List,20000,1.67,8.6,,,cooling_heating,Yes,No
+Window TCL 1.72TR SEER 10.3,Window,CW-TW24CI/V1,TCL,2.0 TR Window AC Models List,20600,1.72,10.3,,,cooling_only,Yes,No
+Window Fisher 1.82TR SEER 8.65,Window,FWAC‐H24CF,Fisher,2.0 TR Window AC Models List,21800,1.82,8.65,,,cooling_only,Yes,No
+Window Fisher 1.8TR SEER 8.65,Window,FWAC‐H24HF,Fisher,2.0 TR Window AC Models List,21600,1.8,8.65,,,cooling_heating,Yes,No
+Window York 1.8TR SEER 8.6,Window,YWHE24ZH2DHCOR3,York,2.0 TR Window AC Models List,21600,1.8,8.6,,,cooling_heating,Yes,No
+Window Zamil 1.72TR SEER 10.5C&H,Window,ZHT24CSEDMNW,Zamil,2.0 TR Window AC Models List,20600,1.72,10.5,,,cooling_heating,Yes,No
+Window Haier 1.79TR SEER 8.6,Window,HW-24LWA13/R2(T3),Haier,2.0 TR Window AC Models List,21500,1.79,8.6,,,cooling_only,Yes,No
+Window Haier 1.79TR SEER 8.6C&H,Window,HW-24EWA13/R2(T3),Haier,2.0 TR Window AC Models List,21500,1.79,8.6,,,cooling_heating,Yes,No
+Window Ugine 1.75TR SEER 8.65,Window,UAWMS24C,Ugine,2.0 TR Window AC Models List,21000,1.75,8.65,,,cooling_only,Yes,No
+Window Basic 2.02TR SEER 10.6,Window,BIWAC-T24CD,Basic,2.0 TR Window AC Models List,24200,2.02,10.6,,,cooling_only,Yes,No
+Window Basic 2.02TR SEER 10.6C&H,Window,BIWAC-T24HD,Basic,2.0 TR Window AC Models List,24200,2.02,10.6,,,cooling_heating,Yes,No
+Window York 2.02TR SEER 10.6C&H,Window,YWLF26ZT2GTUJG‐R3,York,2.0 TR Window AC Models List,24200,2.02,10.6,,,cooling_heating,Yes,No
+Window Midea  1.7TR SEER 10.65,Window,WDV24CDWGKSA,Midea ,2.0 TR Window AC Models List,20500,1.7,10.65,,,cooling_only,Yes,Yes
+Window Midea  1.68TR SEER 11.15C&H,Window,WDV24HDWGKSA,Midea ,2.0 TR Window AC Models List,20200,1.68,11.15,,,cooling_heating,Yes,Yes
+Window Midea  2.01TR SEER 10.6,Window,WDV25CDWGKSA,Midea ,2.0 TR Window AC Models List,24200,2.01,10.6,,,cooling_only,Yes,Yes
+Window Bancool 1.66TR SEER 8.6,Window,BCW24C,Bancool,2.0 TR Window AC Models List,20000,1.66,8.6,,,cooling_only,Yes,No
+Window Bancool 1.66TR SEER 8.6C&H,Window,BCW24H,Bancool,2.0 TR Window AC Models List,20000,1.66,8.6,,,cooling_heating,Yes,No
+Split_Wall_Mounted Midea 0.97TR SEER 15.65,Split_Wall_Mounted,MSTMXV12HRN1AG1,Midea,1.0 TR Split -Wall mounted AC Models List,11600,0.97,15.65,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 1TR SEER 15.85,Split_Wall_Mounted,BSACQ-FI12CB,Basic,1.0 TR Split -Wall mounted AC Models List,12000,1,15.85,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1TR SEER 15.75,Split_Wall_Mounted,BSACQ-FI12HB,Basic,1.0 TR Split -Wall mounted AC Models List,12000,1,15.75,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1TR SEER 15.1,Split_Wall_Mounted,NF122C0.NJ0,LG,1.0 TR Split -Wall mounted AC Models List,12000,1,15.1,,,cooling_only,Yes,Yes
+Split_Wall_Mounted Basic 1TR SEER 15,Split_Wall_Mounted,BSACMA-FI12CB,Basic,1.0 TR Split -Wall mounted AC Models List,12000,1,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 1TR SEER 15,Split_Wall_Mounted,GWC12AVCXD-S6DTA1C,Gree,1.0 TR Split -Wall mounted AC Models List,12000,1,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1TR SEER 15.75,Split_Wall_Mounted,BSACMA‐FI12HB / BSACMA‐CI12HB,Basic,1.0 TR Split -Wall mounted AC Models List,12000,1,15.75,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.03TR SEER 15.1,Split_Wall_Mounted,TSZ12EHITY,Zamil,1.0 TR Split -Wall mounted AC Models List,12300,1.03,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1TR SEER 15.1,Split_Wall_Mounted,NF122C0.UJ1,LG,1.0 TR Split -Wall mounted AC Models List,12000,1,15.1,,,cooling_only,Yes,Yes
+Split_Wall_Mounted LG 1TR SEER 15.1,Split_Wall_Mounted,NF122H0.UJ1,LG,1.0 TR Split -Wall mounted AC Models List,12000,1,15.1,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Carrier 0.97TR SEER 15.65,Split_Wall_Mounted,42QHG012VS 38QHG012VS,Carrier,1.0 TR Split -Wall mounted AC Models List,11600,0.97,15.65,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1TR SEER 15.85,Split_Wall_Mounted,AIZ12ECIZBK AKZ12EIBCJZBK,Zamil,1.0 TR Split -Wall mounted AC Models List,12000,1,15.85,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 1TR SEER 15.75,Split_Wall_Mounted,AIZ12EHIZBK AKZ12EIBHJZBK,Zamil,1.0 TR Split -Wall mounted AC Models List,12000,1,15.75,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.03TR SEER 15.1,Split_Wall_Mounted,TIZ12EHITBK TKZ12EIGHJTBK,Zamil,1.0 TR Split -Wall mounted AC Models List,12300,1.03,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted TCL 1TR SEER 15.2,Split_Wall_Mounted,TAC-12CSU/TSSI1,TCL,1.0 TR Split -Wall mounted AC Models List,12000,1,15.2,,,cooling_only,Yes,No
+Split_Wall_Mounted TCL 1.03TR SEER 15.1,Split_Wall_Mounted,TAC-12HSU/TSSI1,TCL,1.0 TR Split -Wall mounted AC Models List,12400,1.03,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 0.98TR SEER 15,Split_Wall_Mounted,GWC12AGC-S3DTA1C,Gree,1.0 TR Split -Wall mounted AC Models List,11700,0.98,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 0.98TR SEER 15,Split_Wall_Mounted,GWH12AGC-S3DTA1C,Gree,1.0 TR Split -Wall mounted AC Models List,11700,0.98,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 1TR SEER 15,Split_Wall_Mounted,GWH12AWCXB-S6DTA3A ,Gree,1.0 TR Split -Wall mounted AC Models List,12000,1,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 1TR SEER 15.85,Split_Wall_Mounted,BSACMA‐FI12CB BSACMA‐CI12CB,Basic,1.0 TR Split -Wall mounted AC Models List,12000,1,15.85,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1TR SEER 15.15,Split_Wall_Mounted,BSACMA‐FI12CB/B BSACMA‐CI12CB/B,Basic,1.0 TR Split -Wall mounted AC Models List,12000,1,15.15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1TR SEER 15.15,Split_Wall_Mounted,BSACMA‐FI12HB/B BSACMA‐CI12HB/B,Basic,1.0 TR Split -Wall mounted AC Models List,12000,1,15.15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Fisher 1TR SEER 15.75,Split_Wall_Mounted,FSACME‐XF12HIB FSACME‐XC12HIB,Fisher,1.0 TR Split -Wall mounted AC Models List,12000,1,15.75,,,cooling_heating,Yes,No
+Split_Wall_Mounted Fisher 1TR SEER 15.85,Split_Wall_Mounted,FSACME‐XF12CIB FSACME‐XC12CIB,Fisher,1.0 TR Split -Wall mounted AC Models List,12000,1,15.85,,,cooling_only,Yes,No
+Split_Wall_Mounted Daikin 1.1TR SEER 16.85,Split_Wall_Mounted,FTHF12TVMVZK/RHFG12TVMVZK,Daikin,1.0 TR Split -Wall mounted AC Models List,13200,1.1,16.85,,,cooling_heating,Yes,No
+Split_Wall_Mounted Daikin 1.1TR SEER 17.1,Split_Wall_Mounted,FTKF12TVMVZK/RKFG12TVMVZK,Daikin,1.0 TR Split -Wall mounted AC Models List,13200,1.1,17.1,,,cooling_only,Yes,No
+Split_Wall_Mounted Ugine 1.01TR SEER 15,Split_Wall_Mounted,UAST12C4,Ugine,1.0 TR Split -Wall mounted AC Models List,12100,1.01,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Airfel 1.03TR SEER 15.1,Split_Wall_Mounted,LXTYGQ12VLK / MXYGQ12VLKW,Airfel,1.0 TR Split -Wall mounted AC Models List,12300,1.03,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted Bancool 1TR SEER 15.85,Split_Wall_Mounted,AMJBCPVR12CC,Bancool,1.0 TR Split -Wall mounted AC Models List,12000,1,15.85,,,cooling_only,Yes,No
+Split_Wall_Mounted Bancool 1TR SEER 15.3,Split_Wall_Mounted,AMJBCPVR12CH,Bancool,1.0 TR Split -Wall mounted AC Models List,12000,1,15.3,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.02TR SEER 15.1,Split_Wall_Mounted,AIZ12EHIKBB‐R32 / AKZ12EIRHJKBB‐R32,Zamil,1.0 TR Split -Wall mounted AC Models List,12200,1.02,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted York 1.02TR SEER 15.1,Split_Wall_Mounted,YHKF14XT2GHRG‐R6 / YHKF14YT2GHRGO‐6 ,York,1.0 TR Split -Wall mounted AC Models List,12200,1.02,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted Midea 1.02TR SEER 15.45,Split_Wall_Mounted,SAPV12HDEFKSA,Midea,1.0 TR Split -Wall mounted AC Models List,12300,1.02,15.45,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Bancool 1TR SEER 15.35,Split_Wall_Mounted,BC12CV,Bancool,1.0 TR Split -Wall mounted AC Models List,12100,1,15.35,,,cooling_only,Yes,No
+Split_Wall_Mounted Bancool 1TR SEER 15.15,Split_Wall_Mounted,BC12HV,Bancool,1.0 TR Split -Wall mounted AC Models List,12100,1,15.15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 1TR SEER 15.25,Split_Wall_Mounted,AS12CH1 / AS12CH2,Hisense,1.0 TR Split -Wall mounted AC Models List,12000,1,15.25,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 1TR SEER 15.45,Split_Wall_Mounted,ASV12CO1 / ASV12CO2,Hisense,1.0 TR Split -Wall mounted AC Models List,12400,1,15.45,,,cooling_only,Yes,No
+Split_Wall_Mounted Midea 1.45TR SEER 15,Split_Wall_Mounted,MSTMXV18HRN2AG1,Midea,1.5 TR Split- Wall mounted AC Models List,17400,1.45,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1.5TR SEER 15.2,Split_Wall_Mounted,NS182C2SK1,LG,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.2,,,cooling_only,Yes,Yes
+Split_Wall_Mounted Basic 1.5TR SEER 15,Split_Wall_Mounted,BSACQ-FI18HC,Basic,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 1.5TR SEER 15.3,Split_Wall_Mounted,BSACMA-FI18CB,Basic,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.3,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 1.5TR SEER 15.05,Split_Wall_Mounted,HIZ18,Zamil,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Hisense 1.5TR SEER 15.25,Split_Wall_Mounted,HS18HPVI/O23,Hisense,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.25,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 1.5TR SEER 15.3,Split_Wall_Mounted,BSACMA‐FI18HB / BSACMA‐CI18HB,Basic,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.3,,,cooling_heating,Yes,No
+Split_Wall_Mounted TCL 1.53TR SEER 15,Split_Wall_Mounted,TAC-18CSU/TPXI11,TCL,1.5 TR Split- Wall mounted AC Models List,18400,1.53,15,,,cooling_only,Yes,No
+Split_Wall_Mounted York 1.5TR SEER 15.05,Split_Wall_Mounted,YHQE18XT2CHS-R5-YHQE18YT2CHSO-5,York,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1.5TR SEER 15.2,Split_Wall_Mounted,NS182C2 NK2 / NS182C2 UK2,LG,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.2,,,cooling_only,Yes,Yes
+Split_Wall_Mounted LG 1.5TR SEER 15.2,Split_Wall_Mounted,NS182H2 NK2 / NS182H2 UK2,LG,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.2,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Carrier 1.45TR SEER 15,Split_Wall_Mounted,42QHG018VS 38QHG018VS,Carrier,1.5 TR Split- Wall mounted AC Models List,17400,1.45,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.5TR SEER 15.3,Split_Wall_Mounted,AIZ18ECIZBK AKZ18EIBCJZBK,Zamil,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.3,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 1.5TR SEER 15.3,Split_Wall_Mounted,AIZ18EHIZBK AKZ18EIBHJZBK,Zamil,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.3,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.5TR SEER 15.05,Split_Wall_Mounted,HIZ18ECIPBK HKZ18EIGCJPBK,Zamil,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 1.5TR SEER 15.05,Split_Wall_Mounted,HIZ18EHIPBK HKZ18EIGHJPBK,Zamil,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.53TR SEER 15.15,Split_Wall_Mounted,TIZ18ECITBK TKZ18EIGCJTBK,Zamil,1.5 TR Split- Wall mounted AC Models List,18400,1.53,15.15,,,cooling_only,Yes,No
+Split_Wall_Mounted LG 1.5TR SEER 15.2,Split_Wall_Mounted,NW182C0.NK0/UK0,LG,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.2,,,cooling_only,Yes,Yes
+Split_Wall_Mounted LG 1.5TR SEER 15.2,Split_Wall_Mounted,NW182H0.NK0/UK0,LG,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.2,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Midea 1.5TR SEER 15.25,Split_Wall_Mounted,MSTXCV18HRNXT,Midea,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.25,,,cooling_heating,Yes,No
+Split_Wall_Mounted Fisher 1.5TR SEER 15.3,Split_Wall_Mounted,FSACME‐XF18CIB FSACME‐XC18CIB,Fisher,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.3,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1.6TR SEER 15.05,Split_Wall_Mounted,BSACMA‐FI19CB/B - BSACMA‐CI19CB/B,Basic,1.5 TR Split- Wall mounted AC Models List,19200,1.6,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1.6TR SEER 15.05,Split_Wall_Mounted,BSACMA‐FI19HB/B - BSACMA‐CI19HB/B,Basic,1.5 TR Split- Wall mounted AC Models List,19200,1.6,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Fisher 1.5TR SEER 15.3,Split_Wall_Mounted,FSACME‐XF18HIB FSACME‐XC18HIB,Fisher,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.3,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 1.5TR SEER 15.05,Split_Wall_Mounted,GWC18AGD-S3DTA1A,Gree,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 1.5TR SEER 15.05,Split_Wall_Mounted,GWH18AGD-S3DTA1A,Gree,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 1.5TR SEER 15.05,Split_Wall_Mounted,GWH18AWDXE‐S6DTA3B,Gree,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 1.5TR SEER 15.05,Split_Wall_Mounted,GWC18AWDXE‐S6DTA3B,Gree,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Hisense 1.5TR SEER 15.45,Split_Wall_Mounted,HS18CPVI/O23,Hisense,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.45,,,cooling_only,Yes,No
+Split_Wall_Mounted Airfel 1.47TR SEER 15.75,Split_Wall_Mounted,LXTYEQ18VLK/MXYEQ18VLKW,Airfel,1.5 TR Split- Wall mounted AC Models List,17600,1.47,15.75,,,cooling_heating,Yes,No
+Split_Wall_Mounted Haier 1.5TR SEER 15.05,Split_Wall_Mounted,HSU-18HPA13/R2(T3DB),Haier,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Haier 1.5TR SEER 15.05,Split_Wall_Mounted,HSU-18LPA13/R2(T3DB),Haier,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Ugine 1.5TR SEER 15.65,Split_Wall_Mounted,UASMINV18C,Ugine,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.65,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1.5TR SEER 15.05,Split_Wall_Mounted,BSACMA‐FI18HBN BSACMA‐CI18HBN,Basic,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Airfel 1.48TR SEER 15,Split_Wall_Mounted,LXTYGQ18VLK‐SP1 / MXYGQ18VLKW‐SP1,Airfel,1.5 TR Split- Wall mounted AC Models List,17800,1.48,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Bancool 1.5TR SEER 15.3,Split_Wall_Mounted,AMJBCPVR18CC,Bancool,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.3,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1.5TR SEER 15.05,Split_Wall_Mounted,BSACMA‐FI18HBN / BSACMA‐CI18HBN,Basic,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.5TR SEER 15.15,Split_Wall_Mounted,AIZ18EHIKBB‐R32 / AKZ18EIRHJKBB‐R32,Zamil,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.15,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1.5TR SEER 15.05,Split_Wall_Mounted,NF182H3 NK3 / NF182H3 UK3,LG,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15.05,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted York 1.5TR SEER 15,Split_Wall_Mounted,YHKF21XT2GHRG‐R6 / YHKF21XT2GHRGO‐6 ,York,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Midea 1.51TR SEER 15.65,Split_Wall_Mounted,SAPV18CDEFKSA,Midea,1.5 TR Split- Wall mounted AC Models List,18200,1.51,15.65,,,cooling_only,Yes,Yes
+Split_Wall_Mounted Midea 1.59TR SEER 16.35,Split_Wall_Mounted,SAPV18HDEFKSA,Midea,1.5 TR Split- Wall mounted AC Models List,19100,1.59,16.35,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Bancool 1.58TR SEER 15.05,Split_Wall_Mounted,BC18CV,Bancool,1.5 TR Split- Wall mounted AC Models List,19000,1.58,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Bancool 1.58TR SEER 15.05,Split_Wall_Mounted,BC18HV,Bancool,1.5 TR Split- Wall mounted AC Models List,19000,1.58,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 1.5TR SEER 15,Split_Wall_Mounted,ASV18CH1 / ASV18CH2,Hisense,1.5 TR Split- Wall mounted AC Models List,18000,1.5,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 1.53TR SEER 15,Split_Wall_Mounted,ASV18CO1 / ASV18CO2,Hisense,1.5 TR Split- Wall mounted AC Models List,18300,1.53,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 1.77TR SEER 15.05,Split_Wall_Mounted,BSACMA-FI24HB - BSACMA-CI24HB,Basic,2.0 TR Split- Wall mounted AC Models List,21200,1.77,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 1.83TR SEER 15,Split_Wall_Mounted,GWH24AGE-S3DTA1F,Gree,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.83TR SEER 15.05,Split_Wall_Mounted,HIZ24,Zamil,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 1.83TR SEER 15,Split_Wall_Mounted,GWH24AGE-S3DTA1F/I,Gree,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Haier 1.83TR SEER 15.05,Split_Wall_Mounted,HSU-24HPA13/R2 (T3DBN-B),Haier,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 2TR SEER 15.25,Split_Wall_Mounted,HS24C2VF/HS24C2VC ,Hisense,2.0 TR Split- Wall mounted AC Models List,24000,2,15.25,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2TR SEER 16.1,Split_Wall_Mounted,GWC24AVEXF-S6DTA1E,Gree,2.0 TR Split- Wall mounted AC Models List,24000,2,16.1,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2TR SEER 15.75,Split_Wall_Mounted,GWC24AWEXF-S6DTA3A,Gree,2.0 TR Split- Wall mounted AC Models List,24000,2,15.75,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2TR SEER 16.05,Split_Wall_Mounted,GWH24AVEXF‐S6DTA1B,Gree,2.0 TR Split- Wall mounted AC Models List,24000,2,16.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 2TR SEER 15.1,Split_Wall_Mounted,GWH24AWEXF-S6DTA3A,Gree,2.0 TR Split- Wall mounted AC Models List,24000,2,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted Midea 1.75TR SEER 15.05,Split_Wall_Mounted,MSTMXV24HRN2AG1,Midea,2.0 TR Split- Wall mounted AC Models List,21000,1.75,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted York 1.83TR SEER 15.05,Split_Wall_Mounted,YHQE24XT2CHS-R5/YHQE24YT2CHSO-5,York,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1.75TR SEER 15.25,Split_Wall_Mounted,NS242H3 NK2 NS242H3 UK2,LG,2.0 TR Split- Wall mounted AC Models List,21000,1.75,15.25,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Carrier 1.75TR SEER 15,Split_Wall_Mounted,42QHG024VS 38QHG024VS,Carrier,2.0 TR Split- Wall mounted AC Models List,21000,1.75,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1.79TR SEER 15.35,Split_Wall_Mounted,NS242C3 NK2 NS242C3 UK2,LG,2.0 TR Split- Wall mounted AC Models List,21500,1.79,15.35,,,cooling_only,Yes,Yes
+Split_Wall_Mounted Zamil 1.83TR SEER 15.05,Split_Wall_Mounted,AIZ24ECIZBK AKZ24EIBCJZBK,Zamil,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 1.77TR SEER 15.05,Split_Wall_Mounted,AIZ24EHIZBK AKZ24EIBHJZBK,Zamil,2.0 TR Split- Wall mounted AC Models List,21200,1.77,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 1.83TR SEER 15.05,Split_Wall_Mounted,HIZ24ECIPBK HKZ24EIGCJPBK,Zamil,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 1.83TR SEER 15.05,Split_Wall_Mounted,HIZ24EHIPBK HKZ24EIGHJPBK,Zamil,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1.79TR SEER 15.35,Split_Wall_Mounted,NW242C0.NK0/UK0,LG,2.0 TR Split- Wall mounted AC Models List,21500,1.79,15.35,,,cooling_only,Yes,Yes
+Split_Wall_Mounted LG 1.75TR SEER 15.25,Split_Wall_Mounted,NW242H0.NK0/UK0,LG,2.0 TR Split- Wall mounted AC Models List,21000,1.75,15.25,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Midea 1.79TR SEER 15.05,Split_Wall_Mounted,MSTXCV24HRNXT,Midea,2.0 TR Split- Wall mounted AC Models List,21500,1.79,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 1.83TR SEER 15.05,Split_Wall_Mounted,BSACMA-FI24CB - BSACMA-CI24CB,Basic,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 2TR SEER 15.1,Split_Wall_Mounted,BSACMA‐FI24CB/B - BSACMA‐CI24CB/B,Basic,2.0 TR Split- Wall mounted AC Models List,24000,2,15.1,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 2TR SEER 15.05,Split_Wall_Mounted,BSACMA‐FI24HB/B - BSACMA‐CI24HB/B,Basic,2.0 TR Split- Wall mounted AC Models List,24000,2,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Fisher 1.83TR SEER 15.05,Split_Wall_Mounted,FSACME‐XF24CIB FSACME‐XC24CIB,Fisher,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Fisher 1.77TR SEER 15.05,Split_Wall_Mounted,FSACME‐XF24HIB FSACME‐XC24HIB,Fisher,2.0 TR Split- Wall mounted AC Models List,21200,1.77,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 2TR SEER 15.25,Split_Wall_Mounted,HS24CPVI23 / HS24CPVO23,Hisense,2.0 TR Split- Wall mounted AC Models List,24000,2,15.25,,,cooling_only,Yes,No
+Split_Wall_Mounted Hisense 2TR SEER 15.25,Split_Wall_Mounted,HS24HPVI23/HS24HPVO23,Hisense,2.0 TR Split- Wall mounted AC Models List,24000,2,15.25,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 2TR SEER 15.8,Split_Wall_Mounted,GWC24AWEXF-S6DTA3F,Gree,2.0 TR Split- Wall mounted AC Models List,24000,2,15.8,,,cooling_heating,Yes,No
+Split_Wall_Mounted Haier 1.83TR SEER 15.05,Split_Wall_Mounted,HSU-24HPA13/R2(T3DB),Haier,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Haier 1.83TR SEER 15.05,Split_Wall_Mounted,HSU-24LPA13/R2(T3DB),Haier,2.0 TR Split- Wall mounted AC Models List,22000,1.83,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Ugine 1.93TR SEER 15.95,Split_Wall_Mounted,UASMINV24C,Ugine,2.0 TR Split- Wall mounted AC Models List,23200,1.93,15.95,,,cooling_only,Yes,No
+Split_Wall_Mounted Airfel 1.75TR SEER 15,Split_Wall_Mounted,LXTYGQ24VLK‐SP1 / MXYGQ24VLKW‐SP1,Airfel,2.0 TR Split- Wall mounted AC Models List,21000,1.75,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 1.84TR SEER 15,Split_Wall_Mounted,NF242H4 NK4 / NF242H4 UK4,LG,2.0 TR Split- Wall mounted AC Models List,22100,1.84,15,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Zamil 2TR SEER 15.05,Split_Wall_Mounted,AIZ24EHIKBB‐R32 / AKZ24EIRHJKBB‐R32,Zamil,2.0 TR Split- Wall mounted AC Models List,24000,2,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted York 2TR SEER 15.05,Split_Wall_Mounted,YHKF28XT2GHRG‐R6 / YHKF28YT2GHRGO‐6,York,2.0 TR Split- Wall mounted AC Models List,24000,2,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Midea 1.93TR SEER 15.95,Split_Wall_Mounted,SAPV24CDEFKSA,Midea,2.0 TR Split- Wall mounted AC Models List,23200,1.93,15.95,,,cooling_only,Yes,Yes
+Split_Wall_Mounted Midea 2TR SEER 15.5,Split_Wall_Mounted,SAPV24HDEFKSA,Midea,2.0 TR Split- Wall mounted AC Models List,24000,2,15.5,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Bancool 2TR SEER 15.1,Split_Wall_Mounted,BC24CV,Bancool,2.0 TR Split- Wall mounted AC Models List,24000,2,15.1,,,cooling_only,Yes,No
+Split_Wall_Mounted Bancool 2TR SEER 15.05,Split_Wall_Mounted,BC24HV,Bancool,2.0 TR Split- Wall mounted AC Models List,24000,2,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 1.9TR SEER 15.05,Split_Wall_Mounted,ASV24CH1 / ASV24CH2,Hisense,2.0 TR Split- Wall mounted AC Models List,22800,1.9,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Hisense 1.92TR SEER 15.05,Split_Wall_Mounted,ASV24CO1 / ASV24CO2,Hisense,2.0 TR Split- Wall mounted AC Models List,23000,1.92,15.05,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 2.25TR SEER 15.05,Split_Wall_Mounted,MEZ30CHIVBK,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,27000,2.25,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Midea 2.25TR SEER 15.05,Split_Wall_Mounted,MSTMXV30HRN2AG1,Midea,2.5 - 3.0 TR Split- Wall mounted AC Models List,27000,2.25,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Gree 2.28TR SEER 15,Split_Wall_Mounted,GWH30AGEXH-S3DTA1A,Gree,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 2.28TR SEER 15,Split_Wall_Mounted,HIZ30,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2.28TR SEER 15,Split_Wall_Mounted,GWC30AGEXH‐S3DTA1A/I,Gree,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 2.28TR SEER 15.1,Split_Wall_Mounted,BSACCA-FI30HB - BSACCA-CI30HB,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted Haier 2.28TR SEER 15,Split_Wall_Mounted,HSU‐30LPA13/R2 (T3DBN-B),Haier,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Airfel 2.42TR SEER 15,Split_Wall_Mounted,LXTYEQ32VLK MXYEQ32VLKW,Airfel,2.5 - 3.0 TR Split- Wall mounted AC Models List,29000,2.42,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Midea 2.42TR SEER 15,Split_Wall_Mounted,MSTMXV36HRNMB,Midea,2.5 - 3.0 TR Split- Wall mounted AC Models List,29000,2.42,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 2.5TR SEER 15.25,Split_Wall_Mounted,NT382C2NR0/UR0,LG,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.25,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2.5TR SEER 15.5,Split_Wall_Mounted,GWC30AVEXH-S6DTA1B,Gree,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.5,,,cooling_only,Yes,No
+Split_Wall_Mounted LG 2.5TR SEER 15.25,Split_Wall_Mounted,NT382C2NR2,LG,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.25,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2.5TR SEER 15.4,Split_Wall_Mounted,GWC30AWEXH-S6DTA3A,Gree,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.4,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2.5TR SEER 15.5,Split_Wall_Mounted,GWH30AVEXH‐S6DTA1B,Gree,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.5,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 2.62TR SEER 15,Split_Wall_Mounted,BSACCA‐FI36HB / BSACCA‐CI36HB,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,31400,2.62,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted York 2.85TR SEER 15,Split_Wall_Mounted,YHQE36YT2CHSO-5 / YHQE36XT2CHS-R5,York,2.5 - 3.0 TR Split- Wall mounted AC Models List,34200,2.85,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 2.85TR SEER 15.5,Split_Wall_Mounted,GWC36QFXH‐S6DTB4B,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,34200,2.85,15.5,,,cooling_only,Yes,No
+Split_Wall_Mounted York 2.85TR SEER 15.05,Split_Wall_Mounted,YGQE36XT2B2S-R4 / YGQE36YT2B2SO-4,York,2.5 - 3.0 TR Split- Wall mounted AC Models List,34200,2.85,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted York 2.28TR SEER 15,Split_Wall_Mounted,YHQE30YT2CHSO-5 / YHQE30XT2CHS-R5,York,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Fisher 2.28TR SEER 15.1,Split_Wall_Mounted,FSACCA-XF30HIB / FSACCA-XC30HIB,Fisher,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted LG 2.5TR SEER 15.25,Split_Wall_Mounted,NT382C2 NR2 / NT382C2 UR2,LG,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.25,,,cooling_only,Yes,Yes
+Split_Wall_Mounted LG 2.5TR SEER 15.25,Split_Wall_Mounted,NT382H2.NR2,LG,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.25,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Zamil 2.28TR SEER 15.1,Split_Wall_Mounted,AIZ30ECIZBK AKZ30EIBCJZBK,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15.1,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 2.28TR SEER 15.1,Split_Wall_Mounted,AIZ30EHIZBK AKZ30EIBHJZBK,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15.1,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 2.62TR SEER 15,Split_Wall_Mounted,AIZ36ECIZBK AKZ36EIBCJZBK,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,31400,2.62,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 2.62TR SEER 15,Split_Wall_Mounted,AIZ36EHIZBK AKZ36EIBHJZBK,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,31400,2.62,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 2.28TR SEER 15,Split_Wall_Mounted,HIZ30ECIPBK HKZ30EIGCJPBK,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Zamil 2.28TR SEER 15,Split_Wall_Mounted,HIZ30EHIPBK HKZ30EIGHJPBK,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Fisher 2.62TR SEER 15,Split_Wall_Mounted,FSACCA‐XF36CIB FSACCA‐XC36CIB,Fisher,2.5 - 3.0 TR Split- Wall mounted AC Models List,31400,2.62,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Fisher 2.62TR SEER 15,Split_Wall_Mounted,FSACCA‐XF36HIB FSACCA‐XC36HIB,Fisher,2.5 - 3.0 TR Split- Wall mounted AC Models List,31400,2.62,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 2.62TR SEER 15,Split_Wall_Mounted,BSACCA‐FI36CB BSACCA‐CI36CB,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,31400,2.62,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 2.28TR SEER 15.1,Split_Wall_Mounted,BSACCA‐FI30CB - BSACCA‐CI30CB,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15.1,,,cooling_only,Yes,No
+Split_Wall_Mounted Gree 2.5TR SEER 15.4,Split_Wall_Mounted,GWC30AWEXH‐S6DTA3A/I GWC30AWEXH‐S6DTA1A/O,Gree,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15.4,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 2.5TR SEER 15,Split_Wall_Mounted,BSACCA‐FI30CB/B BSACCA‐CI30CB/B,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Airfel 2.42TR SEER 15,Split_Wall_Mounted,LXTYEQ32VLK/MXYEQ32VLKW,Airfel,2.5 - 3.0 TR Split- Wall mounted AC Models List,29000,2.42,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Haier 2.28TR SEER 15,Split_Wall_Mounted,HSU-30LPA13/R2(T3DB),Haier,2.5 - 3.0 TR Split- Wall mounted AC Models List,27400,2.28,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Haier 2.75TR SEER 15.05,Split_Wall_Mounted,HSU-36HPA13/R2(T3DB),Haier,2.5 - 3.0 TR Split- Wall mounted AC Models List,33000,2.75,15.05,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 2.33TR SEER 15.75,Split_Wall_Mounted,BSACCA‐FI30HB/B BSACCA‐CI30HB/B,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,28000,2.33,15.75,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 2.33TR SEER 15,Split_Wall_Mounted,BSACMA-FI30HB/B,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,28000,2.33,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Basic 2.5TR SEER 15,Split_Wall_Mounted,BSACCA‐FI30CB/B - BSACCA‐CI30CB/B,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 3TR SEER 15,Split_Wall_Mounted,BSACCA‐FI36CB/B - BSACCA‐CI36CB/B,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,36000,3,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Basic 2.93TR SEER 15.15,Split_Wall_Mounted,BSACCA‐FI36HB/B - BSACCA‐CI36HB/B,Basic,2.5 - 3.0 TR Split- Wall mounted AC Models List,35200,2.93,15.15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Zamil 2.5TR SEER 15,Split_Wall_Mounted,AIZ30EHIKBB‐R32 / AKZ30EIRHJKBB‐R32,Zamil,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted York 2.5TR SEER 15,Split_Wall_Mounted,YHKF32XT2GHQC‐R6 / YHKF32YT2GHQCO‐6,York,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15,,,cooling_heating,Yes,No
+Split_Wall_Mounted Midea 2.42TR SEER 15.15,Split_Wall_Mounted,SAPV30HDAG1KSA / SAPV30HDAG1KSA,Midea,2.5 - 3.0 TR Split- Wall mounted AC Models List,29000,2.42,15.15,,,cooling_heating,Yes,Yes
+Split_Wall_Mounted Bancool 2.5TR SEER 15,Split_Wall_Mounted,BC30CV,Bancool,2.5 - 3.0 TR Split- Wall mounted AC Models List,30000,2.5,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Bancool 2.33TR SEER 15.75,Split_Wall_Mounted,BC30HV,Bancool,2.5 - 3.0 TR Split- Wall mounted AC Models List,28000,2.33,15.75,,,cooling_heating,Yes,No
+Split_Wall_Mounted Bancool 3TR SEER 15,Split_Wall_Mounted,BC36CV,Bancool,2.5 - 3.0 TR Split- Wall mounted AC Models List,36000,3,15,,,cooling_only,Yes,No
+Split_Wall_Mounted Bancool 2.93TR SEER 15.75,Split_Wall_Mounted,BC36HV,Bancool,2.5 - 3.0 TR Split- Wall mounted AC Models List,35200,2.93,15.75,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted LG 3.83TR SEER 15.05,Split- Floor Standing/mounted,APNW55GT3M6 / AUUW55GT6,LG,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,46000,3.83,15.05,,,cooling_heating,Yes,Yes
+Split- Floor Standing/mounted Basic 4TR SEER 15.05,Split- Floor Standing/mounted,BVAC-FH48HPIB,Basic,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Basic 4TR SEER 15,Split- Floor Standing/mounted,BVAC-FH48HPIC,Basic,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Hisense 4TR SEER 15.05,Split- Floor Standing/mounted,HUF48HAI/O23,Hisense,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Basic 4.58TR SEER 13.9,Split- Floor Standing/mounted,BVAC-FH60HPIC,Basic,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,55000,4.58,13.9,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted York 4TR SEER 15.05,Split- Floor Standing/mounted,YLKF55XL2FFB-R3M/YLKF55YL2FFBO-3M,York,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted York 4.58TR SEER 13.9,Split- Floor Standing/mounted,YLKF65XL2EFB‐R3M / YLKF65YL2EFBO‐3M,York,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,55000,4.58,13.9,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted LG 3.83TR SEER 15.05,Split- Floor Standing/mounted,APNW55GT3M7 / AUUW55GT7 ,LG,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,46000,3.83,15.05,,,cooling_heating,Yes,Yes
+Split- Floor Standing/mounted Basic 4TR SEER 15.05,Split- Floor Standing/mounted,BVAC‐FH48HPIB1 - BVAC‐CH48HPIB1,Basic,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Basic 4.58TR SEER 13.9,Split- Floor Standing/mounted,BVAC‐FH60HPIC1 - BVAC‐CH60HPIC1,Basic,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,55000,4.58,13.9,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Fisher 4TR SEER 15.05,Split- Floor Standing/mounted,FVAC‐FH48HPIB1 - FVAC‐CH48HPIB1,Fisher,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Fisher 4.58TR SEER 13.9,Split- Floor Standing/mounted,FVAC‐FH60HPIC1 - FVAC‐CH60HPIC1,Fisher,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,55000,4.58,13.9,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Hisense 4.58TR SEER 13.9,Split- Floor Standing/mounted,HUF60HAI/O23,Hisense,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,55000,4.58,13.9,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted LG 4TR SEER 15.25,Split- Floor Standing/mounted,APNQ55GT3MA / APUQ55GT3MA,LG,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.25,,,cooling_heating,Yes,Yes
+Split- Floor Standing/mounted Bancool 3.75TR SEER 15.2,Split- Floor Standing/mounted,BCDU48IND BCDU48ODU,Bancool,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,45000,3.75,15.2,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Bancool 4.33TR SEER 15.2,Split- Floor Standing/mounted,BCDU60IND BCDU48ODU,Bancool,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,52000,4.33,15.2,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Basic 4.08TR SEER 15.05,Split- Floor Standing/mounted,BVAC‐FA48HIB / BVAC‐CA48HIB,Basic,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,49000,4.08,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Basic 4.86TR SEER 15.15,Split- Floor Standing/mounted,BVAC‐FA60HIB / BVAC‐CA60HIB,Basic,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,58400,4.86,15.15,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Airfel 4TR SEER 15.05,Split- Floor Standing/mounted,LXVYJA48VLK / MXYJA48VLKF,Airfel,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Airfel 4.42TR SEER 13.9,Split- Floor Standing/mounted,LXVYJA54VLK / MXYJA54VLKF,Airfel,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,53000,4.42,13.9,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Midea 4TR SEER 15.35,Split- Floor Standing/mounted, MFTFNV50HRDKSA,Midea,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,48000,4,15.35,,,cooling_heating,Yes,Yes
+Split- Floor Standing/mounted Bancool 4.08TR SEER 15.05,Split- Floor Standing/mounted,BCFS48CH,Bancool,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,49000,4.08,15.05,,,cooling_heating,Yes,No
+Split- Floor Standing/mounted Bancool 4.86TR SEER 15.15,Split- Floor Standing/mounted,BCFS60CH,Bancool,4.0-5.0 TR Split- Floor Standing/mounted AC Models List,58400,4.86,15.15,,,cooling_heating,Yes,No
+Package York 7.85TR SEER 15.54,Package,DEH090I,York,Package Unit,94300,7.85,,15.54,,,Yes,Yes
+Package York 9.26TR SEER 15.4C&H,Package,DEH120I,York,Package Unit,111200,9.26,,15.4,,,Yes,Yes
+Package York 12.16TR SEER 16.5,Package,DEH160I,York,Package Unit,146000,12.16,,16.5,,,Yes,Yes
+Package York 18.91TR SEER 14.23,Package,DEM230I,York,Package Unit,227000,18.91,,14.23,,,Yes,Yes
+Package York 20.33TR SEER 14.23v2,Package,DEM260I,York,Package Unit,244000,20.33,,14.23,,,Yes,Yes
+Package York 23.33TR SEER 12.64,Package,DEM290I,York,Package Unit,280000,23.33,,12.64,,,Yes,Yes
+Package York 27.08TR SEER 12.79,Package,DEM350I,York,Package Unit,325000,27.08,,12.79,,,Yes,Yes
+Package York 30.08TR SEER 12.17,Package,DEM410I,York,Package Unit,361000,30.08,,12.17,,,Yes,Yes
+Package Zamil 6.25TR SEER 15.12,Package,PTX075KI,Zamil,Package Unit,75000,6.25,,15.12,,,Yes,Yes
+Package Zamil 7.5TR SEER 15.84,Package,PTX090KI,Zamil,Package Unit,90000,7.5,,15.84,,,Yes,Yes
+Package Zamil 10TR SEER 15.84C&H,Package,PTX120KI,Zamil,Package Unit,120000,10,,15.84,,,Yes,Yes
+Package Zamil 12.5TR SEER 16.86C&H,Package,PTX150KI,Zamil,Package Unit,150000,12.5,,16.86,,,Yes,Yes
+Package Zamil 15TR SEER 14.46C&H,Package,PTX180KI,Zamil,Package Unit,180000,15,,14.46,,,Yes,Yes
+Package Zamil 17.5TR SEER 14.31C&H,Package,PTX210KI,Zamil,Package Unit,210000,17.5,,14.31,,,Yes,Yes
+Package Zamil 20TR SEER 14.37C&H,Package,PTX240KI,Zamil,Package Unit,240000,20,,14.37,,,Yes,Yes
+Package Zamil 25TR SEER 13.94C&H,Package,PTX300KI,Zamil,Package Unit,300000,25,,13.94,,,Yes,Yes
+Package Zamil 30TR SEER 13.46C&H,Package,PTX360KI,Zamil,Package Unit,360000,30,,13.46,,,Yes,Yes
+Package Zamil 33.33TR SEER 13.4C&H,Package,PTX400KI,Zamil,Package Unit,400000,33.33,,13.4,,,Yes,Yes
+Package LG 3TR SEER 18.7C&H,Package,AK-Q036GC00,LG,Package Unit,36000,3,,18.7,220 V – 1Ph,cooling_only,Yes,Yes
+Package LG 4TR SEER 18.2C&H,Package,AK-Q048GC00,LG,Package Unit,48000,4,,18.2,220 V – 1Ph,cooling_only,Yes,Yes
+Package LG 4.41TR SEER 17.8C&H,Package,AK-Q060GC00,LG,Package Unit,53000,4.41,,17.8,220 V – 1Ph,cooling_only,Yes,Yes
+Package LG 7.5TR SEER 20C&H,Package,AK-Q110LC01,LG,Package Unit,90000,7.5,,20,400 V – 3Ph,cooling_only,Yes,Yes
+Package LG 9.75TR SEER 19C&H,Package,AK-Q130LC01,LG,Package Unit,117000,9.75,,19,400 V – 3Ph,cooling_only,Yes,Yes
+Package LG 11.66TR SEER 19.5C&H,Package,AK-Q160LC01,LG,Package Unit,140000,11.66,,19.5,400 V – 3Ph,cooling_only,Yes,Yes
+Package LG 14.5TR SEER 18.5C&H,Package,AK-Q200LC01,LG,Package Unit,174000,14.5,,18.5,400 V – 3Ph,cooling_only,Yes,Yes
+Package LG 20TR SEER 19C&H,Package,AK-Q270LC01,LG,Package Unit,240000,20,,19,400 V – 3Ph,cooling_only,Yes,Yes
+Package LG 23TR SEER 18.3C&H,Package,AK-Q320LC01,LG,Package Unit,276000,23,,18.3,400 V – 3Ph,cooling_only,Yes,Yes
+Package LG 14.5TR SEER 18.5C&H,Package,AK-Q200BC03,LG,Package Unit,174000,14.5,,18.5,220 V – 3Ph,cooling_only,Yes,Yes
+Package LG 20TR SEER 19C&H,Package,AK-Q270BC03,LG,Package Unit,240000,20,,19,220 V – 3Ph,cooling_only,Yes,Yes
+Package LG 23TR SEER 18.3C&H,Package,AK-Q320BC03,LG,Package Unit,276000,23,,18.3,220 V – 3Ph,cooling_only,Yes,Yes
+Package LG 7.5TR SEER 20C&H,Package,AK-W110LH00,LG,Package Unit,90000,7.5,,20,400 V – 3Ph,cooling_heating,Yes,Yes
+Package LG 9.75TR SEER 19C&H,Package,AK-W130LH00,LG,Package Unit,117000,9.75,,19,400 V – 3Ph,cooling_heating,Yes,Yes
+Package LG 11.66TR SEER 19.5C&H,Package,AK-W160LH00,LG,Package Unit,140000,11.66,,19.5,400 V – 3Ph,cooling_heating,Yes,Yes
+Package LG 14.5TR SEER 18.5C&H,Package,AK-W200LH00,LG,Package Unit,174000,14.5,,18.5,400 V – 3Ph,cooling_heating,Yes,Yes
+Package LG 20TR SEER 19C&H,Package,AK-W270LH00,LG,Package Unit,240000,20,,19,400 V – 3Ph,cooling_heating,Yes,Yes
+Package LG 23TR SEER 18.3C&H,Package,AK-W320LH00,LG,Package Unit,276000,23,,18.3,400 V – 3Ph,cooling_heating,Yes,Yes
