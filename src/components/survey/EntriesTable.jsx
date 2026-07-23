@@ -46,10 +46,16 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
 
   const doDelete = async (ids) => {
     setBusy(true)
-    const { error } = await supabase.from('survey_entries').delete().in('id', ids)
+    // .select() so the toast reports what ACTUALLY deleted — RLS or a
+    // concurrent delete by the other team can silently shrink the set.
+    const { data, error } = await supabase.from('survey_entries').delete().in('id', ids).select('id')
     setBusy(false)
     if (error) { toast("Couldn't delete — " + error.message, 'err'); return }
-    toast(`${ids.length} ${ids.length === 1 ? 'entry' : 'entries'} deleted`)
+    const n = data?.length || 0
+    if (n === 0) { toast("Nothing deleted — the entries no longer exist or aren't yours to delete", 'err'); return }
+    toast(n === ids.length
+      ? `${n} ${n === 1 ? 'entry' : 'entries'} deleted`
+      : `${n} of ${ids.length} deleted — the rest no longer exist or aren't yours to delete`, n === ids.length ? undefined : 'err')
     setSel(new Set()); setDel(null); setBulkDel(false)
   }
 
