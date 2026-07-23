@@ -121,9 +121,15 @@ export default function ProjectDetail() {
     perB[s.building_id] = perB[s.building_id] || { planned: 0, installed: 0 }
     perB[s.building_id].planned += s.planned_qty || 0
     perB[s.building_id].installed += ins
-    // Bucket by the scope's real ESM (via project_esm_id); fall back to the
-    // material_code only for legacy rows with no project_esm_id.
-    const esmKey = peCode[s.project_esm_id] || code
+    // Bucket by the scope's real ESM (via project_esm_id). Rows with no
+    // project_esm_id mapping are EXCLUDED from the BOQ rollup on purpose: the
+    // rollup is only read back by esmRows via a real ESM code, so a
+    // material_code-keyed bucket could never be displayed anyway. They still
+    // count toward the overall/per-building progress totals above. (The old
+    // fallback here referenced an undefined `code` and crashed the page for
+    // exactly these rows — review fix #1.)
+    const esmKey = peCode[s.project_esm_id]
+    if (!esmKey) return
     rollup[esmKey] = rollup[esmKey] || { planned: 0, installed: 0 }
     rollup[esmKey].planned += s.planned_qty || 0
     rollup[esmKey].installed += ins
