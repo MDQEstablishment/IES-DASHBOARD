@@ -5,7 +5,7 @@ import { useAuth } from '../rbac'
 import { useLiveQuery } from '../lib/db'
 import { ROLE_ORDER, ROSTER, roleTitle, roleColor } from '../lib/constants'
 import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
-import { fmtDateTime } from '../lib/format'
+import { fmtDateTime, num } from '../lib/format'
 import { toast } from '../lib/toast'
 import EquipmentCatalogs from '../components/EquipmentCatalogs'
 
@@ -84,8 +84,8 @@ export default function Settings() {
               <div style={{ fontWeight: 700, fontSize: 14 }}>AI delivery-note extraction</div>
               <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>PDF extractions used this calendar month. Resets on the 1st.</div>
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 800, color: usedThisMonth >= PDF_CAP ? 'var(--bad)' : 'var(--text)' }}>
-              {usedThisMonth} <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/ {PDF_CAP}</span>
+            <div lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 800, color: usedThisMonth >= PDF_CAP ? 'var(--bad)' : 'var(--text)' }}>
+              {num(usedThisMonth)} <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/ {num(PDF_CAP)}</span>
             </div>
           </div>
           <div style={{ height: 7, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden', marginTop: 10 }}>

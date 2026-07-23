@@ -241,7 +241,7 @@ function CatalogTab({ cfg, state, canWrite }) {
         {cfg.filters.map((f) => (
           <select key={f.key} value={filters[f.key] || 'all'} onChange={resetPage((e) => setFilters((p) => ({ ...p, [f.key]: e.target.value })))}
             style={{ ...inputStyle, width: 'auto', minWidth: 130, flex: '0 0 auto' }}>
-            {f.bool ? YESNO.map(([v, l]) => <option key={v} value={v}>{v === 'all' ? f.label : l}</option>)
+            {f.bool ? YESNO.map(([v, l]) => <option key={v} value={v}>{v === 'all' ? `${f.label}: all` : l}</option>)
               : <>
                   <option value="all">{f.label}: all</option>
                   {(f.options || (distinct[f.key] || []).map((v) => [v, v])).map(([v, l]) => <option key={v} value={v}>{l}</option>)}

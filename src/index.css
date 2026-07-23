@@ -53,8 +53,12 @@ h1,h2,h3,p{margin:0}
   .ies-set2{grid-template-columns:1fr !important}
   .ies-login{grid-template-columns:1fr !important}
   .ies-loginleft{display:none !important}
-  .ies-table-wrap{overflow-x:auto !important;-webkit-overflow-scrolling:touch}
 }
+/* Wide tables scroll INSIDE their card at every viewport width. This rule
+   used to live only in the <=767px media block, so on desktop any table wider
+   than its card (AC & Package: 14 cols, Lighting: 13) rendered outside the
+   white container. */
+.ies-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 /* hover helpers used across inline-styled buttons/rows */
 .ies-hover{transition:background .12s,border-color .12s,box-shadow .12s,color .12s}
 .ies-hover:hover{background:var(--hover)}
