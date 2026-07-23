@@ -1,11 +1,5 @@
 // Small formatting helpers. Mono/tabular numerals are applied via CSS (.num).
 
-export function money(n, { m = false } = {}) {
-  if (n == null || isNaN(n)) return '—'
-  if (m) return 'SAR ' + (n / 1_000_000).toFixed(1) + 'M'
-  return 'SAR ' + Number(n).toLocaleString('en-US')
-}
-
 export function num(n) {
   if (n == null || isNaN(n)) return '—'
   return Number(n).toLocaleString('en-US')

@@ -144,15 +144,6 @@ export default function Escalations() {
   )
 }
 
-function Kpi({ label, value, color }) {
-  return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 14 }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6, ...(color ? { color } : {}) }}>{value}</div>
-    </div>
-  )
-}
-
 function NewEscalation({ onClose, user }) {
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id').order('code'))
   const [title, setTitle] = useState('')
