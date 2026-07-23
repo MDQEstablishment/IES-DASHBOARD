@@ -83,6 +83,10 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       return
     }
     const { data, error } = await bgInsert('projects', payload, { okMsg: 'Project created' })
+    // Child inserts after the project row: the project already exists, so a
+    // failure here can't roll back — but it must be EXPLICIT about what was
+    // lost (the modal closes and the typed drafts are gone), never a generic
+    // toast the user can't act on. (Persistence audit P5)
     if (!error && data?.[0] && buildings.length) {
       const pid = data[0].id
       const valid = buildings.filter((b) => b.code && b.name)
@@ -91,17 +95,20 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         location_lat: num(b.location_lat), location_lng: num(b.location_lng),
         contractor: b.contractor_name || null, contractor_name: b.contractor_name || null,
         contractor_phone: b.contractor_phone || null, status_override: 'pending',
-      })))
+      })), { errMsg: `Project created, but the ${valid.length} building${valid.length === 1 ? '' : 's'} couldn't be saved — add them again from the project page` })
     }
     // optional Items & Replacements captured at creation (fill-once)
     if (!error && data?.[0] && items.length) {
       const pid = data[0].id
+      let pairFails = 0
       for (const it of items.filter((x) => x.esm_code && (x.iDesc || x.rDesc))) {
-        let iId = null, rId = null
-        if (it.iDesc || it.iQty) { const { data: di } = await bgInsert('project_installed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.iDesc || null, model_code: it.iModel || null, capacity_value: num(it.iCap), capacity_unit: it.iCapU || 'kBTU', efficiency_value: num(it.iEff), efficiency_unit: it.iEffU || 'SEER', total_quantity: num(it.iQty) }); iId = di?.[0]?.id }
-        if (it.rDesc || it.rQty) { const { data: dr } = await bgInsert('project_removed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.rDesc || null, capacity_value: num(it.rCap), capacity_unit: it.rCapU || 'kBTU', efficiency_value: num(it.rEff), efficiency_unit: it.rEffU || 'SEER', total_quantity: num(it.rQty), returned_to_facility: it.rRet !== false }); rId = dr?.[0]?.id }
-        if (iId && rId) await bgInsert('project_item_pairs', { project_id: pid, esm_code: it.esm_code, installed_item_id: iId, removed_item_id: rId, notes: it.note || null })
+        let iId = null, rId = null, failed = false
+        if (it.iDesc || it.iQty) { const { data: di, error: ie } = await bgInsert('project_installed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.iDesc || null, model_code: it.iModel || null, capacity_value: num(it.iCap), capacity_unit: it.iCapU || 'kBTU', efficiency_value: num(it.iEff), efficiency_unit: it.iEffU || 'SEER', total_quantity: num(it.iQty) }); iId = di?.[0]?.id; failed = failed || !!ie }
+        if (it.rDesc || it.rQty) { const { data: dr, error: re } = await bgInsert('project_removed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.rDesc || null, capacity_value: num(it.rCap), capacity_unit: it.rCapU || 'kBTU', efficiency_value: num(it.rEff), efficiency_unit: it.rEffU || 'SEER', total_quantity: num(it.rQty), returned_to_facility: it.rRet !== false }); rId = dr?.[0]?.id; failed = failed || !!re }
+        if (iId && rId) { const { error: pe } = await bgInsert('project_item_pairs', { project_id: pid, esm_code: it.esm_code, installed_item_id: iId, removed_item_id: rId, notes: it.note || null }); failed = failed || !!pe }
+        if (failed) pairFails++
       }
+      if (pairFails) toast(`Project created, but ${pairFails} item pair${pairFails === 1 ? '' : 's'} couldn't be fully saved — check the Items & Replacements tab`, 'err')
     }
     setBusy(false)
     if (!error) { onClose(); if (data?.[0]) navigate(`/projects/${data[0].id}`) }
