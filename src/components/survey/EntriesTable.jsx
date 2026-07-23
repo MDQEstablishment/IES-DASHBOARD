@@ -14,6 +14,7 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
   const [search, setSearch] = useState('')
   const [building, setBuilding] = useState('all')
   const [category, setCategory] = useState('all')
+  const [mapping, setMapping] = useState('all') // all | linked | needs (unlinked lighting/ac)
   const [page, setPage] = useState(0)
   const [sel, setSel] = useState(() => new Set())
   const [del, setDel] = useState(null)      // single row pending delete
@@ -28,13 +29,15 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
     return entries.filter((e) => {
       if (building !== 'all' && e.building_id !== building) return false
       if (category !== 'all' && e.category !== category) return false
+      if (mapping === 'linked' && !e.catalog_item_id) return false
+      if (mapping === 'needs' && (e.catalog_item_id || !['lighting', 'ac'].includes(e.category))) return false
       if (s) {
         const hay = [e.building?.code, e.building?.name, e.room_name, e.floor, e.make, e.model, e.equipment_type, e.remarks].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(s)) return false
       }
       return true
     })
-  }, [entries, search, building, category])
+  }, [entries, search, building, category, mapping])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE))
   const pageSafe = Math.min(page, pageCount - 1)
@@ -59,7 +62,7 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
     setSel(new Set()); setDel(null); setBulkDel(false)
   }
 
-  const COLS = ['', 'BLDG', 'FLOOR', 'ROOM', 'TYPE', 'CAT', 'EQUIP', 'MAKE', 'MODEL', 'SIZE', 'TR', 'W', 'QTY', 'INV', 'AGE', 'REMARKS', 'BY', 'WHEN']
+  const COLS = ['', 'BLDG', 'FLOOR', 'ROOM', 'TYPE', 'CAT', 'MAP', 'EQUIP', 'MAKE', 'MODEL', 'SIZE', 'TR', 'W', 'QTY', 'INV', 'AGE', 'REMARKS', 'BY', 'WHEN']
 
   return (
     <div>
@@ -75,6 +78,11 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
         <select style={ctrl} value={category} onChange={reset((e) => setCategory(e.target.value))}>
           <option value="all">All categories</option>
           {SURVEY_CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        <select style={ctrl} value={mapping} onChange={reset((e) => setMapping(e.target.value))} title="Catalog mapping — linked entries feed the savings estimate">
+          <option value="all">Mapping: all</option>
+          <option value="needs">Needs mapping</option>
+          <option value="linked">Linked</option>
         </select>
         {canManageAll && sel.size > 0 && <Btn variant="danger" icon="x" onClick={() => setBulkDel(true)}>Delete {sel.size}</Btn>}
       </div>
@@ -97,6 +105,13 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
                   <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>{e.room_name || '—'}</td>
                   <td style={{ padding: '6px', color: 'var(--text-3)' }}>{e.room_type || '—'}</td>
                   <td style={{ padding: '6px' }}>{CAT_LABEL[e.category] || e.category}</td>
+                  <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>
+                    {e.catalog_item_id
+                      ? <span title="Linked to an approved catalog item — counted in the savings estimate" style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓</span>
+                      : ['lighting', 'ac'].includes(e.category)
+                        ? <span title="Not linked to a catalog item — excluded from the savings estimate (edit to map)" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>map</span>
+                        : <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>}
+                  </td>
                   <td style={{ padding: '6px' }}>{e.equipment_type || '—'}</td>
                   <td style={{ padding: '6px' }}>{e.make || '—'}</td>
                   <td style={{ padding: '6px' }}>{e.model || '—'}</td>
