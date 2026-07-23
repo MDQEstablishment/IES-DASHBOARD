@@ -5,6 +5,7 @@
 import { supabase } from './supabase'
 import { uploadToBucket } from './db'
 import { generateDocPdf } from './docPdf'
+import { localToday } from './format'
 
 const AC_RE = /\ba\/?c\b|air.?cond|cool|hvac/i
 const CTRL_RE = /control|sensor/i
@@ -150,7 +151,7 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
 
   return {
     referenceNo: coc.reference_no || coc.code,
-    date: new Date().toISOString().slice(0, 10),
+    date: localToday(),
     projectName: p?.name || '',
     projectRefNo: p?.project_reference_no || p?.code || '',
     contractDate: fmtDate(p?.contract_sign_date || p?.start_date),
@@ -178,7 +179,7 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     // the generating engineer's name + the generation date. TARSHID and the
     // government-entity columns stay blank (signed later, on paper, by TARSHID).
     escoSignerName: ctx.currentUserName || '',
-    generationDate: fmtDate(new Date().toISOString().slice(0, 10)),
+    generationDate: fmtDate(localToday()),
   }
 }
 

@@ -2,6 +2,7 @@
 // build-for-preview, then commit-on-download. Used by InspectionFormModal.
 import { bgInsert, bgUpdate, uploadToBucket } from './db'
 import { generateDocPdf } from './docPdf'
+import { localToday } from './format'
 
 export const slugify = (s) => String(s || '').trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 25)
 // {PROJECT_CODE}_{KIND}-{YYYY-SEQ}[_slug][_R{N}].pdf  — no random suffix
@@ -16,9 +17,9 @@ export function smartFilename({ projectCode, kind, referenceNo, title, revNo = 0
 function inspectionPdfData({ kind, project, esm, building, items, photoFiles, title, generatedBy, referenceNo, storage, installation }) {
   return {
     referenceNo, projectName: project?.name, projectCode: project?.code,
-    clientName: project?.client || 'Tarshid', date: new Date().toISOString().slice(0, 10),
+    clientName: project?.client || 'Tarshid', date: localToday(),
     generatedBy: generatedBy || '', region: project?.region || '',
-    rev: project?.doc_rev || '00', revDate: new Date().toISOString().slice(0, 10),
+    rev: project?.doc_rev || '00', revDate: localToday(),
     projectRef: project?.project_reference_no || '',
     beneficiary: project?.beneficiary_entity || project?.client || '',
     contractor: project?.contractor_name || '',

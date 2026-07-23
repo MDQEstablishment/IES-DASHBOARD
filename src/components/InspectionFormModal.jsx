@@ -6,6 +6,7 @@ import { Modal, Field, inputStyle, Btn } from './ui'
 import { compressImage } from '../lib/image'
 import { toast } from '../lib/toast'
 import { buildInspectionPdf, commitInspectionDoc } from '../lib/inspectionDocs'
+import { localToday } from '../lib/format'
 
 // Multi-item MIR / WIR generator with a LIVE side-by-side PDF preview: the iframe
 // re-renders (debounced) as the user edits any field/item/photo. Project-level
@@ -15,7 +16,7 @@ const emptyRow = () => ({ description: '', brand: '', model: '', qty: '', unit: 
 
 export default function InspectionFormModal({ kind, project, esm = null, building = null, onClose, onDone, replaceOf = null }) {
   const { user, profile } = useAuth()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localToday()
   const generatedBy = profile?.full_name || user?.email || ''
   const revNo = replaceOf ? (replaceOf.revNo || 0) : 0
   const heading = (replaceOf ? `Replace ${kind.toUpperCase()}` : (kind === 'mir' ? 'Generate MIR' : 'Generate WIR')) + (revNo > 0 ? ` · R${revNo}` : '')

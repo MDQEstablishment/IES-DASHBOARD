@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { toast } from '../lib/toast'
 import { PROJECT_PHASE_ORDER, PROJECT_PHASE_META } from '../lib/constants'
+import { localDayKey } from '../lib/format'
 import { read, utils } from 'xlsx'
 
 const STATUSES = ['active', 'draft', 'on_hold', 'closed']
@@ -487,7 +488,9 @@ export function ProjectImportModal({ onClose }) {
     setParsed({ project: pr, buildings, scopes, materials, items })
   }
 
-  const toIso = (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : s(v) || null)
+  // SheetJS cellDates gives local-midnight Dates; toISOString() shifts them to
+  // UTC and loses a day east of Greenwich — format from local components.
+  const toIso = (v) => (v instanceof Date ? localDayKey(v) : s(v) || null)
   const doImport = async () => {
     // Visible on every click so a future dead-button report can be diagnosed from the console.
     console.log('[IES] import: Confirm clicked', { project: parsed?.project?.code, errors: errors.length, busy })

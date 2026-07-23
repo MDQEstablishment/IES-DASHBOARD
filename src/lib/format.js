@@ -16,6 +16,17 @@ export function pct(n) {
   return Math.round(n) + '%'
 }
 
+// Local-day helpers. The app's "day" is the user's LOCAL day (site teams are
+// UTC+3): `toISOString().slice(0,10)` is UTC and shifts entries logged between
+// midnight and 3am local onto the previous day. Always Latin digits (String()).
+const p2 = (n) => String(n).padStart(2, '0')
+export function localDayKey(d) {
+  const t = d instanceof Date ? d : new Date(d ?? Date.now())
+  if (isNaN(t)) return ''
+  return `${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())}`
+}
+export const localToday = () => localDayKey(new Date())
+
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function fmtDate(d) {

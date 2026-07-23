@@ -5,6 +5,7 @@
 // (9C). AC-only columns are filled only for category 'ac'. xlsx (SheetJS) is
 // loaded lazily so it stays out of the main bundle.
 import { signedUrlFor } from './db'
+import { localDayKey } from './format'
 
 const PHOTO_BUCKET = 'daily-progress-photos' // survey photos live here, prefix survey/<building_id>/
 
@@ -40,7 +41,7 @@ function rowFor(e, i, projectName, urls) {
     .filter(Boolean).join(e.remarks && e.wattage != null ? ' · ' : '')
   return [
     i + 1,                                    // 1  Sr. No.
-    dstr(e.created_at),                       // 2  DATE
+    localDayKey(e.created_at),                // 2  DATE (local day — matches the Daily Log grouping; the Attribution sheet stays UTC as labelled)
     projectName || '',                        // 3  Project Name
     e.building?.name || e.building?.code || '', // 4 Building Name
     '', '', '', '', '',                       // 5-9  NEW building / Zone / Location / SUB Building / New Sub (not captured)

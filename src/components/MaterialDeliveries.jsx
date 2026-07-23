@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { Empty, Btn, Modal, Field, inputStyle } from './ui'
 import DateInput from './DateInput'
-import { fmtDate } from '../lib/format'
+import { fmtDate, localToday } from '../lib/format'
 import { toast } from '../lib/toast'
 import InspectionFormModal from './InspectionFormModal'
 import FileDropZone from './FileDropZone'
@@ -24,7 +24,7 @@ const DDESC = {
 // Engineers (proje) can add + approve alongside the other write roles (migration 0061).
 const WRITE_ROLES = ['admin', 'pmo', 'projm', 'progm', 'procm', 'proco', 'proje']
 const inp = { padding: '7px 9px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, background: '#fff' }
-const today = () => new Date().toISOString().slice(0, 10)
+const today = localToday
 
 export default function MaterialDeliveries({ projectId, buildings = [] }) {
   const { user, role } = useAuth()
