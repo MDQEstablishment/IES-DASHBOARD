@@ -64,8 +64,12 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
       if (error) { setBusy(false); toast("Couldn't save — " + error.message, 'err'); return }
       toast('Entry added')
     } else {
-      const { error } = await supabase.from('survey_entries').update(payload()).eq('id', row.id)
+      // .select() so an RLS/no-row no-op is detectable: with two field teams
+      // writing live, this row may have been deleted since the modal opened —
+      // a bare .update() would return no error and we'd toast a false success.
+      const { data, error } = await supabase.from('survey_entries').update(payload()).eq('id', row.id).select('id')
       if (error) { setBusy(false); toast("Couldn't save — " + error.message, 'err'); return }
+      if (!data || data.length === 0) { setBusy(false); toast("Couldn't save — this entry no longer exists or isn't yours to edit", 'err'); return }
       toast('Entry updated')
     }
     setBusy(false)
