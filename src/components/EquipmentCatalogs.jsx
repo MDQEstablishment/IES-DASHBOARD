@@ -345,8 +345,10 @@ function CatalogFormModal({ cfg, row, userId, onClose, onDone }) {
       if (error) { setBusy(false); toast("Couldn't add — " + error.message, 'err'); return }
       toast(`${cfg.label} item added`)
     } else {
-      const { error } = await supabase.from(cfg.table).update({ ...payload, updated_at: new Date().toISOString() }).eq('id', row.id)
+      // .select() so an RLS/no-row no-op errors instead of a false "Changes saved".
+      const { data, error } = await supabase.from(cfg.table).update({ ...payload, updated_at: new Date().toISOString() }).eq('id', row.id).select('id')
       if (error) { setBusy(false); toast("Couldn't save — " + error.message, 'err'); return }
+      if (!data || data.length === 0) { setBusy(false); toast("Couldn't save — item not found or no permission (admin/PMO only)", 'err'); return }
       toast('Changes saved')
     }
     setBusy(false)
@@ -404,9 +406,10 @@ function RetireModal({ cfg, row, onClose, onDone }) {
 
   const go = async () => {
     setBusy(true)
-    const { error } = await supabase.from(cfg.table).update({ is_active: !retiring, updated_at: new Date().toISOString() }).eq('id', row.id)
+    const { data, error } = await supabase.from(cfg.table).update({ is_active: !retiring, updated_at: new Date().toISOString() }).eq('id', row.id).select('id')
     setBusy(false)
     if (error) { toast("Couldn't update — " + error.message, 'err'); return }
+    if (!data || data.length === 0) { toast("Couldn't update — item not found or no permission (admin/PMO only)", 'err'); return }
     toast(retiring ? 'Item retired' : 'Item restored')
     onDone()
   }
