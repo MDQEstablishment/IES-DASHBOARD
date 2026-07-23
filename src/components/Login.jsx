@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Spinner } from './ui'
-import { ROLE_CARDS, ROLE_FULL, DEMO_PASSWORD, ROSTER } from '../lib/constants'
+import { ROLE_CARDS, ROLE_FULL, DEMO_MODE, DEMO_PASSWORD, ROSTER } from '../lib/constants'
 import { useAuth } from '../rbac'
 
 function KsaMap() {
@@ -16,8 +16,9 @@ function KsaMap() {
 export default function Login() {
   const { signInWithRole, signInEmail } = useAuth()
   const [busy, setBusy] = useState(null)
-  const [email, setEmail] = useState(ROSTER.pmo.email)
-  const [pw, setPw] = useState(DEMO_PASSWORD)
+  // Prefill only in demo builds; production shows a plain empty sign-in form.
+  const [email, setEmail] = useState(DEMO_MODE ? ROSTER.pmo.email : '')
+  const [pw, setPw] = useState(DEMO_MODE ? DEMO_PASSWORD : '')
 
   const pick = async (r) => { setBusy(r); await signInWithRole(r); setBusy(null) }
   const manual = async () => { setBusy('manual'); await signInEmail(email.trim(), pw); setBusy(null) }
@@ -43,23 +44,25 @@ export default function Login() {
         <div style={{ width: '100%', maxWidth: 440 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '2px', color: 'var(--text-3)' }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)' }} />VAULT SSO</div>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: '10px 0 4px' }}>Sign in to IES</h1>
-          <p style={{ color: 'var(--text-3)', margin: '0 0 22px' }}>Use your corporate credentials, or pick a demo role below.</p>
+          <p style={{ color: 'var(--text-3)', margin: '0 0 22px' }}>{DEMO_MODE ? 'Use your corporate credentials, or pick a demo role below.' : 'Use your corporate credentials.'}</p>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Email</label>
           <input lang="en" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', fontSize: 14, marginBottom: 14 }} />
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Password</label>
           <input lang="en" type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && manual()} style={{ width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', fontSize: 14, marginBottom: 16 }} />
           <button onClick={manual} disabled={!!busy} style={{ width: '100%', padding: 12, borderRadius: 6, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: busy ? 0.7 : 1 }}>{busy === 'manual' ? <Spinner size={16} /> : 'Sign in'}</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0 16px', color: 'var(--text-3)', fontSize: 11, fontFamily: 'var(--mono)', letterSpacing: '1px' }}><span style={{ flex: 1, height: 1, background: 'var(--line)' }} />OR PICK A DEMO ROLE<span style={{ flex: 1, height: 1, background: 'var(--line)' }} /></div>
-          <div className="ies-rolecards" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {ROLE_CARDS.map(([key, short, desc]) => (
-              <button key={key} className="ies-card-hover" disabled={!!busy} onClick={() => pick(key)} style={{ textAlign: 'left', padding: '10px 11px', border: '1px solid var(--line)', borderRadius: 8, background: '#fff', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--accent)' }}>{busy === key ? 'SIGNING IN…' : ROLE_FULL[key].toUpperCase()}</span>
-                <span style={{ fontWeight: 700, fontSize: 13 }}>{short}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.3 }}>{desc}</span>
-              </button>
-            ))}
-          </div>
-          <div style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)', fontSize: 10.5, letterSpacing: '2px', marginTop: 20, textAlign: 'center' }}>BUILD 2.0 · DEMO ENVIRONMENT</div>
+          {DEMO_MODE && (<>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0 16px', color: 'var(--text-3)', fontSize: 11, fontFamily: 'var(--mono)', letterSpacing: '1px' }}><span style={{ flex: 1, height: 1, background: 'var(--line)' }} />OR PICK A DEMO ROLE<span style={{ flex: 1, height: 1, background: 'var(--line)' }} /></div>
+            <div className="ies-rolecards" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {ROLE_CARDS.map(([key, short, desc]) => (
+                <button key={key} className="ies-card-hover" disabled={!!busy} onClick={() => pick(key)} style={{ textAlign: 'left', padding: '10px 11px', border: '1px solid var(--line)', borderRadius: 8, background: '#fff', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--accent)' }}>{busy === key ? 'SIGNING IN…' : ROLE_FULL[key].toUpperCase()}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{short}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.3 }}>{desc}</span>
+                </button>
+              ))}
+            </div>
+          </>)}
+          <div style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)', fontSize: 10.5, letterSpacing: '2px', marginTop: 20, textAlign: 'center' }}>{DEMO_MODE ? 'BUILD 2.0 · DEMO ENVIRONMENT' : 'BUILD 2.0'}</div>
         </div>
       </div>
     </div>

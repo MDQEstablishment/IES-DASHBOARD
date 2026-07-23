@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
-import { ROSTER, DEMO_PASSWORD } from './lib/constants'
+import { ROSTER, DEMO_MODE, DEMO_PASSWORD } from './lib/constants'
 import { toast } from './lib/toast'
 
 // Declarative role-based access. Current role is pulled from the profiles row of
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
 
   const signInWithRole = useCallback(async (role) => {
     const r = ROSTER[role]
-    if (!r) return
+    if (!r || !DEMO_MODE || !DEMO_PASSWORD) { toast('Demo sign-in is disabled in this build', 'err'); return }
     const { error } = await supabase.auth.signInWithPassword({ email: r.email, password: DEMO_PASSWORD })
     if (error) toast('Sign-in failed — ' + error.message, 'err')
   }, [])

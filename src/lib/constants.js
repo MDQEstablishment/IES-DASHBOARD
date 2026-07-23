@@ -1,7 +1,12 @@
 // Roster, role metadata, top-nav, retrofit stages, status maps. The 9 roles +
 // emails mirror the Phase 2 seed; colors + labels mirror the v1.5 design (people{}).
 
-export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || 'IESdemo2026!'
+// Demo affordances (role cards on the login screen + the in-app role switcher)
+// only exist in dev builds, or when a deploy explicitly opts in with
+// VITE_DEMO_MODE=true. The shared demo password comes ONLY from env — no
+// committed fallback (the platform now holds real programme data).
+export const DEMO_MODE = import.meta.env.DEV || import.meta.env.VITE_DEMO_MODE === 'true'
+export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || ''
 export const DEMO_DOMAIN = '@ies.demo.local'
 
 // role -> email (Phase 2 auth.users) + display name fallback

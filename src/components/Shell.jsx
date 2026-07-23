@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Outlet, NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import Icon from './Icon'
 import { Avatar } from './ui'
-import { ROLE_ORDER, ROSTER, roleColor, roleTitle } from '../lib/constants'
+import { ROLE_ORDER, ROSTER, DEMO_MODE, roleColor, roleTitle } from '../lib/constants'
 import { navForRole, crumbsFor } from '../lib/nav'
 import { useAuth } from '../rbac'
 import { useBreadcrumb } from '../breadcrumbs'
@@ -132,15 +132,19 @@ export default function Shell() {
             </button>
             {roleMenu && (
               <div style={{ position: 'absolute', right: 0, top: 44, width: 280, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 12px 32px rgba(16,26,36,.16)', padding: 8, zIndex: 200 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1.5px', color: 'var(--text-3)', padding: '6px 10px 8px' }}>SWITCH DEMO ROLE</div>
-                {ROLE_ORDER.map((r) => (
-                  <button key={r} className="ies-row-hover" onClick={() => { setRoleMenu(false); signInWithRole(r) }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, textAlign: 'left', background: r === role ? '#F5EEDF' : 'transparent' }}>
-                    <Avatar name={ROSTER[r].name} color={roleColor(r)} size={26} />
-                    <span style={{ lineHeight: 1.2 }}><span style={{ display: 'block', fontWeight: 600, fontSize: 12.5 }}>{roleTitle(r)}</span><span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-3)' }}>{ROSTER[r].name}</span></span>
-                    {r === role && <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}><Icon name="check" size={15} /></span>}
-                  </button>
-                ))}
-                <div style={{ height: 1, background: 'var(--line)', margin: '8px 4px' }} />
+                {/* Role switching is a demo-only affordance (DEMO_MODE) — in a
+                    production build the menu is just the signed-in card + Sign out. */}
+                {DEMO_MODE && (<>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1.5px', color: 'var(--text-3)', padding: '6px 10px 8px' }}>SWITCH DEMO ROLE</div>
+                  {ROLE_ORDER.map((r) => (
+                    <button key={r} className="ies-row-hover" onClick={() => { setRoleMenu(false); signInWithRole(r) }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 6, textAlign: 'left', background: r === role ? '#F5EEDF' : 'transparent' }}>
+                      <Avatar name={ROSTER[r].name} color={roleColor(r)} size={26} />
+                      <span style={{ lineHeight: 1.2 }}><span style={{ display: 'block', fontWeight: 600, fontSize: 12.5 }}>{roleTitle(r)}</span><span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-3)' }}>{ROSTER[r].name}</span></span>
+                      {r === role && <span style={{ marginLeft: 'auto', color: 'var(--accent)' }}><Icon name="check" size={15} /></span>}
+                    </button>
+                  ))}
+                  <div style={{ height: 1, background: 'var(--line)', margin: '8px 4px' }} />
+                </>)}
                 <button className="ies-hover" onClick={() => { setRoleMenu(false); signOut() }} style={{ width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 6, fontSize: 12.5, color: 'var(--bad)', fontWeight: 600 }}>Sign out</button>
               </div>
             )}
