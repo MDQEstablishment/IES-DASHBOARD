@@ -6,12 +6,12 @@ import { useLiveQuery, bgUpdate, signedUrlFor } from '../lib/db'
 import { useAuth, can } from '../rbac'
 import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
-import { statusMeta, MANAGERS, PROJECT_PHASE_META } from '../lib/constants'
+import { statusMeta, MANAGERS, PROJECT_PHASE_META, SCOPE_STATUS_META } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal, AssignEngineerModal, PhaseAdvanceModal } from '../components/ProjectModals'
 import SurveyTab from '../components/SurveyTab'
 import SavingsPanel, { SavingsCoverageBars, SavingsAlerts, FreezeScopeModal } from '../components/SavingsPanel'
-import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
+import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal, ScopeChangeModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
 import MaterialDeliveries from '../components/MaterialDeliveries'
@@ -76,10 +76,20 @@ export default function ProjectDetail() {
   const { rows: seLite } = useLiveQuery('survey_entries', (q) => q.select('id,building_id').eq('project_id', id), [id])
   const surveyedSet = new Set(seLite.map((e) => e.building_id))
   const [freezeOpen, setFreezeOpen] = useState(false)
+  const [scopeBldg, setScopeBldg] = useState(null)   // building pending manual exclude/include
+  const [scopeFilter, setScopeFilter] = useState('all')
+  // ONE scope rule everywhere: surplus buildings never count toward progress,
+  // COC lists or surveys. Before a freeze there is no surplus (unless manually
+  // excluded) so "all non-surplus" == everything; after a freeze non-surplus
+  // == in_scope. No ordering assumptions.
+  const activeBuildings = buildings.filter((b) => b.scope_status !== 'surplus')
+  const surplusCount = buildings.length - activeBuildings.length
   // 8K-1 — debounced live filter across code / name / engineer / region / city / contractor
-  const filteredBuildings = bldgQ
-    ? buildings.filter((b) => [b.code, b.name, b.engineer_name, b.region, b.city, b.contractor].some((v) => (v || '').toLowerCase().includes(bldgQ)))
-    : buildings
+  const filteredBuildings = buildings.filter((b) => {
+    if (scopeFilter !== 'all' && b.scope_status !== scopeFilter) return false
+    if (bldgQ && ![b.code, b.name, b.engineer_name, b.region, b.city, b.contractor].some((v) => (v || '').toLowerCase().includes(bldgQ))) return false
+    return true
+  })
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty,project_esm_id'))
   const { rows: catShort } = useLiveQuery('project_category_stock', (q) => q.select('is_short').eq('project_id', id).eq('is_short', true), [id])
   const anyShortage = catShort.length > 0
@@ -108,7 +118,8 @@ export default function ProjectDetail() {
   if (!project) return <Empty icon="projects">Project not found.</Empty>
 
   // --- progress math (approved-installed capped per scope) ---------------------
-  const bIds = new Set(buildings.map((b) => b.id))
+  // 9C: computed over ACTIVE (non-surplus) buildings only.
+  const bIds = new Set(activeBuildings.map((b) => b.id))
   const insByScope = {}
   install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
 
@@ -272,7 +283,7 @@ export default function ProjectDetail() {
           </div>
           <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>BUILDINGS</div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{buildings.length}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{activeBuildings.length}{surplusCount > 0 && <span title={`${surplusCount} surplus building(s) excluded from progress and COCs`} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginLeft: 5 }}>+{surplusCount} surplus</span>}</div>
           </div>
           <div style={{ padding: '13px 18px' }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.5px', color: 'var(--text-3)' }}>ESMs</div>
@@ -306,8 +317,8 @@ export default function ProjectDetail() {
         })}
       </div>
 
-      {/* SURVEY tab (9B) */}
-      {tab === 'survey' && <SurveyTab project={project} buildings={buildings} />}
+      {/* SURVEY tab (9B) — active buildings only: surplus is out of the survey */}
+      {tab === 'survey' && <SurveyTab project={project} buildings={activeBuildings} />}
 
       {/* SAVINGS & SCOPE tab (9C) */}
       {tab === 'saving' && <SavingsPanel project={project} buildings={buildings} savings={savingsRows} surveyedSet={surveyedSet} />}
@@ -317,8 +328,14 @@ export default function ProjectDetail() {
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Buildings <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({buildings.length})</span></div>
-            <input lang="en" value={bldgQuery} onChange={(e) => setBldgQuery(e.target.value)} placeholder="Search code, name, engineer, region…"
-              style={{ width: buildings.length < 6 ? 200 : 280, maxWidth: '100%', padding: '7px 11px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12.5 }} />
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select value={scopeFilter} onChange={(e) => setScopeFilter(e.target.value)} style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12.5, background: '#fff' }}>
+                <option value="all">Scope: all</option>
+                {Object.entries(SCOPE_STATUS_META).map(([v, m]) => <option key={v} value={v}>{m.label}</option>)}
+              </select>
+              <input lang="en" value={bldgQuery} onChange={(e) => setBldgQuery(e.target.value)} placeholder="Search code, name, engineer, region…"
+                style={{ width: buildings.length < 6 ? 200 : 280, maxWidth: '100%', padding: '7px 11px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12.5 }} />
+            </div>
           </div>
           {buildings.length === 0 ? (
             <Empty icon="buildings">No buildings yet. Import an Excel or add buildings to populate this project.</Empty>
@@ -331,12 +348,13 @@ export default function ProjectDetail() {
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>ENGINEER</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>PROGRESS</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Date the building's Certificate of Completion (COC) was approved, and by whom. Click a date to open the approval document.">COC APPROVAL</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="9C scope lifecycle: candidate / in scope / surplus. Surveyed = has at least one survey entry (derived). Surplus buildings are excluded from progress, COCs and the savings potential.">SCOPE</th>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
                 {canManage && <th style={{ padding: '9px 8px', fontWeight: 600, width: 64 }} />}
               </tr></thead>
               <tbody>
                 {filteredBuildings.length === 0 ? (
-                  <tr><td colSpan={canManage ? 8 : 7} style={{ padding: '16px 8px', color: 'var(--text-3)', textAlign: 'center' }}>No buildings match “{bldgQuery}”.</td></tr>
+                  <tr><td colSpan={canManage ? 9 : 8} style={{ padding: '16px 8px', color: 'var(--text-3)', textAlign: 'center' }}>No buildings match.</td></tr>
                 ) : filteredBuildings.map((b) => {
                   const d = perB[b.id] || { planned: 0, installed: 0 }
                   const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
@@ -354,6 +372,21 @@ export default function ProjectDetail() {
                       <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: b.approval_date ? 'var(--text)' : 'var(--text-3)' }}>{b.approval_date ? fmtDate(b.approval_date) : '—'}</div>
                         <Chip status={b.approval_status || 'awaiting'} />
+                      </td>
+                      <td style={{ padding: '11px 8px', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const m = SCOPE_STATUS_META[b.scope_status] || SCOPE_STATUS_META.candidate
+                          const chip = <Chip label={m.label} color={m.color} bg={m.bg} />
+                          return (
+                            <>
+                              {canPhase
+                                ? <button title={(b.scope_reason ? `${m.label} — ${b.scope_reason}. ` : '') + (b.scope_status === 'surplus' ? 'Click to return to scope' : 'Click to exclude from scope')}
+                                    onClick={() => setScopeBldg(b)} style={{ cursor: 'pointer', background: 'none' }}>{chip}</button>
+                                : <span title={b.scope_reason || ''}>{chip}</span>}
+                              {surveyedSet.has(b.id) && <span title="Surveyed — has at least one survey entry" style={{ marginLeft: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 5, color: '#1D6A49', background: '#E9F3EE' }}>SURV</span>}
+                            </>
+                          )
+                        })()}
                       </td>
                       <td style={{ padding: '11px 8px' }} onClick={(e) => canManage && e.stopPropagation()}>
                         {canManage
@@ -493,9 +526,10 @@ export default function ProjectDetail() {
         </>
       )}
 
-      {/* COCs tab — completion certificates pipeline (8S) */}
+      {/* COCs tab — completion certificates pipeline (8S). 9C: in-scope/candidate
+          buildings only — surplus never enters certificate coverage. */}
       {tab === 'coc' && (
-        <CocHome projectId={id} project={project} buildings={buildings} projectEsms={projectEsms} canManage={canManage} />
+        <CocHome projectId={id} project={project} buildings={activeBuildings} projectEsms={projectEsms} canManage={canManage} />
       )}
 
       {/* MAP tab — real OpenStreetMap markers */}
@@ -535,6 +569,7 @@ export default function ProjectDetail() {
       {engOpen && <AssignEngineerModal project={project} onClose={() => setEngOpen(false)} />}
       {phaseOpen && <PhaseAdvanceModal project={project} onClose={() => setPhaseOpen(false)} />}
       {freezeOpen && <FreezeScopeModal project={project} buildings={buildings} surveyedSet={surveyedSet} onClose={() => setFreezeOpen(false)} />}
+      {scopeBldg && <ScopeChangeModal building={scopeBldg} frozen={!!project.scope_frozen_at} onClose={() => setScopeBldg(null)} />}
       {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
       {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
       {archiveBldg && <ArchiveBuildingModal building={archiveBldg} onClose={() => setArchiveBldg(null)} />}

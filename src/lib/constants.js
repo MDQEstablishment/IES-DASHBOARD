@@ -121,3 +121,11 @@ export const PROJECT_PHASE_META = {
 // Survey capture roles (client gate; RLS w_bld/w_proj is the real enforcement)
 export const CAN_SURVEY = ['proje', 'projm', 'progm', 'pmo', 'admin']
 export const SURVEY_CATEGORIES = [['lighting', 'Lighting'], ['ac', 'AC'], ['sensor', 'Sensor'], ['other', 'Other']]
+
+// 9C — building scope lifecycle (candidate -> in_scope | surplus).
+// "Surveyed" is always DERIVED from survey entries, never stored here.
+export const SCOPE_STATUS_META = {
+  candidate: { label: 'Candidate', color: '#8A8577', bg: '#F0EDE4' },
+  in_scope: { label: 'In scope', color: '#1D6A49', bg: '#E9F3EE' },
+  surplus: { label: 'Surplus', color: '#B45309', bg: '#FAF3E3' },
+}

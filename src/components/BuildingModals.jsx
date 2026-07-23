@@ -108,6 +108,42 @@ export function ArchiveBuildingModal({ building, onClose }) {
   )
 }
 
+// ── 9C: manual scope exclude / include (single building, reason kept) ───────
+// Exclude -> surplus. Include -> in_scope while the project scope is frozen,
+// candidate otherwise. The reason + actor + time live on the row forever.
+export function ScopeChangeModal({ building, frozen, onClose }) {
+  const { user } = useAuth()
+  const excluding = building.scope_status !== 'surplus'
+  const nextStatus = excluding ? 'surplus' : (frozen ? 'in_scope' : 'candidate')
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const save = async () => {
+    if (!reason.trim()) { toast('A reason is required', 'err'); return }
+    setBusy(true)
+    const { error } = await bgUpdate('buildings', building.id, {
+      scope_status: nextStatus, scope_reason: reason.trim(),
+      scope_changed_by: user.id, scope_changed_at: new Date().toISOString(),
+    }, { okMsg: excluding ? 'Building excluded from scope' : 'Building returned to scope' })
+    setBusy(false); if (!error) onClose()
+  }
+
+  return (
+    <Modal open width={460} title={`${excluding ? 'Exclude from scope' : 'Return to scope'} · ${building.code}`} onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant={excluding ? 'danger' : 'primary'} onClick={save} disabled={busy || !reason.trim()}>{busy ? 'Saving…' : excluding ? 'Exclude (surplus)' : `Include (${frozen ? 'in scope' : 'candidate'})`}</Btn></>}>
+      <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 10 }}>
+        {excluding
+          ? <><b>{building.name}</b> becomes <b>surplus</b>: excluded from progress, COC lists and the savings potential. The building and its data are kept — nothing is deleted — and it can be returned to scope later.</>
+          : <><b>{building.name}</b> returns to <b>{frozen ? 'in scope' : 'candidate'}</b>{building.scope_reason ? <> (was surplus: “{building.scope_reason}”)</> : null}.</>}
+      </div>
+      <Field label="Reason (required — kept on the building)">
+        <textarea style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={excluding ? 'e.g. Client removed the site / inaccessible' : 'e.g. TARSHID raised the target'} />
+      </Field>
+    </Modal>
+  )
+}
+
 // ── Manual building-status override (complaint 1.8) ─────────────────────────
 // `status_override` is the building's effective status. A manual change records
 // who/why/when so the Buildings table and Recent Activity reflect the override.
