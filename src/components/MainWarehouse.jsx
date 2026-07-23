@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { useLiveQuery } from '../lib/db'
 import { Empty } from './ui'
 
@@ -57,8 +57,8 @@ export default function MainWarehouse() {
                   const multi = r.brands.length > 1
                   const isOpen = open === r.key
                   return (
-                    <>
-                      <tr key={r.key} style={{ borderTop: '1px solid var(--line)', cursor: multi ? 'pointer' : 'default' }} onClick={() => multi && setOpen(isOpen ? null : r.key)}>
+                    <Fragment key={r.key}>
+                      <tr style={{ borderTop: '1px solid var(--line)', cursor: multi ? 'pointer' : 'default' }} onClick={() => multi && setOpen(isOpen ? null : r.key)}>
                         <td style={{ padding: '10px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}>{r.esm_code || '—'}</td>
                         <td style={{ padding: '10px 8px' }}><span className="ies-ellipsis">{r.category_name || '—'}</span></td>
                         <td style={{ padding: '10px 8px', fontWeight: 600 }}><span className="ies-ellipsis">{r.name}</span></td>
@@ -72,7 +72,7 @@ export default function MainWarehouse() {
                           <td style={{ padding: '6px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{b.qty}</td><td />
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   )
                 })}
               </tbody>
