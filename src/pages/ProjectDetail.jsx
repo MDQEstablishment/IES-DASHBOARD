@@ -10,6 +10,7 @@ import { statusMeta, MANAGERS, PROJECT_PHASE_META } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal, AssignEngineerModal, PhaseAdvanceModal } from '../components/ProjectModals'
 import SurveyTab from '../components/SurveyTab'
+import SavingsPanel, { SavingsCoverageBars, SavingsAlerts, FreezeScopeModal } from '../components/SavingsPanel'
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
@@ -28,6 +29,7 @@ const DOC_COLS = [
 
 const TABS = [
   ['survey', 'Survey'],
+  ['saving', 'Savings & Scope'],
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
   ['items', 'Items & Replacements'],
@@ -68,6 +70,12 @@ export default function ProjectDetail() {
   useEffect(() => { if (project && !landedRef.current) { landedRef.current = true; if (project.phase === 'survey') setTab('survey') } }, [project])
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
+  // 9C — savings meters + scope lifecycle. surveyedSet derives "surveyed"
+  // (>=1 survey entry) — never stored, never order-dependent.
+  const { rows: savingsRows } = useLiveQuery('v_project_savings', (q) => q.select('*').eq('project_id', id), [id])
+  const { rows: seLite } = useLiveQuery('survey_entries', (q) => q.select('id,building_id').eq('project_id', id), [id])
+  const surveyedSet = new Set(seLite.map((e) => e.building_id))
+  const [freezeOpen, setFreezeOpen] = useState(false)
   // 8K-1 — debounced live filter across code / name / engineer / region / city / contractor
   const filteredBuildings = bldgQ
     ? buildings.filter((b) => [b.code, b.name, b.engineer_name, b.region, b.city, b.contractor].some((v) => (v || '').toLowerCase().includes(bldgQ)))
@@ -271,7 +279,18 @@ export default function ProjectDetail() {
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{projectEsms.length}</div>
           </div>
         </div>
+        {/* 9C — headline savings coverage (only when a commitment exists) */}
+        {savingsRows.some((s) => s.committed_kwh_yr != null && Number(s.committed_kwh_yr) > 0) && (
+          <div style={{ padding: '11px 18px 13px', borderTop: '1px solid var(--line)', background: '#fff' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>SAVINGS COVERAGE · ACHIEVED / COMMITTED · ▎= SURVEYED POTENTIAL</div>
+            <SavingsCoverageBars savings={savingsRows} />
+          </div>
+        )}
       </div>
+
+      {/* 9C — freeze / shortfall alerts (survey phase only) */}
+      <SavingsAlerts project={project} savings={savingsRows} buildings={buildings} surveyedSet={surveyedSet}
+        canManage={canPhase} onOpenFreeze={() => setFreezeOpen(true)} />
 
       {/* tab row */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--line)', marginBottom: 16, overflowX: 'auto' }}>
@@ -289,6 +308,9 @@ export default function ProjectDetail() {
 
       {/* SURVEY tab (9B) */}
       {tab === 'survey' && <SurveyTab project={project} buildings={buildings} />}
+
+      {/* SAVINGS & SCOPE tab (9C) */}
+      {tab === 'saving' && <SavingsPanel project={project} buildings={buildings} savings={savingsRows} surveyedSet={surveyedSet} />}
 
       {/* BUILDINGS tab */}
       {tab === 'buildings' && (
@@ -512,6 +534,7 @@ export default function ProjectDetail() {
       {statusOpen && <StatusChangeModal project={project} onClose={() => setStatusOpen(false)} />}
       {engOpen && <AssignEngineerModal project={project} onClose={() => setEngOpen(false)} />}
       {phaseOpen && <PhaseAdvanceModal project={project} onClose={() => setPhaseOpen(false)} />}
+      {freezeOpen && <FreezeScopeModal project={project} buildings={buildings} surveyedSet={surveyedSet} onClose={() => setFreezeOpen(false)} />}
       {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
       {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
       {archiveBldg && <ArchiveBuildingModal building={archiveBldg} onClose={() => setArchiveBldg(null)} />}
