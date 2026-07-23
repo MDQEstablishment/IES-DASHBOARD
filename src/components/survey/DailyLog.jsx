@@ -101,7 +101,14 @@ export default function SurveyDailyLog({ entries, buildings }) {
                             <td style={{ padding: '6px 7px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{e.building?.code || '—'}</td>
                             <td style={{ padding: '6px 7px', whiteSpace: 'nowrap' }}>{[e.floor, e.room_name].filter(Boolean).join(' · ') || '—'}</td>
                             <td style={{ padding: '6px 7px' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '1px 7px', borderRadius: 6, color: '#A0762B', background: '#F5EEDF' }}>{CAT_LABEL[e.category] || e.category}</span></td>
-                            <td style={{ padding: '6px 7px', color: 'var(--text-2)' }}>{[e.make, e.model, e.category === 'ac' && e.tr ? `${num(e.tr)} TR` : e.category === 'lighting' && e.wattage ? `${num(e.wattage)} W` : ''].filter(Boolean).join(' ') || e.equipment_type || '—'}</td>
+                            <td style={{ padding: '6px 7px', color: 'var(--text-2)' }}>
+                              {[e.make, e.model, e.category === 'ac' && e.tr ? `${num(e.tr)} TR` : e.category === 'lighting' && e.wattage ? `${num(e.wattage)} W` : ''].filter(Boolean).join(' ') || e.equipment_type || '—'}
+                              {e.catalog_item_id
+                                ? <span title="Linked to an approved catalog item" style={{ marginLeft: 6, color: 'var(--ok)', fontWeight: 700, fontSize: 10.5 }}>✓</span>
+                                : ['lighting', 'ac'].includes(e.category)
+                                  ? <span title="Needs catalog mapping for the savings estimate" style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>map</span>
+                                  : null}
+                            </td>
                             <td style={{ padding: '6px 7px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 11 }}>×{num(e.qty)}</td>
                           </tr>
                         ))}

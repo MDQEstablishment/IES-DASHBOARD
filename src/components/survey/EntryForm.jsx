@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
-import { uploadToBucket, signedUrlFor } from '../../lib/db'
+import { useLiveQuery, uploadToBucket, signedUrlFor } from '../../lib/db'
+import { num } from '../../lib/format'
 import { compressImage } from '../../lib/image'
 import { Modal, Btn, Field, inputStyle } from '../ui'
 import { toast } from '../../lib/toast'
@@ -23,7 +24,8 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
   const blank = () => ({
     building_id: row?.building_id || (buildings[0]?.id ?? ''), floor: row?.floor || '', room_name: row?.room_name || '',
     room_type: row?.room_type || '', room_width: row?.room_width ?? '', room_height: row?.room_height ?? '', room_area: row?.room_area ?? '',
-    category: row?.category || 'lighting', equipment_type: row?.equipment_type || '', make: row?.make || '', model: row?.model || '',
+    category: row?.category || 'lighting', catalog_item_id: row?.catalog_item_id || '',
+    equipment_type: row?.equipment_type || '', make: row?.make || '', model: row?.model || '',
     size_category: row?.size_category || '', tr: row?.tr ?? '', wattage: row?.wattage ?? '', qty: row?.qty ?? 1,
     inverter: row?.inverter ?? false, age_years: row?.age_years ?? '', remarks: row?.remarks || '',
     photo_room_path: row?.photo_room_path || '', photo_indoor_path: row?.photo_indoor_path || '', photo_nameplate_path: row?.photo_nameplate_path || '',
@@ -46,7 +48,10 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
 
   const payload = () => {
     const p = { project_id: project.id, building_id: form.building_id, floor: form.floor || null, room_name: form.room_name || null,
-      room_type: form.room_type || null, category: form.category, equipment_type: form.equipment_type || null, make: form.make || null,
+      room_type: form.room_type || null, category: form.category,
+      // catalog link = the approved REPLACEMENT; only lighting/ac catalogs exist (DB-enforced)
+      catalog_item_id: (isAc || isLight) && form.catalog_item_id ? form.catalog_item_id : null,
+      equipment_type: form.equipment_type || null, make: form.make || null,
       model: form.model || null, size_category: form.size_category || null, remarks: form.remarks || null,
       inverter: isAc ? !!form.inverter : null, qty: form.qty === '' || form.qty == null ? 1 : parseInt(form.qty, 10),
       photo_room_path: form.photo_room_path || null, photo_indoor_path: form.photo_indoor_path || null, photo_nameplate_path: form.photo_nameplate_path || null }
@@ -75,7 +80,7 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
     setBusy(false)
     if (again) {
       // keep the location block, reset the unit block for fast same-room repeat
-      setForm((p) => ({ ...p, equipment_type: '', make: '', model: '', size_category: '', tr: '', wattage: '', qty: 1, inverter: false, age_years: '', remarks: '', photo_nameplate_path: '', photo_indoor_path: '' }))
+      setForm((p) => ({ ...p, catalog_item_id: '', equipment_type: '', make: '', model: '', size_category: '', tr: '', wattage: '', qty: 1, inverter: false, age_years: '', remarks: '', photo_nameplate_path: '', photo_indoor_path: '' }))
       onSaved?.(false)
     } else { onSaved?.(true) }
   }
@@ -111,10 +116,16 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
       <SectionLabel>Old unit</SectionLabel>
       <div style={grid}>
         <Field label="Category *">
-          <select style={control} value={form.category} onChange={(e) => set('category', e.target.value)}>
+          {/* switching category invalidates the catalog link (per-category catalogs) */}
+          <select style={control} value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value, catalog_item_id: '' }))}>
             {SURVEY_CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </Field>
+        {(isAc || isLight) && (
+          <div style={{ minWidth: 0, gridColumn: '1 / -1' }}>
+            <CatalogPicker category={form.category} value={form.catalog_item_id} onChange={(id) => set('catalog_item_id', id)} />
+          </div>
+        )}
         <Field label="Equipment type"><input style={control} value={form.equipment_type} onChange={(e) => set('equipment_type', e.target.value)} /></Field>
         <Field label="Make"><input style={control} value={form.make} onChange={(e) => set('make', e.target.value)} /></Field>
         <Field label="Model"><input style={control} value={form.model} onChange={(e) => set('model', e.target.value)} /></Field>
@@ -148,6 +159,61 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
 
 const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 14px' }
 const SectionLabel = ({ children }) => <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-3)', margin: '4px 0 8px' }}>{children}</div>
+
+// Searchable, category-filtered picker over the TARSHID-approved catalogs.
+// Stores the catalog row id (the approved REPLACEMENT unit — 9C savings
+// engine input); free-text make/model below stay as the fallback description.
+function CatalogPicker({ category, value, onChange }) {
+  const table = category === 'ac' ? 'ac_catalog' : 'lighting_catalog'
+  const { rows } = useLiveQuery(table, (q) => q.select('*').eq('is_active', true).order('sr_no', { nullsFirst: false }), [table])
+  const [q, setQ] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const labelOf = (r) => category === 'ac'
+    ? [r.size_category, r.make, r.model, r.capacity_tr != null ? `${num(r.capacity_tr)} TR` : null, r.seer != null ? `SEER ${num(r.seer)}` : r.ieer != null ? `IEER ${num(r.ieer)}` : null].filter(Boolean).join(' · ')
+    : [r.lamp_type, r.model, r.brand, r.wattage_w != null ? `${num(r.wattage_w)} W` : null].filter(Boolean).join(' · ')
+  const hayOf = (r) => (category === 'ac'
+    ? [r.description, r.model, r.make, r.size_category, r.equipment_type]
+    : [r.lamp_type, r.model, r.brand, r.shape_size_base]).filter(Boolean).join(' ').toLowerCase()
+
+  const chosen = value ? rows.find((r) => r.id === value) : null
+  const matches = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    const list = s ? rows.filter((r) => hayOf(r).includes(s)) : rows
+    return list.slice(0, 8)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, q, category])
+
+  return (
+    <div style={{ minWidth: 0, marginBottom: 14 }}>
+      <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 6 }}>
+        Approved replacement (catalog){' '}
+        <span style={{ color: value ? 'var(--ok)' : '#B45309', textTransform: 'none', letterSpacing: 0 }}>{value ? '· linked' : '· needed for savings estimate'}</span>
+      </span>
+      {chosen ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--line)', borderRadius: 8, padding: '7px 10px', background: '#F5EEDF' }}>
+          <span lang="en" dir="ltr" style={{ fontSize: 12.5, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{labelOf(chosen)}</span>
+          <button type="button" onClick={() => { onChange(''); setQ('') }} style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: 'var(--bad)', background: 'none', flex: 'none' }}>Remove</button>
+        </div>
+      ) : (
+        <div style={{ position: 'relative' }}>
+          <input lang="en" style={control} value={q} placeholder={`Search the approved ${category === 'ac' ? 'AC & Package' : 'lighting'} catalog…`}
+            onChange={(e) => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
+          {open && matches.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
+              {matches.map((r) => (
+                <button key={r.id} type="button" onMouseDown={(e) => { e.preventDefault(); onChange(r.id); setOpen(false) }}
+                  className="ies-row-hover" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, background: 'none', cursor: 'pointer' }}>
+                  <span lang="en" dir="ltr">{labelOf(r)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function NumField({ label, v, on, help }) {
   return (
