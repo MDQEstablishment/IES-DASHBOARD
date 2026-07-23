@@ -6,7 +6,7 @@ import { toast } from '../lib/toast'
 import { compressImage } from '../lib/image'
 import { Empty, Btn, inputStyle } from './ui'
 import DateInput from './DateInput'
-import { fmtDate } from '../lib/format'
+import { fmtDate, localToday } from '../lib/format'
 
 // Small uppercase field caption to match the Claude Design mockup.
 const Lbl = ({ children }) => <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 5 }}>{children}</span>
@@ -21,7 +21,7 @@ const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
 const ESM_PILL = { ESM1: { c: '#3E5C8A', bg: '#EBF0F7' }, ESM2: { c: '#6D5A8E', bg: '#F0EDF6' }, ESM3: { c: '#2A7A72', bg: '#E8F3F1' } }
 const esmPill = (code) => ESM_PILL[code] || { c: '#8A8577', bg: '#F0EDE4' }
 const num = (v) => (v == null ? 0 : Number(v))
-const today = () => new Date().toISOString().slice(0, 10)
+const today = localToday
 const ACCEPT = '.jpg,.jpeg,.png,.heic,.heif,image/*'
 
 function EsmBadge({ code, style }) {

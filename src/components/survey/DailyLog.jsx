@@ -2,12 +2,10 @@ import { useState, useMemo } from 'react'
 import { Empty } from '../ui'
 import Icon from '../Icon'
 import DateInput from '../DateInput'
-import { num, fmtDate } from '../../lib/format'
+import { num, fmtDate, localDayKey as dayKey, localToday as todayKey } from '../../lib/format'
 import { SURVEY_CATEGORIES } from '../../lib/constants'
 
 const CAT_LABEL = Object.fromEntries(SURVEY_CATEGORIES)
-const dayKey = (ts) => new Date(ts).toISOString().slice(0, 10)
-const todayKey = () => new Date().toISOString().slice(0, 10)
 
 // Daily log: the end-of-day meeting as a screen. Entries grouped day -> contributor -> rows.
 export default function SurveyDailyLog({ entries, buildings }) {

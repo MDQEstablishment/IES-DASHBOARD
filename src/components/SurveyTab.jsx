@@ -3,7 +3,7 @@ import { useAuth, can } from '../rbac'
 import { useLiveQuery } from '../lib/db'
 import { Btn, Loading, Empty } from './ui'
 import { toast } from '../lib/toast'
-import { num, fmtDateTime } from '../lib/format'
+import { num, fmtDateTime, localToday, localDayKey } from '../lib/format'
 import { CAN_SURVEY, SURVEY_CATEGORIES } from '../lib/constants'
 import { exportSurveyXlsx } from '../lib/surveyExport'
 import SurveyDailyLog from './survey/DailyLog'
@@ -11,7 +11,6 @@ import SurveyEntriesTable from './survey/EntriesTable'
 import SurveyEntryForm from './survey/EntryForm'
 
 const CAT_LABEL = Object.fromEntries(SURVEY_CATEGORIES)
-const todayKey = () => new Date().toISOString().slice(0, 10)
 
 // 9B — the survey DAILY LOG. Two field teams log OLD equipment straight into the
 // project; entries merge live (realtime) and are fully attributed.
@@ -32,7 +31,7 @@ export default function SurveyTab({ project, buildings }) {
   const stats = useMemo(() => {
     const surveyedB = new Set(entries.map((e) => e.building_id)).size
     const cats = {}; let today = 0
-    entries.forEach((e) => { cats[e.category] = (cats[e.category] || 0) + (e.qty || 0); if (new Date(e.created_at).toISOString().slice(0, 10) === todayKey()) today++ })
+    entries.forEach((e) => { cats[e.category] = (cats[e.category] || 0) + (e.qty || 0); if (localDayKey(e.created_at) === localToday()) today++ })
     const last = entries[0]?.created_at
     return { surveyedB, cats, today, last, total: entries.length }
   }, [entries])

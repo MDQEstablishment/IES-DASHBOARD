@@ -7,15 +7,13 @@ import { useAuth } from '../rbac'
 import { useLiveQuery, bgInsert, uploadToBucket } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { CAN_INSTALL } from '../lib/constants'
-import { fmtShort } from '../lib/format'
+import { fmtShort, localToday as today, localDayKey as dayKey } from '../lib/format'
 import { compressImage } from '../lib/image'
 import { useBreadcrumb } from '../breadcrumbs'
 
 const DRAFT_KEY = 'ies.draft.daily'
-const today = () => new Date().toISOString().slice(0, 10)
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const dayKey = (d) => new Date(d).toISOString().slice(0, 10)
 
 export default function DailyProgress() {
   const { user, profile } = useAuth()

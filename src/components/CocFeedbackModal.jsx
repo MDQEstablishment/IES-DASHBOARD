@@ -6,6 +6,7 @@ import { Modal, Btn, Field, inputStyle } from './ui'
 import { toast } from '../lib/toast'
 import FileDropZone from './FileDropZone'
 import DateInput from './DateInput'
+import { localToday } from '../lib/format'
 
 // 8S screen 4 — record what TARSHID said about a sent certificate. Approval
 // happens outside the platform; this only logs the outcome + their response
@@ -19,7 +20,7 @@ const OUTCOMES = [
 export default function CocFeedbackModal({ coc, onClose, onDone }) {
   const { user } = useAuth()
   const [outcome, setOutcome] = useState('approved')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => localToday())
   const [comments, setComments] = useState('')
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
