@@ -54,11 +54,14 @@ h1,h2,h3,p{margin:0}
   .ies-login{grid-template-columns:1fr !important}
   .ies-loginleft{display:none !important}
 }
-/* Wide tables scroll INSIDE their card at every viewport width. This rule
-   used to live only in the <=767px media block, so on desktop any table wider
-   than its card (AC & Package: 14 cols, Lighting: 13) rendered outside the
-   white container. */
-.ies-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* Wide tables scroll INSIDE their card at every viewport width (this rule
+   used to live only in the <=767px media block). The scrollbar is styled to
+   stay VISIBLE — macOS overlay scrollbars are invisible until touched, which
+   made a working scroll container read as a clipped/broken table. */
+.ies-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;scrollbar-width:thin;scrollbar-color:#C9C3B4 transparent}
+.ies-table-wrap::-webkit-scrollbar{height:8px}
+.ies-table-wrap::-webkit-scrollbar-track{background:transparent}
+.ies-table-wrap::-webkit-scrollbar-thumb{background:#C9C3B4;border-radius:4px}
 /* hover helpers used across inline-styled buttons/rows */
 .ies-hover{transition:background .12s,border-color .12s,box-shadow .12s,color .12s}
 .ies-hover:hover{background:var(--hover)}

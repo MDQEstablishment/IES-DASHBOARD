@@ -30,18 +30,21 @@ const CATALOGS = {
       { key: 'mandatory', label: 'Mandatory', bool: true },
       { key: 'local', label: 'Local', bool: true },
     ],
+    // Column diet (post-9C overflow fix, measured): `max` caps a text column
+    // with ellipsis + title tooltip, `tight` narrows numeric padding,
+    // `hideIfEmpty` drops the column when no row on the page has a value.
     columns: [
-      { key: 'sr_no', label: 'SR', mono: true },
-      { key: 'lamp_type', label: 'LAMP TYPE', bold: true },
-      { key: 'model', label: 'MODEL' },
-      { key: 'brand', label: 'BRAND' },
-      { key: 'shape_size_base', label: 'SHAPE/SIZE/BASE' },
-      { key: 'dimensions', label: 'DIMENSIONS' },
-      { key: 'wattage_w', label: 'W', mono: true, num: true },
-      { key: 'lumens_lm', label: 'LUMENS', mono: true, num: true },
-      { key: 'cct_k', label: 'CCT', mono: true },
-      { key: 'life_hours', label: 'LIFE (H)', mono: true, num: true },
-      { key: 'operating_v', label: 'V', mono: true },
+      { key: 'sr_no', label: 'SR', mono: true, tight: true },
+      { key: 'lamp_type', label: 'LAMP TYPE', bold: true, max: 180 },
+      { key: 'model', label: 'MODEL', max: 130 },
+      { key: 'brand', label: 'BRAND', max: 110 },
+      { key: 'shape_size_base', label: 'SHAPE/SIZE/BASE', max: 150 },
+      { key: 'dimensions', label: 'DIMENSIONS', max: 110 },
+      { key: 'wattage_w', label: 'W', mono: true, num: true, tight: true },
+      { key: 'lumens_lm', label: 'LUMENS', mono: true, num: true, tight: true },
+      { key: 'cct_k', label: 'CCT', mono: true, tight: true },
+      { key: 'life_hours', label: 'LIFE (H)', mono: true, num: true, tight: true },
+      { key: 'operating_v', label: 'V', mono: true, tight: true, hideIfEmpty: true },
       { key: 'mandatory', label: 'MAND.', chip: true },
       { key: 'local', label: 'LOCAL', chip: true },
     ],
@@ -71,18 +74,21 @@ const CATALOGS = {
       { key: 'mandatory', label: 'Mandatory', bool: true },
       { key: 'local', label: 'Local', bool: true },
     ],
+    // Measured blowout drivers were SIZE CATEGORY (332px — 51-char repeated
+    // strings) and MODEL (288px): both now ellipsized with tooltips. IEER +
+    // VOLTAGE hide when the visible page has none (all window/split pages).
     columns: [
-      { key: 'sr_no', label: 'SR', mono: true },
-      { key: 'description', label: 'DESCRIPTION', bold: true },
+      { key: 'sr_no', label: 'SR', mono: true, tight: true },
+      { key: 'description', label: 'DESCRIPTION', bold: true, max: 200 },
       { key: 'equipment_type', label: 'TYPE' },
-      { key: 'model', label: 'MODEL (ID/OD)' },
-      { key: 'make', label: 'MAKE' },
-      { key: 'size_category', label: 'SIZE CATEGORY' },
-      { key: 'capacity_btu', label: 'BTU', mono: true, num: true },
-      { key: 'capacity_tr', label: 'TR', mono: true, num: true },
-      { key: 'seer', label: 'SEER', mono: true, num: true },
-      { key: 'ieer', label: 'IEER', mono: true, num: true },
-      { key: 'voltage_class', label: 'VOLTAGE' },
+      { key: 'model', label: 'MODEL (ID/OD)', max: 140 },
+      { key: 'make', label: 'MAKE', max: 100 },
+      { key: 'size_category', label: 'SIZE CATEGORY', max: 150 },
+      { key: 'capacity_btu', label: 'BTU', mono: true, num: true, tight: true },
+      { key: 'capacity_tr', label: 'TR', mono: true, num: true, tight: true },
+      { key: 'seer', label: 'SEER', mono: true, num: true, tight: true },
+      { key: 'ieer', label: 'IEER', mono: true, num: true, tight: true, hideIfEmpty: true },
+      { key: 'voltage_class', label: 'VOLTAGE', tight: true, hideIfEmpty: true },
       { key: 'ch_mode', label: 'C&H', render: (v) => v === 'cooling_heating' ? 'C&H' : v === 'cooling_only' ? 'Cooling' : '—' },
       { key: 'mandatory', label: 'MAND.', chip: true },
       { key: 'local', label: 'LOCAL', chip: true },
@@ -160,7 +166,9 @@ export default function EquipmentCatalogs({ role }) {
   const activeCount = (d) => d.rows.filter((r) => r.is_active).length
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
+    // overflow:hidden — the card is the hard clip boundary; the table's own
+    // .ies-table-wrap scrolls inside it (visible scrollbar via index.css).
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16, overflow: 'hidden' }}>
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Approved Equipment</div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         TARSHID-approved equipment from the technical data sheet. These catalogs feed the saving sheet — retiring an item hides it from new selections without breaking past references.{!canWrite && ' Editing is limited to PMO and admins.'}
@@ -226,6 +234,9 @@ function CatalogTab({ cfg, state, canWrite }) {
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageSafe = Math.min(page, pageCount - 1)
   const pageRows = filtered.slice(pageSafe * PAGE_SIZE, pageSafe * PAGE_SIZE + PAGE_SIZE)
+  // hideIfEmpty columns (IEER/VOLTAGE/V) drop when no row on the CURRENT page
+  // has a value — they were all dashes and pure width on most pages.
+  const visCols = cfg.columns.filter((c) => !c.hideIfEmpty || pageRows.some((r) => r[c.key] != null && String(r[c.key]).trim() !== ''))
 
   const resetPage = (fn) => (...a) => { fn(...a); setPage(0) }
 
@@ -261,15 +272,18 @@ function CatalogTab({ cfg, state, canWrite }) {
         <>
           <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 640 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              {cfg.columns.map((c) => <th key={c.key} style={{ padding: '8px 7px', fontWeight: 600, whiteSpace: 'nowrap', textAlign: c.num ? 'right' : 'left' }}>{c.label}</th>)}
+              {visCols.map((c) => <th key={c.key} style={{ padding: c.tight ? '8px 5px' : '8px 7px', fontWeight: 600, whiteSpace: 'nowrap', textAlign: c.num ? 'right' : 'left' }}>{c.label}</th>)}
               {canWrite && <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>ACTIONS</th>}
             </tr></thead>
             <tbody>
               {pageRows.map((r) => (
                 <tr key={r.id} style={{ borderTop: '1px solid var(--line)', opacity: r.is_active ? 1 : 0.5 }}>
-                  {cfg.columns.map((c) => (
-                    <td key={c.key} style={{ padding: '8px 7px', textAlign: c.num ? 'right' : 'left', fontFamily: c.mono ? 'var(--mono)' : undefined,
-                      fontSize: c.mono ? 11 : 12.5, fontWeight: c.bold ? 600 : undefined, color: c.bold ? 'var(--text)' : 'var(--text-2)', whiteSpace: c.bold ? 'normal' : 'nowrap' }}>
+                  {visCols.map((c) => (
+                    <td key={c.key} title={c.max && r[c.key] ? String(r[c.key]) : undefined}
+                      style={{ padding: c.tight ? '8px 5px' : '8px 7px', textAlign: c.num ? 'right' : 'left', fontFamily: c.mono ? 'var(--mono)' : undefined,
+                        fontSize: c.mono ? 11 : 12.5, fontWeight: c.bold ? 600 : undefined, color: c.bold ? 'var(--text)' : 'var(--text-2)',
+                        whiteSpace: c.bold ? 'normal' : 'nowrap',
+                        ...(c.max ? { maxWidth: c.max, overflow: 'hidden', textOverflow: 'ellipsis' } : {}) }}>
                       {c.chip ? <span style={chipStyle(!!r[c.key])}>{r[c.key] ? 'Yes' : 'No'}</span>
                         : c.render ? c.render(r[c.key], r)
                         : c.num ? num(r[c.key])
