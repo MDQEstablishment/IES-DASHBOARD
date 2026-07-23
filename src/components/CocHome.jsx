@@ -60,8 +60,12 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
   // settings query + the loadPlan effect above pick the change up automatically.
   const saveLayout = async (mode) => {
     if ((settings?.layout_mode || 'concatenated') === mode) return
-    const { error } = await supabase.from('coc_project_settings').update({ layout_mode: mode }).eq('project_id', projectId)
-    if (error) toast("Couldn't save — " + error.message, 'err'); else toast('Saved')
+    // .select() so a 0-row no-op (settings row missing / RLS) is an error,
+    // not a false "Saved" while the toggle silently stays put.
+    const { data, error } = await supabase.from('coc_project_settings').update({ layout_mode: mode }).eq('project_id', projectId).select('project_id')
+    if (error) toast("Couldn't save — " + error.message, 'err')
+    else if (!data || data.length === 0) toast("Couldn't save — coverage settings not found or no permission", 'err')
+    else toast('Saved')
   }
 
   const active = cocs.filter((c) => c.status !== 'superseded')
@@ -107,7 +111,13 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
     setBusyId(c.id)
     try {
       const prior = cocs.find((x) => x.superseded_by_coc_id === c.id)
-      if (prior) await supabase.from('cocs').update({ superseded_by_coc_id: null, status: prior.feedback_outcome || 'rejected' }).eq('id', prior.id)
+      if (prior) {
+        // Restore the prior revision FIRST and stop if it fails — deleting the
+        // newer rev anyway would leave the chain pointing at a dead row.
+        const { data: pd, error: pErr } = await supabase.from('cocs')
+          .update({ superseded_by_coc_id: null, status: prior.feedback_outcome || 'rejected' }).eq('id', prior.id).select('id')
+        if (pErr || !pd?.length) { toast("Couldn't restore the prior revision — " + (pErr?.message || 'no permission'), 'err'); return }
+      }
       const { error } = await supabase.from('cocs').delete().eq('id', c.id)
       if (error) { toast("Couldn't delete — " + error.message, 'err'); return }
       if (c.pdf_path) await supabase.storage.from('coc-pdfs').remove([c.pdf_path]).catch(() => {})
