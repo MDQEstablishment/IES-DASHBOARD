@@ -12,6 +12,7 @@ export function useLiveQuery(table, build, deps = []) {
   const [tick, setTick] = useState(0)
   const buildRef = useRef(build)
   buildRef.current = build
+  const lastErrRef = useRef(null)
 
   const refetch = useCallback(() => setTick((t) => t + 1), [])
 
@@ -22,8 +23,20 @@ export function useLiveQuery(table, build, deps = []) {
     const q = buildRef.current ? buildRef.current(base) : base.select('*')
     Promise.resolve(q).then(({ data, error }) => {
       if (!alive) return
-      if (error) setState({ rows: [], loading: false, error })
-      else setState({ rows: data || [], loading: false, error: null })
+      if (error) {
+        // Surface load failures instead of rendering a false empty state
+        // (RLS denials / bad embeds looked identical to "no data"). Toast only
+        // when the error CHANGES so realtime-triggered refetches don't spam.
+        console.error('[IES] useLiveQuery', table, error)
+        if (lastErrRef.current !== error.message) {
+          lastErrRef.current = error.message
+          toast(`Couldn't load ${table.replace(/_/g, ' ')} — ${error.message}`, 'err')
+        }
+        setState({ rows: [], loading: false, error })
+      } else {
+        lastErrRef.current = null
+        setState({ rows: data || [], loading: false, error: null })
+      }
     })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,16 +86,34 @@ export async function bgUpdate(table, id, patch, opts = {}) {
     opts.rollback?.(error)
     return { error }
   }
+  // RLS can match 0 rows and return no error — a silent no-op, not success.
+  // Callers used to check data.length themselves (only 2 of ~20 did); now the
+  // no-op is surfaced here so a denied write never shows a success toast.
+  if (!data || data.length === 0) {
+    const err = { message: 'no rows updated (permission or missing row)', code: 'rls-noop' }
+    console.warn('[IES] bgUpdate 0 rows', table, id)
+    toast(opts.errMsg || "Change didn't persist — you may not have permission", 'err')
+    opts.rollback?.(err)
+    return { data, error: err }
+  }
   if (opts.okMsg) toast(opts.okMsg)
   return { data }
 }
 
 export async function bgDelete(table, id, opts = {}) {
-  const { error } = await supabase.from(table).delete().eq('id', id)
+  const { data, error } = await supabase.from(table).delete().eq('id', id).select()
   if (error) {
     toast(opts.errMsg || `Couldn't delete — ${error.message}`, 'err')
     opts.rollback?.(error)
     return { error }
+  }
+  // Same silent-no-op guard as bgUpdate (RLS matched nothing).
+  if (!data || data.length === 0) {
+    const err = { message: 'no rows deleted (permission or missing row)', code: 'rls-noop' }
+    console.warn('[IES] bgDelete 0 rows', table, id)
+    toast(opts.errMsg || "Delete didn't persist — you may not have permission", 'err')
+    opts.rollback?.(err)
+    return { error: err }
   }
   if (opts.okMsg) toast(opts.okMsg)
   return { ok: true }
