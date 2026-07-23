@@ -291,7 +291,6 @@ export function StatusChangeModal({ project, onClose }) {
     if (reasonRequired && !reason.trim()) { toast('A reason is required for on-hold / closed', 'err'); return }
     setErr('')
     setBusy(true)
-    console.log('[IES] status change', { project: project.code, from: project.status, to: status })
     const { data, error } = await bgUpdate('projects', project.id, {
       status, status_changed_by: user.id, status_changed_at: new Date().toISOString(), status_change_reason: reason || null,
     }, { okMsg: `Status → ${statusLabel(status)}` })
@@ -337,7 +336,6 @@ export function DeleteProjectModal({ project, onClose }) {
     if (!ok) return
     setErr('')
     setBusy(true)
-    console.log('[IES] delete project', project.code)
     const { data, error } = await bgUpdate('projects', project.id, {
       deleted_at: new Date().toISOString(), status_changed_by: user.id, status_changed_at: new Date().toISOString(), status_change_reason: 'Soft-deleted',
     }, { okMsg: 'Project deleted' })
@@ -492,8 +490,6 @@ export function ProjectImportModal({ onClose }) {
   // UTC and loses a day east of Greenwich — format from local components.
   const toIso = (v) => (v instanceof Date ? localDayKey(v) : s(v) || null)
   const doImport = async () => {
-    // Visible on every click so a future dead-button report can be diagnosed from the console.
-    console.log('[IES] import: Confirm clicked', { project: parsed?.project?.code, errors: errors.length, busy })
     if (!parsed?.project || errors.length) {
       setImportErr('Nothing to import — fix the validation errors above first.')
       return

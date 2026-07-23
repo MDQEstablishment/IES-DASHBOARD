@@ -10,8 +10,6 @@ import SurveyDailyLog from './survey/DailyLog'
 import SurveyEntriesTable from './survey/EntriesTable'
 import SurveyEntryForm from './survey/EntryForm'
 
-const CAT_LABEL = Object.fromEntries(SURVEY_CATEGORIES)
-
 // 9B — the survey DAILY LOG. Two field teams log OLD equipment straight into the
 // project; entries merge live (realtime) and are fully attributed.
 export default function SurveyTab({ project, buildings }) {

@@ -149,9 +149,6 @@ export default function ProjectDetail() {
   const ringDash = `${((overall / 100) * circ).toFixed(1)} ${circ.toFixed(1)}`
   const timeline = totalWeeks ? `${weeksElapsed}/${totalWeeks} wks` : '—'
 
-  const iconPlus = <Icon name="plus" size={15} />
-  const iconUpload = <Icon name="upload" size={15} />
-
   // --- ESM rollup rows ---------------------------------------------------------
   const esmRows = projectEsms.length
     ? projectEsms.map((pe, i) => {
