@@ -8,6 +8,9 @@ import { signedUrlFor } from './db'
 import { localDayKey } from './format'
 
 const PHOTO_BUCKET = 'daily-progress-photos' // survey photos live here, prefix survey/<building_id>/
+// The exported workbook is a long-lived artifact — the default 1h signed-URL
+// expiry made every photo link die before anyone opened the file. One year.
+const PHOTO_URL_TTL = 60 * 60 * 24 * 365
 
 // Header row, verbatim in ESCO order (1-indexed positions preserved).
 export const ESCO_HEADERS = [
@@ -29,7 +32,7 @@ async function resolvePhotos(entries) {
   const paths = new Set()
   entries.forEach((e) => [e.photo_room_path, e.photo_indoor_path, e.photo_nameplate_path].forEach((p) => p && paths.add(p)))
   const map = {}
-  await Promise.all([...paths].map(async (p) => { map[p] = (await signedUrlFor(PHOTO_BUCKET, p)) || '' }))
+  await Promise.all([...paths].map(async (p) => { map[p] = (await signedUrlFor(PHOTO_BUCKET, p, PHOTO_URL_TTL)) || '' }))
   return map
 }
 
