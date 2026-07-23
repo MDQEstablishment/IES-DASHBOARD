@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { useLiveQuery } from '../lib/db'
 import { Empty } from './ui'
 
@@ -44,16 +45,16 @@ export default function BuildingMaterialsPlan({ buildingId, projectId }) {
                 const header = esm !== lastEsm ? esm : null; lastEsm = esm
                 const short = r.avail < num(r.remaining_qty)
                 return (
-                  <>
-                    {header && <tr key={'h' + esm}><td colSpan={5} style={{ padding: '8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: '#FAF8F2', borderTop: '1px solid var(--line)' }}>{header}</td></tr>}
-                    <tr key={r.category_id} style={{ borderTop: '1px solid var(--line)' }}>
+                  <Fragment key={r.category_id}>
+                    {header && <tr><td colSpan={5} style={{ padding: '8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: '#FAF8F2', borderTop: '1px solid var(--line)' }}>{header}</td></tr>}
+                    <tr style={{ borderTop: '1px solid var(--line)' }}>
                       <td style={{ padding: '9px 8px' }}><span className="ies-ellipsis" title={r.cat.code}>{r.cat.name_en}</span></td>
                       <td style={tdR}>{num(r.planned_qty)}</td>
                       <td style={{ ...tdR, color: 'var(--ok)' }}>{num(r.used_qty)}</td>
                       <td style={{ ...tdR, fontWeight: 700 }}>{num(r.remaining_qty)}</td>
                       <td style={{ ...tdR, color: short ? 'var(--bad)' : 'var(--text)' }}>{r.avail}{short && <span title="Warehouse stock is below this building's remaining need" style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: '#96271E', background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 5, padding: '1px 5px' }}>LOW</span>}</td>
                     </tr>
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>
