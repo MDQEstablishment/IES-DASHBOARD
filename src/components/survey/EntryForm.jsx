@@ -123,7 +123,8 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
         </Field>
         {(isAc || isLight) && (
           <div style={{ minWidth: 0, gridColumn: '1 / -1' }}>
-            <CatalogPicker category={form.category} value={form.catalog_item_id} onChange={(id) => set('catalog_item_id', id)} />
+            <CatalogPicker category={form.category} value={form.catalog_item_id} onChange={(id) => set('catalog_item_id', id)}
+              refValue={isAc ? form.tr : form.wattage} />
           </div>
         )}
         <Field label="Equipment type"><input style={control} value={form.equipment_type} onChange={(e) => set('equipment_type', e.target.value)} /></Field>
@@ -161,28 +162,80 @@ const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(18
 const SectionLabel = ({ children }) => <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-3)', margin: '4px 0 8px' }}>{children}</div>
 
 // Searchable, category-filtered picker over the TARSHID-approved catalogs.
-// Stores the catalog row id (the approved REPLACEMENT unit — 9C savings
-// engine input); free-text make/model below stay as the fallback description.
-function CatalogPicker({ category, value, onChange }) {
+// Stores the catalog row id (the approved REPLACEMENT unit — savings engine
+// input); free-text make/model below stay as the fallback description.
+// Search is TOKENIZED and numeric-aware: '2 TR' / '2TR' / '2' match items
+// whose TR (lighting: wattage) is within ±10% — the same tolerance TARSHID
+// uses — because the stored sheet strings don't contain '2 TR' verbatim.
+// Default list ranks by proximity to the entry's own TR/wattage, or shows a
+// representative sample across size categories, never raw import order.
+const UNIT_WORDS = new Set(['tr', 'w', 'watt', 'watts', 'seer', 'ton', 'tons', 'hrs'])
+function CatalogPicker({ category, value, onChange, refValue }) {
   const table = category === 'ac' ? 'ac_catalog' : 'lighting_catalog'
   const { rows } = useLiveQuery(table, (q) => q.select('*').eq('is_active', true).order('sr_no', { nullsFirst: false }), [table])
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
 
   const labelOf = (r) => category === 'ac'
-    ? [r.size_category, r.make, r.model, r.capacity_tr != null ? `${num(r.capacity_tr)} TR` : null, r.seer != null ? `SEER ${num(r.seer)}` : r.ieer != null ? `IEER ${num(r.ieer)}` : null].filter(Boolean).join(' · ')
-    : [r.lamp_type, r.model, r.brand, r.wattage_w != null ? `${num(r.wattage_w)} W` : null].filter(Boolean).join(' · ')
-  const hayOf = (r) => (category === 'ac'
-    ? [r.description, r.model, r.make, r.size_category, r.equipment_type]
-    : [r.lamp_type, r.model, r.brand, r.shape_size_base]).filter(Boolean).join(' ').toLowerCase()
+    ? [r.equipment_type, r.capacity_tr != null ? `${num(r.capacity_tr)} TR` : null, r.make, r.model,
+       r.seer != null ? `SEER ${num(r.seer)}` : r.ieer != null ? `IEER ${num(r.ieer)}` : null].filter(Boolean).join(' · ')
+    : [r.lamp_type, r.wattage_w != null ? `${num(r.wattage_w)} W` : null, r.brand, r.model].filter(Boolean).join(' · ')
+  const titleOf = (r) => category === 'ac'
+    ? [r.size_category, r.description].filter(Boolean).join(' — ')
+    : [r.shape_size_base, r.dimensions].filter(Boolean).join(' — ')
 
   const chosen = value ? rows.find((r) => r.id === value) : null
+
   const matches = useMemo(() => {
-    const s = q.trim().toLowerCase()
-    const list = s ? rows.filter((r) => hayOf(r).includes(s)) : rows
-    return list.slice(0, 8)
+    const norm = (s) => toLatin(String(s ?? '')).toLowerCase()
+    const hayOf = (r) => norm((category === 'ac'
+      ? [r.description, r.model, r.make, r.size_category, r.equipment_type]
+      : [r.lamp_type, r.model, r.brand, r.shape_size_base]).filter(Boolean).join(' '))
+    const numsOf = (r) => (category === 'ac' ? [r.capacity_tr, r.seer, r.ieer] : [r.wattage_w])
+      .filter((v) => v != null).map(Number)
+    // tokens: split, strip standalone unit words, peel unit suffixes ('2tr' -> '2')
+    const tokens = norm(q).split(/\s+/).filter(Boolean)
+      .filter((t) => !UNIT_WORDS.has(t))
+      .map((t) => { const m = /^(\d+(?:\.\d+)?)(tr|w|watts?|seer|tons?)$/.exec(t); return m ? m[1] : t })
+    const tokenHit = (r, t) => {
+      if (hayOf(r).includes(t)) return true
+      const n = /^\d+(?:\.\d+)?$/.test(t) ? parseFloat(t) : NaN
+      if (Number.isNaN(n)) return false
+      return numsOf(r).some((v) => v >= n * 0.9 && v <= n * 1.1)   // ±10% (TARSHID tolerance)
+    }
+    let list = tokens.length ? rows.filter((r) => tokens.every((t) => tokenHit(r, t))) : [...rows]
+    // rank by proximity to the entry's own TR / wattage when it's filled
+    const ref = refValue != null && String(refValue).trim() !== '' ? parseFloat(toLatin(String(refValue))) : NaN
+    const sizeOf = (r) => (category === 'ac' ? r.capacity_tr : r.wattage_w)
+    if (!Number.isNaN(ref)) {
+      list.sort((a, b) => {
+        const va = sizeOf(a), vb = sizeOf(b)
+        const da = va == null ? Infinity : Math.abs(va - ref), db = vb == null ? Infinity : Math.abs(vb - ref)
+        const ba = da <= ref * 0.1 ? 0 : 1, bb = db <= ref * 0.1 ? 0 : 1
+        return ba - bb || da - db || (a.sr_no || 0) - (b.sr_no || 0)
+      })
+    } else if (!tokens.length) {
+      // representative default: round-robin one item per size category / lamp
+      // type, so the list never looks like "only 1.5 TR exists"
+      const groups = new Map()
+      list.forEach((r) => {
+        const k = category === 'ac' ? (r.size_category || '') : (r.lamp_type || '')
+        if (!groups.has(k)) groups.set(k, [])
+        groups.get(k).push(r)
+      })
+      const rr = []
+      const buckets = [...groups.values()]
+      for (let i = 0; rr.length < Math.min(10, list.length); i++) {
+        const b = buckets[i % buckets.length]
+        const item = b[Math.floor(i / buckets.length)]
+        if (item) rr.push(item)
+        if (i > buckets.length * 10) break
+      }
+      list = rr
+    }
+    return list.slice(0, 10)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, q, category])
+  }, [rows, q, category, refValue])
 
   return (
     <div style={{ minWidth: 0, marginBottom: 14 }}>
@@ -191,22 +244,26 @@ function CatalogPicker({ category, value, onChange }) {
         <span style={{ color: value ? 'var(--ok)' : '#B45309', textTransform: 'none', letterSpacing: 0 }}>{value ? '· linked' : '· needed for savings estimate'}</span>
       </span>
       {chosen ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--line)', borderRadius: 8, padding: '7px 10px', background: '#F5EEDF' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--line)', borderRadius: 8, padding: '7px 10px', background: '#F5EEDF' }} title={titleOf(chosen)}>
           <span lang="en" dir="ltr" style={{ fontSize: 12.5, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{labelOf(chosen)}</span>
           <button type="button" onClick={() => { onChange(''); setQ('') }} style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: 'var(--bad)', background: 'none', flex: 'none' }}>Remove</button>
         </div>
       ) : (
         <div style={{ position: 'relative' }}>
-          <input lang="en" style={control} value={q} placeholder={`Search the approved ${category === 'ac' ? 'AC & Package' : 'lighting'} catalog…`}
+          <input lang="en" style={control} value={q} placeholder={category === 'ac' ? 'Search make, model or tonnage — e.g. Split, Zamil, 2 TR…' : 'Search type, brand or wattage — e.g. LED, Philips, 18…'}
             onChange={(e) => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
-          {open && matches.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
-              {matches.map((r) => (
-                <button key={r.id} type="button" onMouseDown={(e) => { e.preventDefault(); onChange(r.id); setOpen(false) }}
+          {open && (matches.length > 0 || q.trim() !== '') && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+              {matches.length > 0 ? matches.map((r) => (
+                <button key={r.id} type="button" title={titleOf(r)} onMouseDown={(e) => { e.preventDefault(); onChange(r.id); setOpen(false) }}
                   className="ies-row-hover" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, background: 'none', cursor: 'pointer' }}>
                   <span lang="en" dir="ltr">{labelOf(r)}</span>
                 </button>
-              ))}
+              )) : (
+                <div style={{ padding: '10px 12px', fontSize: 12, color: 'var(--text-3)' }}>
+                  No match — try make, model, or {category === 'ac' ? 'tonnage (e.g. Split, Zamil, 2)' : 'wattage (e.g. LED, Philips, 18)'}.
+                </div>
+              )}
             </div>
           )}
         </div>
