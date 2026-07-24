@@ -6,11 +6,10 @@ import { useLiveQuery, bgUpdate, signedUrlFor } from '../lib/db'
 import { useAuth, can } from '../rbac'
 import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
-import { statusMeta, MANAGERS, PROJECT_PHASE_META, SCOPE_STATUS_META } from '../lib/constants'
+import { statusMeta, MANAGERS, SCOPE_STATUS_META } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
-import { ProjectFormModal, StatusChangeModal, AssignEngineerModal, PhaseAdvanceModal } from '../components/ProjectModals'
+import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../components/ProjectModals'
 import SurveyTab from '../components/SurveyTab'
-import SavingsPanel, { SavingsCoverageBars, SavingsAlerts, FreezeScopeModal } from '../components/SavingsPanel'
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal, ScopeChangeModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
@@ -29,7 +28,6 @@ const DOC_COLS = [
 
 const TABS = [
   ['survey', 'Survey'],
-  ['saving', 'Savings & Scope'],
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
   ['items', 'Items & Replacements'],
@@ -46,7 +44,6 @@ export default function ProjectDetail() {
   const { setLabel } = useBreadcrumb()
   const { role } = useAuth()
   const [tab, setTab] = useState('buildings')
-  const [phaseOpen, setPhaseOpen] = useState(false)
   const landedRef = useRef(false)
   const [esmPanel, setEsmPanel] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -70,12 +67,11 @@ export default function ProjectDetail() {
   useEffect(() => { if (project && !landedRef.current) { landedRef.current = true; if (project.phase === 'survey') setTab('survey') } }, [project])
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('*').eq('project_id', id).order('code'), [id])
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived')
-  // 9C — savings meters + scope lifecycle. surveyedSet derives "surveyed"
-  // (>=1 survey entry) — never stored, never order-dependent.
-  const { rows: savingsRows } = useLiveQuery('v_project_savings', (q) => q.select('*').eq('project_id', id), [id])
+  // 9C — scope lifecycle. surveyedSet derives "surveyed" (>=1 survey entry) —
+  // never stored, never order-dependent. (Savings meters UI rolled back by
+  // owner decision; v_project_savings + commitment tables stay dormant in DB.)
   const { rows: seLite } = useLiveQuery('survey_entries', (q) => q.select('id,building_id').eq('project_id', id), [id])
   const surveyedSet = new Set(seLite.map((e) => e.building_id))
-  const [freezeOpen, setFreezeOpen] = useState(false)
   const [scopeBldg, setScopeBldg] = useState(null)   // building pending manual exclude/include
   const [scopeFilter, setScopeFilter] = useState('all')
   // ONE scope rule everywhere: surplus buildings never count toward progress,
@@ -214,7 +210,6 @@ export default function ProjectDetail() {
             <Btn icon="plus" variant="primary" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setAddBldgOpen(true)}>Add building</Btn>
             <Btn icon="edit" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setEditOpen(true)}>Edit project</Btn>
             <Btn icon="settings" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setStatusOpen(true)}>Change status</Btn>
-            {canPhase && <Btn icon="chevronr" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setPhaseOpen(true)}>Next phase</Btn>}
           </div>
         )}
       </div>
@@ -228,9 +223,6 @@ export default function ProjectDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '1px', color: '#8DA0B1' }}>{project.code}</span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pillColor, background: pillBg }}>{pillLabel}</span>
-                {(() => { const pm = PROJECT_PHASE_META[project.phase] || { label: project.phase, color: '#8DA0B1', bg: 'rgba(255,255,255,.10)' }; return (
-                  <span title="Retrofit lifecycle phase" style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pm.color, background: pm.bg }}>{pm.label}</span>
-                ) })()}
                 {anyShortage && <span title="One or more material categories are below their remaining planned quantity — open the Warehouse tab" onClick={() => setTab('warehouse')} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: '#fff', background: '#B3362B' }}>⚠ LOW STOCK</span>}
               </div>
               <h1 style={{ fontSize: 23, fontWeight: 800, margin: '8px 0 8px', color: '#fff', letterSpacing: '-.3px' }}>{project.name}</h1>
@@ -290,18 +282,7 @@ export default function ProjectDetail() {
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{projectEsms.length}</div>
           </div>
         </div>
-        {/* 9C — headline savings coverage (only when a commitment exists) */}
-        {savingsRows.some((s) => s.committed_kwh_yr != null && Number(s.committed_kwh_yr) > 0) && (
-          <div style={{ padding: '11px 18px 13px', borderTop: '1px solid var(--line)', background: '#fff' }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>SAVINGS COVERAGE · ACHIEVED / COMMITTED · ▎= SURVEYED POTENTIAL</div>
-            <SavingsCoverageBars savings={savingsRows} />
-          </div>
-        )}
       </div>
-
-      {/* 9C — freeze / shortfall alerts (survey phase only) */}
-      <SavingsAlerts project={project} savings={savingsRows} buildings={buildings} surveyedSet={surveyedSet}
-        canManage={canPhase} onOpenFreeze={() => setFreezeOpen(true)} />
 
       {/* tab row */}
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--line)', marginBottom: 16, overflowX: 'auto' }}>
@@ -319,9 +300,6 @@ export default function ProjectDetail() {
 
       {/* SURVEY tab (9B) — active buildings only: surplus is out of the survey */}
       {tab === 'survey' && <SurveyTab project={project} buildings={activeBuildings} />}
-
-      {/* SAVINGS & SCOPE tab (9C) */}
-      {tab === 'saving' && <SavingsPanel project={project} buildings={buildings} savings={savingsRows} surveyedSet={surveyedSet} />}
 
       {/* BUILDINGS tab */}
       {tab === 'buildings' && (
@@ -567,8 +545,6 @@ export default function ProjectDetail() {
       {editOpen && <ProjectFormModal mode="edit" project={project} onClose={() => setEditOpen(false)} />}
       {statusOpen && <StatusChangeModal project={project} onClose={() => setStatusOpen(false)} />}
       {engOpen && <AssignEngineerModal project={project} onClose={() => setEngOpen(false)} />}
-      {phaseOpen && <PhaseAdvanceModal project={project} onClose={() => setPhaseOpen(false)} />}
-      {freezeOpen && <FreezeScopeModal project={project} buildings={buildings} surveyedSet={surveyedSet} onClose={() => setFreezeOpen(false)} />}
       {scopeBldg && <ScopeChangeModal building={scopeBldg} frozen={!!project.scope_frozen_at} onClose={() => setScopeBldg(null)} />}
       {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
       {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
