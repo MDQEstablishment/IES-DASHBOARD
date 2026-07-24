@@ -29,7 +29,15 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     location_address: init('location_address'), location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name'), contractor_phone: init('contractor_phone'), contractor_email: init('contractor_email'),
     project_reference_no: init('project_reference_no'), beneficiary_entity: init('beneficiary_entity'),
+    // 9D-1 TARSHID Info (saving-sheet Project_Info tab). lat/lng NOT duplicated
+    // here — the Location section below already owns location_lat/lng.
+    entity_name_ar: init('entity_name_ar'),
+    entity_poc_name: init('entity_poc_name'), entity_poc_position: init('entity_poc_position'),
+    entity_poc_mobile: init('entity_poc_mobile'), entity_poc_email: init('entity_poc_email'),
+    tarshid_poc_name: init('tarshid_poc_name'), tarshid_poc_position: init('tarshid_poc_position'),
+    tarshid_poc_mobile: init('tarshid_poc_mobile'), tarshid_poc_email: init('tarshid_poc_email'),
   })
+  const [showTarshid, setShowTarshid] = useState(false)
   const [buildings, setBuildings] = useState([])
   const [items, setItems] = useState([]) // optional pair drafts captured at creation
   const [showItems, setShowItems] = useState(false)
@@ -61,6 +69,11 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       location_address: f.location_address || null, location_lat: num(f.location_lat), location_lng: num(f.location_lng),
       contractor_name: f.contractor_name || null, contractor_phone: f.contractor_phone || null, contractor_email: f.contractor_email || null,
       project_reference_no: f.project_reference_no || null, beneficiary_entity: f.beneficiary_entity || null,
+      entity_name_ar: f.entity_name_ar || null,
+      entity_poc_name: f.entity_poc_name || null, entity_poc_position: f.entity_poc_position || null,
+      entity_poc_mobile: f.entity_poc_mobile || null, entity_poc_email: f.entity_poc_email || null,
+      tarshid_poc_name: f.tarshid_poc_name || null, tarshid_poc_position: f.tarshid_poc_position || null,
+      tarshid_poc_mobile: f.tarshid_poc_mobile || null, tarshid_poc_email: f.tarshid_poc_email || null,
     }
     if (mode === 'edit') {
       // Resolve the cover photo before the row update so photo_url lands atomically.
@@ -205,6 +218,41 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
       </Row>
       <Field label="Contractor email"><input lang="en" style={inputStyle} value={f.contractor_email} onChange={(e) => set('contractor_email', e.target.value)} /></Field>
+      {/* 9D-1 — TARSHID Info: fills the saving sheet's Project_Info tab at
+          generation time. Buildings count / lat-lng / entity EN stay derived or
+          owned by their existing fields (zero double work). */}
+      <div style={{ margin: '6px 0 8px' }}>
+        <button type="button" onClick={() => setShowTarshid((s) => !s)}
+          style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          TARSHID INFO (SAVING SHEET) {showTarshid ? '▲' : '▼'}
+        </button>
+      </div>
+      {showTarshid && (
+        <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 10, background: '#FAF8F2' }}>
+          <Field label="Entity name (Arabic)">
+            <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
+          </Field>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>ENTITY POINT OF CONTACT</div>
+          <Row>
+            <Field label="Name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
+            <Field label="Position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
+          </Row>
+          <Row>
+            <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
+            <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
+          </Row>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>TARSHID POINT OF CONTACT</div>
+          <Row>
+            <Field label="Name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
+            <Field label="Position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
+          </Row>
+          <Row>
+            <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_mobile} onChange={(e) => set('tarshid_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
+            <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_email} onChange={(e) => set('tarshid_poc_email', e.target.value)} /></Field>
+          </Row>
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Coordinates come from the Location section below; buildings count and entity (EN) / region are derived from existing data.</div>
+        </div>
+      )}
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
       <Row>
         <Field label="Address"><input lang="en" style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
