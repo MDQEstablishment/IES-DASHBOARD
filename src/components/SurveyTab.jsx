@@ -9,6 +9,7 @@ import { exportSurveyXlsx } from '../lib/surveyExport'
 import SurveyDailyLog from './survey/DailyLog'
 import SurveyEntriesTable from './survey/EntriesTable'
 import SurveyEntryForm from './survey/EntryForm'
+import OperatingHours from './survey/OperatingHours'
 
 // 9B — the survey DAILY LOG. Two field teams log OLD equipment straight into the
 // project; entries merge live (realtime) and are fully attributed.
@@ -56,7 +57,7 @@ export default function SurveyTab({ project, buildings }) {
       {/* toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
-          {[['log', 'Daily Log'], ['table', 'All entries']].map(([k, l]) => (
+          {[['log', 'Daily Log'], ['table', 'All entries'], ['hours', 'Operating Hours']].map(([k, l]) => (
             <button key={k} onClick={() => setView(k)} style={{ padding: '7px 14px', fontSize: 12.5, fontWeight: view === k ? 700 : 500, background: view === k ? '#F5EEDF' : '#fff', color: view === k ? 'var(--accent)' : 'var(--text-3)', border: 'none', cursor: 'pointer' }}>{l}</button>
           ))}
         </div>
@@ -70,6 +71,8 @@ export default function SurveyTab({ project, buildings }) {
         <Empty icon="buildings">Add a building to the project before surveying.</Empty>
       ) : view === 'log' ? (
         <SurveyDailyLog entries={entries} buildings={buildings} />
+      ) : view === 'hours' ? (
+        <OperatingHours project={project} canWrite={canWrite} />
       ) : (
         <SurveyEntriesTable entries={entries} buildings={buildings} canManageAll={canManageAll} currentUserId={user?.id} onEdit={(row) => setEditing(row)} />
       )}
