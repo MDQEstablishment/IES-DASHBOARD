@@ -18,7 +18,7 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
     location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name') || init('contractor'), contractor_phone: init('contractor_phone'),
     assigned_engineer_id: init('assigned_engineer_id'), floors: init('floors'), area_sqm: init('area_sqm'),
-    remarks: init('remarks'),
+    remarks: init('remarks'), is_residential: init('is_residential', false),
   })
   const [busy, setBusy] = useState(false)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
@@ -37,6 +37,7 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
       contractor_phone: f.contractor_phone || null,
       assigned_engineer_id: f.assigned_engineer_id || null, engineer_name: eng?.full_name || null,
       floors: numOrNull(f.floors), area_sqm: numOrNull(f.area_sqm), remarks: f.remarks || null,
+      is_residential: !!f.is_residential,
     }
     if (mode === 'edit') {
       const { error } = await bgUpdate('buildings', building.id, payload, { okMsg: 'Building updated' })
@@ -77,6 +78,11 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
         <Field label="Area (m²)"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={f.area_sqm || ''} onChange={(e) => set('area_sqm', e.target.value)} /></Field>
       </Row>
       <Field label="Remarks"><input lang="en" style={inputStyle} value={f.remarks} onChange={(e) => set('remarks', e.target.value)} /></Field>
+      {/* 9D-2 — TARSHID Instr.: housing/residential buildings are excluded from savings scope */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '2px 0 10px', fontSize: 13, cursor: 'pointer' }}>
+        <input type="checkbox" checked={!!f.is_residential} onChange={(e) => set('is_residential', e.target.checked)} />
+        Residential (excluded from TARSHID savings)
+      </label>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Planned scopes (ESM quantities) can be added afterwards from the building's detail page.</div>
     </Modal>
   )
