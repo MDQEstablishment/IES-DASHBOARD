@@ -9,6 +9,8 @@ import DailyProgress from '../components/DailyProgress'
 import BuildingChat from '../components/BuildingChat'
 import InspectionFormModal from '../components/InspectionFormModal'
 import { useAuth, can } from '../rbac'
+import { supabase } from '../lib/supabase'
+import { toast } from '../lib/toast'
 import { useLiveQuery, bgUpdate, bgInsert, bgDelete, uploadToBucket } from '../lib/db'
 import { CAN_QA, CAN_INSTALL, labelize } from '../lib/constants'
 import { num, fmtShort, fmtDate } from '../lib/format'
@@ -282,8 +284,14 @@ function Meta({ k, v }) {
 // ── Rooms tab — room cards with floor + item types ──────────────────────────
 function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
   const { rows: roomItems } = useLiveQuery('room_items', (q) => q.select('*,scope:building_item_scope(sub_type)'), [])
+  // 9D-5 — survey entries carry room_id now, so a room the field team already
+  // surveyed can be shown as such instead of being retyped at install time.
+  const { rows: surveyEntries } = useLiveQuery('survey_entries', (q) =>
+    q.select('id,room_id').eq('building_id', buildingId), [buildingId])
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState(''); const [floor, setFloor] = useState('')
+  const [preview, setPreview] = useState(null)      // dry-run result awaiting confirmation
+  const [busy, setBusy] = useState(false)
 
   const addRoom = async () => {
     if (!name.trim()) return
@@ -291,14 +299,34 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
     if (!error) { setName(''); setFloor(''); setAdding(false) }
   }
   const itemsOf = (rid) => roomItems.filter((ri) => ri.room_id === rid)
+  const surveyCount = (rid) => surveyEntries.filter((e) => e.room_id === rid).length
+
+  // Backfill: preview first, then commit. Idempotent server-side — running it
+  // twice creates and links nothing the second time.
+  const runBackfill = async (dryRun) => {
+    setBusy(true)
+    const { data, error } = await supabase.rpc('backfill_rooms_from_survey', { p_building_id: buildingId, p_dry_run: dryRun })
+    setBusy(false)
+    if (error) { toast("Couldn't read the survey — " + error.message, 'err'); return }
+    if (dryRun) {
+      if ((data?.distinct_names ?? 0) === 0) { toast('No surveyed rooms found for this building', 'err'); return }
+      setPreview(data)
+    } else {
+      setPreview(null)
+      toast(`${num(data?.created ?? 0)} room${(data?.created ?? 0) === 1 ? '' : 's'} created · ${num(data?.entries_linked ?? 0)} survey ${(data?.entries_linked ?? 0) === 1 ? 'entry' : 'entries'} linked`)
+    }
+  }
 
   return (
     <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Rooms &amp; locations</div>
-        {canEdit && <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setAdding((v) => !v)}>Add room</Btn>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {canEdit && <Btn style={{ padding: '7px 11px', fontSize: 12 }} disabled={busy} onClick={() => runBackfill(true)}>Create rooms from survey</Btn>}
+          {canEdit && <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => setAdding((v) => !v)}>Add room</Btn>}
+        </div>
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Define each room and the item types installed there. Daily Progress picks its location from this list.</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Define each room and the item types installed there. Daily Progress picks its location from this list. Rooms the field team already surveyed can be created from the survey instead of retyped.</div>
       {adding && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input lang="en" style={{ ...inputStyle, flex: 1 }} placeholder="Room name (e.g. Classroom 101)" value={name} onChange={(e) => setName(e.target.value)} />
@@ -306,7 +334,9 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
           <Btn variant="primary" onClick={addRoom}>Save</Btn>
         </div>
       )}
-      {rooms.length === 0 ? <Empty icon="buildings">No rooms defined yet.</Empty> : (
+      {rooms.length === 0 ? (
+        <Empty icon="buildings">No rooms defined yet — add them by hand, or create them from what the survey already captured.</Empty>
+      ) : (
         <div className="ies-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
           {rooms.map((r) => (
             <div key={r.id} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12 }}>
@@ -314,6 +344,14 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{r.name}</div>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'var(--bg)', color: 'var(--text-3)' }}>{r.floor || 'L0'}</span>
               </div>
+              {surveyCount(r.id) > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  <span title={`${surveyCount(r.id)} survey entries captured in this room`}
+                    style={{ fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '2px 6px', borderRadius: 5, color: '#1D6A49', background: '#E9F3EE' }}>
+                    SURVEYED · <span lang="en" dir="ltr">{num(surveyCount(r.id))}</span>
+                  </span>
+                </div>
+              )}
               <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', margin: '8px 0 6px' }}>ITEM TYPES</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {itemsOf(r.id).length === 0 ? <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>None yet</span>
@@ -329,6 +367,28 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
             </div>
           ))}
         </div>
+      )}
+
+      {preview && (
+        <Modal open width={460} title="Create rooms from survey" onClose={() => setPreview(null)}
+          footer={<><Btn onClick={() => setPreview(null)}>Cancel</Btn>
+            <Btn variant="primary" disabled={busy} onClick={() => runBackfill(false)}>
+              {busy ? 'Working…' : preview.would_create > 0 ? `Create ${num(preview.would_create)} room${preview.would_create === 1 ? '' : 's'}` : 'Link survey entries'}
+            </Btn></>}>
+          <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+            The survey names <b lang="en" dir="ltr">{num(preview.distinct_names)}</b> distinct room{preview.distinct_names === 1 ? '' : 's'} in this building.
+            <div style={{ marginTop: 8 }}>
+              <b lang="en" dir="ltr">{num(preview.would_create)}</b> new room{preview.would_create === 1 ? '' : 's'} will be created ·
+              {' '}<b lang="en" dir="ltr">{num(preview.already_exist)}</b> already exist{preview.already_exist === 1 ? 's' : ''} and will be reused.
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <b lang="en" dir="ltr">{num(preview.entries_to_link)}</b> survey {preview.entries_to_link === 1 ? 'entry' : 'entries'} will be linked to their room.
+            </div>
+            <div style={{ marginTop: 10, color: 'var(--text-3)', fontSize: 12 }}>
+              Nothing is renamed or deleted, and names differing only by digit form, spacing or case are treated as the same room. Running this again changes nothing.
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   )
