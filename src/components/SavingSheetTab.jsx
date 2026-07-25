@@ -6,9 +6,10 @@ import { Btn, Empty, Loading, Modal } from './ui'
 import Icon from './Icon'
 import { toast } from '../lib/toast'
 import { num, fmtDateTime } from '../lib/format'
-import { loadConstants, computeProject, readiness } from '../lib/savingSheet'
+import { loadConstants, computeProject, readiness, resolveSelectionDescriptions, MAX_SELECTION_ROWS } from '../lib/savingSheet'
 import { fetchAllRows } from '../lib/tarshidImport'
 import AiAssistPanel from './AiAssistPanel'
+import ProjectUnitSelection from './ProjectUnitSelection'
 
 // 9D-3 — the saving sheet as a formal deliverable: readiness → review → generate
 // → draft/approved/shared, revisioned. pmo/admin only (like COCs).
@@ -52,6 +53,8 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
     q.select('*, author:profiles!saving_sheets_generated_by_fkey(full_name)').eq('project_id', project.id).order('revision', { ascending: false }), [project.id])
   const { rows: templates } = useLiveQuery('saving_sheet_templates', (q) => q.select('*').eq('active', true).order('version', { ascending: false }))
   const template = templates[0] || null
+  const { rows: selection, refetch: refetchSelection } = useLiveQuery('project_unit_selection', (q) =>
+    q.select('*').eq('project_id', project.id).order('row_no'), [project.id])
 
   // reference data (catalogs + registry) — chunked, no realtime needed
   useEffect(() => {
@@ -60,7 +63,7 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
       setLoadingRef(true)
       const [c, ac, reg, chf] = await Promise.all([
         loadConstants(),
-        fetchAllRows('ac_catalog', 'id,description,equipment_type,make,model,size_category,capacity_btu,capacity_tr,seer,ieer,unit_cost,labor_cost'),
+        fetchAllRows('ac_catalog', 'id,description,equipment_type,make,model,size_category,capacity_btu,capacity_tr,seer,ieer,unit_cost,labor_cost,saso_cert_ref,datasheet_ref'),
         fetchAllRows('old_model_registry', 'model_no,equivalent_seer,t1_btu'),
         supabase.from('category_hours_factors').select('assumed_old_eff').eq('category', 'ac').maybeSingle(),
       ])
@@ -77,7 +80,16 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
     return computeProject({ entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff })
   }, [entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff])
 
-  const check = useMemo(() => readiness({ project, rows, ohRows, entries, template }), [project, rows, ohRows, entries, template])
+  // The selection drives AC_Savings column W, so the same resolver the
+  // generator uses decides here whether any proposed unit would VLOOKUP to #N/A.
+  const selectionIssues = useMemo(() => {
+    const { missing } = resolveSelectionDescriptions(rows.filter((r) => r.in_scope), selection)
+    const distinct = new Set(rows.filter((r) => r.in_scope && r.catalog_item_id).map((r) => r.catalog_item_id))
+    return { missing, overflow: distinct.size > MAX_SELECTION_ROWS }
+  }, [rows, selection])
+
+  const check = useMemo(() => readiness({ project, rows, ohRows, entries, template, selection, selectionIssues }),
+    [project, rows, ohRows, entries, template, selection, selectionIssues])
 
   const generate = async () => {
     if (!template) { toast('Upload a saving-sheet template in Settings first', 'err'); return }
@@ -88,7 +100,7 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
       const { bytes, report } = await buildSavingSheet({
         templatePath: template.storage_path, project, buildings,
         ohRows: ohRows.filter((o) => o.hours_per_year != null || o.eflh != null),
-        rows: inScope,
+        rows: inScope, selection,
       })
       const revision = (sheets.reduce((a, s) => Math.max(a, s.revision), 0) || 0) + 1
       const path = `${project.id}/rev${revision}-${Date.now()}.xlsx`
@@ -167,6 +179,7 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
           <div lang="en" dir="ltr" style={{ marginTop: 10, background: '#E9F3EE', border: '1px solid #BFDFCF', borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#175A3E' }}>
             Template filled — Project_Info {genReport.project_info.found ? `${num(genReport.project_info.cells)} cells` : 'sheet not found'} ·
             {' '}OH {genReport.oh.found ? `${num(genReport.oh.cells)} cells / ${num(genReport.oh.rows)} rows` : 'sheet not found'} ·
+            {' '}Aprvd Project Unit {genReport.project_units?.found ? `${num(genReport.project_units.cells)} cells / ${num(genReport.project_units.rows)} rows` : 'sheet not found'} ·
             {' '}AC_Savings {genReport.ac_savings.found ? `${num(genReport.ac_savings.cells)} cells / ${num(genReport.ac_savings.rows)} rows` : 'sheet not found'}.
             {(genReport.oh.error || genReport.ac_savings.error) && <span style={{ color: '#96271E' }}> {genReport.oh.error || ''} {genReport.ac_savings.error || ''}</span>}
           </div>
@@ -175,6 +188,10 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
 
       {/* ── AI ASSIST (9D-4) ──────────────────────────────────────── */}
       <AiAssistPanel project={project} entries={entries} onChanged={refetchEntries} onGoSurvey={onGoSurvey} />
+
+      {/* ── PROJECT UNIT SELECTION (9D-4b) ────────────────────────── */}
+      <ProjectUnitSelection project={project} rows={rows} acCatalog={acCatalog} consts={consts}
+        canManage={canManage} selection={selection} refetch={refetchSelection} />
 
       {/* ── REVIEW ────────────────────────────────────────────────── */}
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>

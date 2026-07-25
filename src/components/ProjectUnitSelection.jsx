@@ -1,0 +1,230 @@
+import { useState, useMemo } from 'react'
+import { supabase } from '../lib/supabase'
+import { bgUpdate, bgDelete } from '../lib/db'
+import { Btn, Empty } from './ui'
+import Icon from './Icon'
+import { toast } from '../lib/toast'
+import { num } from '../lib/format'
+import { proposeSelection, selectionDescription, MAX_SELECTION_ROWS } from '../lib/savingSheet'
+
+// 9D-4b — the project's OWN material-submittal shortlist, written to
+// 'Aprvd Project Unit' B2:N21. The payback formula VLOOKUPs against column B,
+// so description strings here are the contract with AC_Savings column W.
+// Only B/C/D (+M/N) are ours; E and F:L are the workbook's formulas.
+const toLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0)
+const numFilter = (s) => toLatin(s).replace(/[^\d.]/g, '')
+const cell = { padding: '5px 7px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12, boxSizing: 'border-box' }
+
+function CostInput({ value, onSave, disabled }) {
+  const [v, setV] = useState(value == null ? '' : String(value))
+  useMemo(() => { setV(value == null ? '' : String(value)) }, [value])
+  return (
+    <input lang="en" dir="ltr" inputMode="decimal" value={v} disabled={disabled} placeholder="—"
+      onChange={(e) => setV(numFilter(e.target.value))}
+      onBlur={() => {
+        const raw = numFilter(v)
+        const n = raw === '' ? null : parseFloat(raw)
+        if (n != null && (Number.isNaN(n) || n < 0)) { toast('Cost must be a positive number', 'err'); setV(value == null ? '' : String(value)); return }
+        if (n !== (value == null ? null : Number(value))) onSave(n)
+      }}
+      style={{ ...cell, width: 88, textAlign: 'right', fontFamily: 'var(--mono)' }} />
+  )
+}
+
+// `selection` is owned by SavingSheetTab (one live subscription feeds both this
+// table and the readiness report); `refetch` re-reads it after every write.
+export default function ProjectUnitSelection({ project, rows, acCatalog, consts, canManage, selection, refetch }) {
+  const [busy, setBusy] = useState(false)
+  const [proposal, setProposal] = useState(null)
+
+  const used = selection.filter((s) => s.description).length
+  const unpriced = selection.filter((s) => s.description && (s.unit_cost == null || s.labor_cost == null))
+  const catById = useMemo(() => new Map(acCatalog.map((c) => [c.id, c])), [acCatalog])
+
+  // Deterministic proposal — the same engine that re-verifies any AI answer.
+  const suggest = () => {
+    if (!consts) return
+    const p = proposeSelection({ rows, acCatalog, consts })
+    if (p.chosen.length === 0) {
+      toast(p.impossible.length ? 'No compliant catalog unit exists for these surveyed rows' : 'Nothing to select yet — map replacements first', 'err')
+      return
+    }
+    setProposal(p)
+  }
+
+  const applyProposal = async () => {
+    if (!proposal) return
+    setBusy(true)
+    // replace the AI/auto rows, keep human-entered rows untouched at the top
+    const humanRows = selection.filter((s) => s.source === 'human' && s.description)
+    const keep = humanRows.slice(0, MAX_SELECTION_ROWS)
+    const keepCat = new Set(keep.map((k) => k.catalog_item_id).filter(Boolean))
+    const fresh = proposal.chosen.filter((c) => !keepCat.has(c.catalog_item_id))
+    const final = [...keep.map((k) => ({ ...k, _keep: true })), ...fresh].slice(0, MAX_SELECTION_ROWS)
+
+    // clear the auto rows, then write the new set in row order
+    for (const s of selection) {
+      if (s.source === 'human' && s.description) continue
+      await bgDelete('project_unit_selection', s.id)
+    }
+    let n = 0
+    for (let i = 0; i < final.length; i++) {
+      const row_no = i + 1
+      const item = final[i]
+      if (item._keep) {
+        if (item.row_no !== row_no) await bgUpdate('project_unit_selection', item.id, { row_no })
+        continue
+      }
+      const { error } = await supabase.from('project_unit_selection').insert({
+        project_id: project.id, row_no, catalog_item_id: item.catalog_item_id, description: item.description,
+        unit_cost: item.unit_cost, labor_cost: item.labor_cost, saso_ref: item.saso_ref,
+        datasheet_ref: item.datasheet_ref, source: 'ai', reason: item.reason,
+      })
+      if (!error) n++
+    }
+    setBusy(false); setProposal(null); refetch()
+    toast(`${num(n)} model${n === 1 ? '' : 's'} added to the project selection`)
+  }
+
+  const patch = async (row, p) => { const { error } = await bgUpdate('project_unit_selection', row.id, p); if (!error) refetch() }
+  const removeRow = async (row) => { const { error } = await bgDelete('project_unit_selection', row.id); if (!error) refetch() }
+  const addBlank = async () => {
+    const next = Math.max(0, ...selection.map((s) => s.row_no)) + 1
+    if (next > MAX_SELECTION_ROWS) { toast(`The sheet only holds ${MAX_SELECTION_ROWS} models (VLOOKUP range B2:N21)`, 'err'); return }
+    const { error } = await supabase.from('project_unit_selection').insert({ project_id: project.id, row_no: next, source: 'human' })
+    if (!error) refetch()
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>Project unit selection</div>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>
+          {num(used)} / {num(MAX_SELECTION_ROWS)} MODELS · WRITES 'Aprvd Project Unit' B2:N21
+        </span>
+        {canManage && (
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <Btn disabled={busy} onClick={suggest}>Suggest selection</Btn>
+            <Btn disabled={busy || used >= MAX_SELECTION_ROWS} onClick={addBlank}>Add row</Btn>
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
+        The models this project standardises on, with its negotiated prices. Fewer distinct models means better pricing and simpler procurement, so the suggestion consolidates: the smallest set that still gives every surveyed unit a compliant replacement (±{consts ? num(consts.capacity_tolerance_pct) : 10}% capacity, ≥{consts ? num(consts.min_savings_pct) : 15}% savings). Type, make, model, BTU, TR, SEER and C&amp;H fill themselves in the workbook from the description — we only write description, costs and references. Prices default from the catalog and can be overridden here without touching the global catalog.
+      </div>
+
+      {unpriced.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FAF3E3', border: '1px solid #EBDCB2', color: '#854D0E', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, marginBottom: 10 }}>
+          <Icon name="alert" size={14} /><span><b>{num(unpriced.length)}</b> row{unpriced.length === 1 ? '' : 's'} missing prices — payback cannot be computed until Unit Cost and labor Cost are filled.</span>
+        </div>
+      )}
+
+      {proposal && (
+        <div style={{ border: '1px solid #BFDFCF', background: '#E9F3EE', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 12.5, color: '#175A3E', marginBottom: 6 }}>
+            Proposed shortlist — {num(proposal.chosen.length)} model{proposal.chosen.length === 1 ? '' : 's'} cover every compliant surveyed unit
+          </div>
+          <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 620 }}>
+            <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
+              <th style={{ padding: '6px', fontWeight: 600 }}>MODEL</th>
+              <th style={{ padding: '6px', fontWeight: 600, textAlign: 'right' }}>COVERS</th>
+              <th style={{ padding: '6px', fontWeight: 600, textAlign: 'right' }}>UNIT COST</th>
+              <th style={{ padding: '6px', fontWeight: 600 }}>WHY</th>
+            </tr></thead>
+            <tbody>
+              {proposal.chosen.map((c, i) => (
+                <tr key={i} style={{ borderTop: '1px solid #BFDFCF' }}>
+                  <td style={{ padding: '6px', fontWeight: 600, maxWidth: 230, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.description}>{c.description}</td>
+                  <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(c.units)}</td>
+                  <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', color: c.unit_cost == null ? '#B45309' : undefined }}>{c.unit_cost == null ? 'needs price' : num(c.unit_cost)}</td>
+                  <td style={{ padding: '6px', color: 'var(--text-3)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.reason}>{c.reason}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+          {proposal.impossible.length > 0 && (
+            <div style={{ fontSize: 11.5, color: '#96271E', marginTop: 6 }}>
+              {num(proposal.impossible.length)} surveyed line{proposal.impossible.length === 1 ? '' : 's'} have no compliant catalog unit at all — they stay unmapped and out of the savings total.
+            </div>
+          )}
+          {proposal.overflow && (
+            <div style={{ fontSize: 11.5, color: '#96271E', marginTop: 6 }}>
+              More than {MAX_SELECTION_ROWS} models would be needed. The workbook VLOOKUP only covers rows 2–21, so {num(proposal.uncovered.length)} line{proposal.uncovered.length === 1 ? '' : 's'} remain uncovered — consolidate or split the project.
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <Btn onClick={() => setProposal(null)}>Discard</Btn>
+            <Btn variant="primary" disabled={busy} onClick={applyProposal}>{busy ? 'Applying…' : `Accept ${num(proposal.chosen.length)} model${proposal.chosen.length === 1 ? '' : 's'}`}</Btn>
+          </div>
+        </div>
+      )}
+
+      {selection.length === 0 ? (
+        <Empty icon="materials">No models selected yet — use “Suggest selection”, or add rows by hand.</Empty>
+      ) : (
+        <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 820 }}>
+          <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
+            <th style={{ padding: '7px 6px', fontWeight: 600, width: 30 }}>#</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>DESCRIPTION (COL B — VLOOKUP KEY)</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>UNIT COST</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>LABOR COST</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>SASO REF</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>DATASHEET</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>SRC</th>
+            {canManage && <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }} />}
+          </tr></thead>
+          <tbody>
+            {selection.map((s) => {
+              const cat = s.catalog_item_id ? catById.get(s.catalog_item_id) : null
+              return (
+                <tr key={s.id} style={{ borderTop: '1px solid var(--line)' }}>
+                  <td lang="en" dir="ltr" style={{ padding: '6px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(s.row_no)}</td>
+                  <td style={{ padding: '6px', maxWidth: 300 }}>
+                    {canManage ? (
+                      <select value={s.catalog_item_id || ''} style={{ ...cell, width: '100%' }}
+                        onChange={(e) => {
+                          const c = catById.get(e.target.value)
+                          patch(s, c ? {
+                            catalog_item_id: c.id, description: selectionDescription(c), source: 'human',
+                            unit_cost: s.unit_cost ?? c.unit_cost ?? null, labor_cost: s.labor_cost ?? c.labor_cost ?? null,
+                            saso_ref: s.saso_ref ?? c.saso_cert_ref ?? null, datasheet_ref: s.datasheet_ref ?? c.datasheet_ref ?? null,
+                          } : { catalog_item_id: null, description: null })
+                        }}>
+                        <option value="">Select an approved model…</option>
+                        {acCatalog.map((c) => <option key={c.id} value={c.id}>{selectionDescription(c)}</option>)}
+                      </select>
+                    ) : <span title={s.description || ''}>{s.description || '—'}</span>}
+                    {s.reason && <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 2 }} title={s.reason}>{s.reason}</div>}
+                  </td>
+                  <td style={{ padding: '4px 6px', textAlign: 'right' }}><CostInput value={s.unit_cost} disabled={!canManage} onSave={(v) => patch(s, { unit_cost: v })} /></td>
+                  <td style={{ padding: '4px 6px', textAlign: 'right' }}><CostInput value={s.labor_cost} disabled={!canManage} onSave={(v) => patch(s, { labor_cost: v })} /></td>
+                  <td style={{ padding: '4px 6px' }}>
+                    <input lang="en" defaultValue={s.saso_ref || ''} disabled={!canManage} placeholder="—"
+                      onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (s.saso_ref || null)) patch(s, { saso_ref: v }) }}
+                      style={{ ...cell, width: '100%', minWidth: 90 }} />
+                  </td>
+                  <td style={{ padding: '4px 6px' }}>
+                    <input lang="en" defaultValue={s.datasheet_ref || ''} disabled={!canManage} placeholder="—"
+                      onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (s.datasheet_ref || null)) patch(s, { datasheet_ref: v }) }}
+                      style={{ ...cell, width: '100%', minWidth: 90 }} />
+                  </td>
+                  <td style={{ padding: '6px' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5,
+                      color: s.source === 'human' ? '#1D6A49' : '#6D5A8E', background: s.source === 'human' ? '#E9F3EE' : '#F3E8FF' }}>
+                      {s.source === 'human' ? 'ESCO' : 'AI'}
+                    </span>
+                  </td>
+                  {canManage && (
+                    <td style={{ padding: '6px', textAlign: 'right' }}>
+                      <button className="ies-hover" title="Remove" onClick={() => removeRow(s)} style={{ padding: 4, borderRadius: 6, color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table></div>
+      )}
+    </div>
+  )
+}

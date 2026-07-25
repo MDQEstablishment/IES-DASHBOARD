@@ -103,6 +103,7 @@ export function computeRow({ entry, cat, building, oh, consts, registryByModel, 
     model: entry.model || '',
     description: [entry.make, entry.model, entry.tr ? `${entry.tr} TR` : null].filter(Boolean).join(' ') || (entry.equipment_type || ''),
     old_btu: bt, old_seer: oldSeer, old_seer_source: seerSource,
+    catalog_item_id: cat?.id || null,
     new_description: cat ? [cat.description || cat.equipment_type, cat.make, cat.model].filter(Boolean).join(' · ') : '',
     new_btu: newBtu, new_seer: newSeer,
     unit_cost: n(cat?.unit_cost), labor_cost: n(cat?.labor_cost),
@@ -146,8 +147,139 @@ export function computeProject({ entries, buildings, ohRows, acCatalog, registry
   return { rows, totals }
 }
 
+// ---------------------------------------------------------------------------
+// PROJECT UNIT SELECTION (9D-4b) — the shortlist written to 'Aprvd Project
+// Unit' B2:N21. Consolidation is commercial: fewer distinct models = better
+// pricing and simpler procurement, so we greedily pick the model that covers
+// the most still-uncovered surveyed units while every unit keeps a COMPLIANT
+// replacement (capacity within ±tolerance AND savings ≥ minimum).
+// This is the deterministic engine; the AI's proposal is re-verified against
+// it and any non-compliant pick is dropped in favour of these results.
+// ---------------------------------------------------------------------------
+export const MAX_SELECTION_ROWS = 20   // VLOOKUP range is fixed at row 21
+
+// Is `cat` a compliant replacement for a surveyed row? Uses the same math as
+// computeRow — no AI claim is trusted without passing this.
+export function isCompliant(row, cat, consts) {
+  const oldBtu = row.old_btu, oldSeer = row.old_seer
+  const newBtu = cat?.capacity_btu == null ? null : Number(cat.capacity_btu)
+  const newSeer = cat?.seer == null ? (cat?.ieer == null ? null : Number(cat.ieer)) : Number(cat.seer)
+  if (!oldBtu || !oldSeer || !newBtu || !newSeer) return { ok: false, why: 'missing capacity or efficiency' }
+  const capPct = ((newBtu - oldBtu) / oldBtu) * 100
+  if (Math.abs(capPct) > consts.capacity_tolerance_pct) return { ok: false, why: `capacity ${capPct.toFixed(1)}% outside ±${consts.capacity_tolerance_pct}%` }
+  // savings % is independent of qty/EFLH: (newSEER-oldSEER)/newSEER × seasonal
+  const savPct = ((newSeer - oldSeer) / newSeer) * consts.seasonal_factor * 100
+  if (savPct < consts.min_savings_pct) return { ok: false, why: `savings ${savPct.toFixed(1)}% below ${consts.min_savings_pct}%` }
+  const typeOk = !row.equipment_type || !cat.equipment_type ||
+    String(cat.equipment_type).trim().toLowerCase().includes(String(row.equipment_type).trim().toLowerCase()) ||
+    String(row.equipment_type).trim().toLowerCase().includes(String(cat.equipment_type).trim().toLowerCase())
+  if (!typeOk) return { ok: false, why: 'different equipment type' }
+  return { ok: true, capPct, savPct }
+}
+
+// Canonical description = the VLOOKUP key written to column B. It must match
+// the Vstack reference sheet, so we use the catalog's own description verbatim
+// when present and fall back to a stable composed string.
+export const selectionDescription = (cat) =>
+  (cat?.description && String(cat.description).trim()) ||
+  [cat?.equipment_type, cat?.make, cat?.model].filter(Boolean).join(' ') || ''
+
+// AC_Savings column W must be a string that exists in column B of the
+// selection sheet, or the payback VLOOKUP returns #N/A. The selection is the
+// authority: where a row's catalog item is in the selection we adopt the
+// selection's wording verbatim. Whatever is left over is a hard blocker.
+// The readiness report and the generator both call this — one source of truth.
+export function resolveSelectionDescriptions(rows, selection = []) {
+  const byCat = new Map(selection.filter((s) => s.catalog_item_id && s.description).map((s) => [s.catalog_item_id, String(s.description).trim()]))
+  const descs = new Set(selection.filter((s) => s.description).map((s) => String(s.description).trim()))
+  const resolved = rows.map((r) => {
+    const d = r.catalog_item_id ? byCat.get(r.catalog_item_id) : null
+    return d ? { ...r, new_description: d } : r
+  })
+  const missing = [...new Set(resolved.map((r) => String(r.new_description || '').trim()).filter((d) => d && !descs.has(d)))]
+  return { resolved, missing }
+}
+
+// Greedy set-cover over the in-scope rows.
+export function proposeSelection({ rows, acCatalog, consts, max = MAX_SELECTION_ROWS }) {
+  const targets = rows.filter((r) => r.in_scope && r.old_btu && r.old_seer)
+  const compliantFor = new Map()   // entry_id -> [{cat, capPct, savPct}]
+  targets.forEach((r) => {
+    const list = []
+    acCatalog.forEach((c) => {
+      const v = isCompliant(r, c, consts)
+      if (v.ok) list.push({ cat: c, capPct: v.capPct, savPct: v.savPct })
+    })
+    compliantFor.set(r.entry_id, list)
+  })
+
+  const uncovered = new Set(targets.filter((r) => (compliantFor.get(r.entry_id) || []).length > 0).map((r) => r.entry_id))
+  const impossible = targets.filter((r) => (compliantFor.get(r.entry_id) || []).length === 0)
+  const chosen = []
+  const qtyOf = new Map(targets.map((r) => [r.entry_id, r.qty || 1]))
+
+  // Anything the survey has ALREADY mapped is seeded first: AC_Savings column W
+  // is written from the row's own replacement, so a selection that omitted it
+  // would leave the payback VLOOKUP unresolved. Seeds must still be compliant.
+  const seedIds = []
+  targets.forEach((r) => {
+    if (!r.catalog_item_id || seedIds.includes(r.catalog_item_id)) return
+    if ((compliantFor.get(r.entry_id) || []).some(({ cat }) => cat.id === r.catalog_item_id)) seedIds.push(r.catalog_item_id)
+  })
+
+  const take = (cat, covers, savTotal, seeded) => {
+    covers.forEach((eid) => uncovered.delete(eid))
+    const units = covers.reduce((a, eid) => a + (qtyOf.get(eid) || 1), 0)
+    chosen.push({
+      catalog_item_id: cat.id,
+      description: selectionDescription(cat),
+      unit_cost: cat.unit_cost ?? null,
+      labor_cost: cat.labor_cost ?? null,
+      saso_ref: cat.saso_cert_ref ?? null,
+      datasheet_ref: cat.datasheet_ref ?? null,
+      covers, units, seeded: !!seeded,
+      reason: `${seeded ? 'Already the surveyed replacement for' : 'Covers'} ${covers.length} surveyed line${covers.length === 1 ? '' : 's'} (${units} unit${units === 1 ? '' : 's'}) at ~${Math.round(savTotal / covers.length)}% savings within ±${consts.capacity_tolerance_pct}% capacity`,
+    })
+  }
+
+  for (const id of seedIds) {
+    if (chosen.length >= max) break
+    const covers = [], hits = []
+    uncovered.forEach((eid) => {
+      const hit = (compliantFor.get(eid) || []).find(({ cat }) => cat.id === id)
+      if (hit) { covers.push(eid); hits.push(hit) }
+    })
+    if (!covers.length) continue
+    take(hits[0].cat, covers, hits.reduce((a, h) => a + h.savPct, 0), true)
+  }
+
+  while (uncovered.size > 0 && chosen.length < max) {
+    const score = new Map()   // catalog id -> { cat, covers:[], units, savings }
+    uncovered.forEach((eid) => {
+      ;(compliantFor.get(eid) || []).forEach(({ cat, savPct }) => {
+        const s = score.get(cat.id) || { cat, covers: [], units: 0, sav: 0 }
+        s.covers.push(eid); s.units += qtyOf.get(eid) || 1; s.sav += savPct
+        score.set(cat.id, s)
+      })
+    })
+    if (score.size === 0) break
+    // most units covered, then best average savings, then cheapest
+    const best = [...score.values()].sort((a, b) =>
+      b.units - a.units ||
+      (b.sav / b.covers.length) - (a.sav / a.covers.length) ||
+      ((Number(a.cat.unit_cost) || Infinity) - (Number(b.cat.unit_cost) || Infinity)))[0]
+    take(best.cat, best.covers, best.sav, false)
+  }
+  return {
+    chosen,
+    uncovered: [...uncovered],                 // compliant options exist but the 20-row ceiling was hit
+    impossible: impossible.map((r) => r.entry_id),   // no compliant catalog unit at all
+    overflow: uncovered.size > 0 && chosen.length >= max,
+  }
+}
+
 // Readiness checklist — every blocker between "survey done" and "clean sheet".
-export function readiness({ project, rows, ohRows, entries, template }) {
+export function readiness({ project, rows, ohRows, entries, template, selection = [], selectionIssues = {} }) {
   const TARSHID_FIELDS = ['entity_poc_name', 'entity_poc_mobile', 'entity_poc_email',
     'tarshid_poc_name', 'tarshid_poc_position', 'tarshid_poc_mobile', 'tarshid_poc_email',
     'entity_name_ar', 'location_lat', 'location_lng']
@@ -169,7 +301,18 @@ export function readiness({ project, rows, ohRows, entries, template }) {
       hint: missingEflh ? 'Survey → Operating Hours (EFLH column)' : 'All spaces have EFLH', link: 'hours' },
     { key: 'space', label: 'AC rows carrying a space type', count: noSpaceType, blocking: true,
       hint: noSpaceType ? 'Edit those entries and set a room type' : 'All rows have a space type', link: 'survey' },
-    { key: 'cost', label: 'Replacement units priced (unit + labor cost)', count: noCost, blocking: false,
+    // 9D-4b — the project's own 'Aprvd Project Unit' shortlist: the payback
+    // VLOOKUP resolves against it, so unpriced rows and any AC_Savings
+    // description missing from it are hard blockers.
+    { key: 'selection', label: 'Project unit selection defined', count: selection.length === 0 ? 1 : 0, blocking: true,
+      hint: selection.length === 0 ? 'Saving Sheet → Project Unit Selection → Suggest selection' : `${selection.length} of ${MAX_SELECTION_ROWS} rows used`, link: null },
+    { key: 'selection_priced', label: 'Selection rows priced (unit + labor cost)', count: selection.filter((s) => s.description && (s.unit_cost == null || s.labor_cost == null)).length, blocking: true,
+      hint: 'Payback cannot be computed without both costs', link: null },
+    { key: 'selection_match', label: 'Every proposed unit exists in the selection', count: (selectionIssues.missing || []).length, blocking: true,
+      hint: (selectionIssues.missing || []).length ? `Not in the selection: ${(selectionIssues.missing || []).slice(0, 3).join(' · ')}${(selectionIssues.missing || []).length > 3 ? ' …' : ''}` : 'All AC_Savings descriptions resolve', link: null },
+    { key: 'selection_overflow', label: 'Selection fits the 20-row sheet limit', count: selectionIssues.overflow ? 1 : 0, blocking: true,
+      hint: selectionIssues.overflow ? 'More than 20 distinct models are needed — consolidate; the workbook VLOOKUP only covers rows 2-21' : 'Within the limit', link: null },
+    { key: 'cost', label: 'Catalog units priced (unit + labor cost)', count: noCost, blocking: false,
       hint: noCost ? 'Settings → Approved Equipment → import costs' : 'All priced', link: null },
     { key: 'project', label: 'Project TARSHID info complete', count: missingProject.length, blocking: false,
       hint: missingProject.length ? missingProject.map((f) => f.replace(/_/g, ' ')).join(', ') : 'Complete', link: null },

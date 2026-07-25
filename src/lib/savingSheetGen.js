@@ -1,9 +1,12 @@
 // 9D-3 — fill the uploaded TARSHID workbook. Sheet and header positions are
 // DISCOVERED at runtime (tolerant to minor shifts); only true input cells are
-// written. Formula cells, reference sheets (Old_Model_Registry, Aprvd Baseline
-// Unit, Aprvd Project Unit, Data_Check, Pivot…) and every style are untouched.
+// written. Formula cells, the genuine reference sheets (Old_Model_Registry,
+// Aprvd Baseline Unit, Data_Check, Pivot…) and every style are untouched.
+// 'Aprvd Project Unit' is NOT a reference sheet — it is this project's own
+// shortlist, so we write B/C/D/M/N there (never E or F:L, which are formulas).
 import { supabase } from './supabase'
 import { openXlsx, saveXlsx, findSheet, readSheet, findHeaderRow, colFor, patchSheet, setFullCalcOnLoad } from './xlsxPatch'
+import { resolveSelectionDescriptions } from './savingSheet'
 
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 // Excel serial time (fraction of a day) for 'HH:MM'
@@ -146,23 +149,68 @@ function fillAcSavings(zip, { rows, project }) {
   return { sheet, written: patchSheet(zip, sheet, patches), rows: rows.length, cols: C, headerRow: header.row }
 }
 
+// 'Aprvd Project Unit' — the PROJECT'S OWN submittal shortlist and the target
+// of the payback VLOOKUP ($B$2:$N$21). Only the manual-input columns are
+// written: B description, C unit cost, D labor cost, M SASO ref, N datasheet
+// ref. E (=C+D) and F:L (array formulas resolving type/make/model/BTU/TR/
+// SEER/C&H from B) are the workbook's own and patchSheet refuses them anyway.
+// The uploaded template arrives with rows 2-21 BLANK — never assume otherwise.
+function fillProjectUnits(zip, selection) {
+  const sheet = findSheet(zip, 'Aprvd Project Unit', 'Aprovd Project Unit', 'Approved Project Unit', 'AprvdProjectUnit')
+  if (!sheet) return { sheet: null, written: 0, rows: 0 }
+  const data = readSheet(zip, sheet)
+  const header = findHeaderRow(data, ['description', 'unit cost', 'labor cost', 'total cost'], { scan: 6, minHits: 2 })
+  // The sheet's layout is fixed by the VLOOKUP range: header row 1, data 2..21.
+  const headerRow = header?.row ?? 1
+  const C = {
+    desc: colFor(header, 'description') || 'B',
+    unit: colFor(header, 'unit cost') || 'C',
+    labor: colFor(header, 'labor cost', 'labour cost') || 'D',
+    saso: colFor(header, 'reference saso certificate', 'saso') || 'M',
+    ds: colFor(header, 'reference datasheet', 'datasheet') || 'N',
+  }
+  const patches = {}
+  const ordered = [...selection].sort((a, b) => (a.row_no || 0) - (b.row_no || 0))
+  ordered.forEach((s) => {
+    if (!s.description || !s.row_no || s.row_no < 1 || s.row_no > 20) return
+    const r = headerRow + s.row_no                       // row_no 1 -> sheet row 2
+    patches[`${C.desc}${r}`] = s.description
+    if (s.unit_cost != null) patches[`${C.unit}${r}`] = Number(s.unit_cost)
+    if (s.labor_cost != null) patches[`${C.labor}${r}`] = Number(s.labor_cost)
+    if (s.saso_ref) patches[`${C.saso}${r}`] = s.saso_ref
+    if (s.datasheet_ref) patches[`${C.ds}${r}`] = s.datasheet_ref
+  })
+  return { sheet, written: patchSheet(zip, sheet, patches), rows: ordered.filter((s) => s.description).length, cols: C, headerRow }
+}
+
 // Build the filled workbook. Returns { bytes, report } — report lists which
 // sheets were found and how many cells each received (surfaced in the UI so a
 // template mismatch is visible, never silent).
-export async function buildSavingSheet({ templatePath, project, buildings, ohRows, rows }) {
+// `selection` = project_unit_selection rows; AC_Savings column W is written
+// with the SAME description strings so the payback VLOOKUP and the AH
+// type-match resolve. A mismatch throws rather than shipping a broken sheet.
+export async function buildSavingSheet({ templatePath, project, buildings, ohRows, rows, selection = [] }) {
   const { data: dl, error } = await supabase.storage.from('saving-sheet-templates').download(templatePath)
   if (error || !dl) throw new Error('Could not load the template — ' + (error?.message || 'missing file'))
   const zip = openXlsx(await dl.arrayBuffer())
 
+  // W must equal a description present in the selection, or the VLOOKUP fails
+  const { resolved: acRows, missing } = resolveSelectionDescriptions(rows, selection)
+  if (missing.length) {
+    throw new Error(`These proposed units are not in the project unit selection, so the payback VLOOKUP would fail: ${missing.slice(0, 5).join(' · ')}${missing.length > 5 ? ` (+${missing.length - 5} more)` : ''}`)
+  }
+
   const info = fillProjectInfo(zip, project, buildings.length)
   const oh = fillOperatingHours(zip, { ohRows, project, buildings })
-  const ac = fillAcSavings(zip, { rows, project })
+  const units = fillProjectUnits(zip, selection)
+  const ac = fillAcSavings(zip, { rows: acRows, project })
   setFullCalcOnLoad(zip)
 
   const report = {
     sheets: zip.sheets.map((s) => s.name),
     project_info: { found: !!info.sheet, cells: info.written },
     oh: { found: !!oh.sheet, cells: oh.written, rows: oh.rows, header_row: oh.headerRow, error: oh.error || null },
+    project_units: { found: !!units.sheet, cells: units.written, rows: units.rows, header_row: units.headerRow },
     ac_savings: { found: !!ac.sheet, cells: ac.written, rows: ac.rows, header_row: ac.headerRow, error: ac.error || null },
   }
   return { bytes: saveXlsx(zip), report }
