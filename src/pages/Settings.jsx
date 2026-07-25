@@ -8,6 +8,7 @@ import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
 import { fmtDateTime, num } from '../lib/format'
 import { toast } from '../lib/toast'
 import EquipmentCatalogs from '../components/EquipmentCatalogs'
+import SavingSheetTemplate from '../components/SavingSheetTemplate'
 
 // Permission matrix reflects the REAL RBAC nav map (lib/nav roleNav), read-only.
 const NAV_IDS = ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings']
@@ -29,6 +30,7 @@ const CATS = [
   { key: 'users', label: 'Users' },
   { key: 'roles', label: 'Roles & Permissions' },
   { key: 'catalogs', label: 'Approved Equipment' },
+  { key: 'template', label: 'Saving Sheet Template' },
   { key: 'audit', label: 'Audit Log' },
 ]
 
@@ -200,6 +202,8 @@ export default function Settings() {
           )}
 
           {cat === 'catalogs' && <EquipmentCatalogs role={role} />}
+
+          {cat === 'template' && <SavingSheetTemplate role={role} />}
 
           {cat === 'audit' && (
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
