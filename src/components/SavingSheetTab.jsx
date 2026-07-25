@@ -27,6 +27,7 @@ const FLAG_META = {
   'no-eflh': ['No EFLH', '#B45309', '#FAF3E3'],
   'no-capacity': ['No capacity', '#B45309', '#FAF3E3'],
   'no-cost': ['No cost', '#8A8577', '#F0EDE4'],
+  'assumed-eff': ['Assumed old SEER', '#B45309', '#FAF3E3'],
   residential: ['Residential', '#8A8577', '#F0EDE4'],
   inverter: ['Inverter', '#8A8577', '#F0EDE4'],
 }
@@ -64,7 +65,9 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
       const [c, ac, reg, chf] = await Promise.all([
         loadConstants(),
         fetchAllRows('ac_catalog', 'id,description,equipment_type,make,model,size_category,capacity_btu,capacity_tr,seer,ieer,unit_cost,labor_cost,saso_cert_ref,datasheet_ref'),
-        fetchAllRows('old_model_registry', 'model_no,equivalent_seer,t1_btu'),
+        // id + t1_eer are needed since 9D-6: rows resolve by registry_id, and the
+        // survey shows the derived T1 EER back to the technician
+        fetchAllRows('old_model_registry', 'id,model_no,equivalent_seer,t1_btu,t1_eer,tr'),
         supabase.from('category_hours_factors').select('assumed_old_eff').eq('category', 'ac').maybeSingle(),
       ])
       if (!alive) return
@@ -77,8 +80,8 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
 
   const { rows, totals } = useMemo(() => {
     if (!consts) return { rows: [], totals: null }
-    return computeProject({ entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff })
-  }, [entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff])
+    return computeProject({ entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff, selection })
+  }, [entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff, selection])
 
   // The selection drives AC_Savings column W, so the same resolver the
   // generator uses decides here whether any proposed unit would VLOOKUP to #N/A.
@@ -231,7 +234,11 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
                   <td style={{ padding: '6px', maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${r.description} · old SEER ${num(r.old_seer)} (${r.old_seer_source})`}>{r.description || '—'}</td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(r.qty)}</td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{r.eflh != null ? num(r.eflh) : '—'}</td>
-                  <td style={{ padding: '6px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.new_description}>{r.new_description || '—'}</td>
+                  <td style={{ padding: '6px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={r.new_description ? `${r.new_description} — ${r.replacement_source === 'selection' ? 'resolved from the project unit selection' : 'mapped on the survey row'}` : ''}>
+                    {r.new_description || '—'}
+                    {r.replacement_source === 'selection' && <span style={{ marginLeft: 5, fontFamily: 'var(--mono)', fontSize: 8, fontWeight: 700, color: '#6D5A8E' }}>SEL</span>}
+                  </td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{kwh(r.baseline_kwh)}</td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, color: r.savings_kwh > 0 ? 'var(--ok)' : 'var(--text-3)' }}>{kwh(r.savings_kwh)}</td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', color: r.savings_pct != null && r.savings_pct < consts.min_savings_pct ? 'var(--bad)' : undefined }}>{pct(r.savings_pct)}</td>

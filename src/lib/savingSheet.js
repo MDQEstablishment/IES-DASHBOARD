@@ -23,34 +23,83 @@ export async function loadConstants() {
 const n = (v) => (v == null || v === '' ? null : Number(v))
 const okNum = (v) => typeof v === 'number' && Number.isFinite(v)
 
+// 9D-6 — the surveyed unit resolves to old_model_registry by its EXPLICIT link
+// first (survey_entries.registry_id, set by the technician or by AI job #1 and
+// accepted by a human) and only then by model string. The string path is kept
+// for rows imported before the link existed; the id path is what makes the
+// workbook's R/S/T/U/V columns (Surveyed Unit Description, Equivalent AC Model
+// Description, T1 BTU, T1 EER, Equivalent SEER) derive from the real nameplate
+// instead of the assumed factor.
+export const modelKey = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+
+export function buildRegistryIndex(registry = []) {
+  const byId = new Map(), byModel = new Map()
+  ;(registry || []).forEach((r) => {
+    if (r.id) byId.set(r.id, r)
+    if (r.model_no && !byModel.has(modelKey(r.model_no))) byModel.set(modelKey(r.model_no), r)
+  })
+  return { byId, byModel }
+}
+
+export function registryHit(entry, index) {
+  if (!index) return null
+  if (entry?.registry_id && index.byId.has(entry.registry_id)) return index.byId.get(entry.registry_id)
+  const k = modelKey(entry?.model)
+  return k ? index.byModel.get(k) || null : null
+}
+
 // Old-unit efficiency: prefer the registry's equivalent SEER for the surveyed
 // model; otherwise the assumed_old_eff factor (category_hours_factors, 9C).
 // Returns { seer, source }.
-export function oldEfficiency(entry, registryByModel, assumedOldEff) {
-  const key = String(entry.model || '').replace(/\s+/g, ' ').trim().toLowerCase()
-  const hit = key ? registryByModel.get(key) : null
+export function oldEfficiency(entry, index, assumedOldEff) {
+  const hit = registryHit(entry, index)
   if (hit && okNum(n(hit.equivalent_seer))) return { seer: n(hit.equivalent_seer), source: 'registry' }
   return { seer: okNum(assumedOldEff) ? assumedOldEff : 8, source: 'assumed' }
 }
 
 // Old capacity in BTU: TR x 12000 when the survey captured tonnage, else the
 // registry's T1 BTU for that model.
-export function oldBtu(entry, registryByModel) {
+export function oldBtu(entry, index) {
   const tr = n(entry.tr)
   if (okNum(tr) && tr > 0) return tr * 12000
-  const key = String(entry.model || '').replace(/\s+/g, ' ').trim().toLowerCase()
-  const hit = key ? registryByModel.get(key) : null
+  const hit = registryHit(entry, index)
   return okNum(n(hit?.t1_btu)) ? n(hit.t1_btu) : null
+}
+
+// Workbook column L — m² served per ton of installed capacity. One definition,
+// used by the survey form and anything that reports it: area / (BTU/12000) / qty.
+export function m2PerTon({ room_area, btu, qty }) {
+  const a = Number(room_area), b = Number(btu), q = Number(qty) || 1
+  if (!(a > 0) || !(b > 0) || !(q > 0)) return null
+  return Math.round((a / (b / 12000) / q) * 100) / 100
+}
+
+// The project's approved shortlist decides the replacement for a surveyed row
+// that has none of its own. Deterministic: best verified savings, then cheapest,
+// then a stable id tie-break — the same row always resolves to the same unit.
+export function bestFromSelection(row, selCats, consts) {
+  let best = null
+  for (const cat of selCats) {
+    const v = isCompliant(row, cat, consts)
+    if (!v.ok) continue
+    if (!best) { best = { cat, savPct: v.savPct }; continue }
+    const cost = Number(cat.unit_cost), bcost = Number(best.cat.unit_cost)
+    const better = v.savPct > best.savPct ||
+      (v.savPct === best.savPct && ((Number.isFinite(cost) ? cost : Infinity) < (Number.isFinite(bcost) ? bcost : Infinity) ||
+        (cost === bcost && String(cat.id) < String(best.cat.id))))
+    if (better) best = { cat, savPct: v.savPct }
+  }
+  return best?.cat || null
 }
 
 // One computed AC row. `cat` = the linked ac_catalog replacement (may be null).
 // Scope rules (TARSHID Instr.): inverter old units and residential buildings
 // are OUT of replacement scope — flagged, never silently dropped.
-export function computeRow({ entry, cat, building, oh, consts, registryByModel, assumedOldEff }) {
+export function computeRow({ entry, cat, building, oh, consts, index, assumedOldEff, replacementSource = null }) {
   const qty = n(entry.qty) || 0
   const eflh = n(oh?.eflh)
-  const bt = oldBtu(entry, registryByModel)
-  const { seer: oldSeer, source: seerSource } = oldEfficiency(entry, registryByModel, assumedOldEff)
+  const bt = oldBtu(entry, index)
+  const { seer: oldSeer, source: seerSource } = oldEfficiency(entry, index, assumedOldEff)
   const newSeer = cat ? (n(cat.seer) ?? n(cat.ieer)) : null
   const newBtu = cat ? n(cat.capacity_btu) : null
 
@@ -64,6 +113,9 @@ export function computeRow({ entry, cat, building, oh, consts, registryByModel, 
   if (!cat) flags.push('no-replacement')
   if (!okNum(eflh)) flags.push('no-eflh')
   if (!okNum(bt)) flags.push('no-capacity')
+  // the baseline came from the assumed factor, not a real nameplate — visible,
+  // never silent (9D-6)
+  if (seerSource !== 'registry') flags.push('assumed-eff')
 
   let baseline = null, savings = null, savingsPct = null, capacityCheck = null, payback = null
   if (inScope && okNum(eflh) && okNum(bt) && okNum(oldSeer) && oldSeer > 0 && qty > 0) {
@@ -103,7 +155,13 @@ export function computeRow({ entry, cat, building, oh, consts, registryByModel, 
     model: entry.model || '',
     description: [entry.make, entry.model, entry.tr ? `${entry.tr} TR` : null].filter(Boolean).join(' ') || (entry.equipment_type || ''),
     old_btu: bt, old_seer: oldSeer, old_seer_source: seerSource,
+    registry_id: entry.registry_id || null,
     catalog_item_id: cat?.id || null,
+    // what the SURVEY itself mapped (pre-9D-6 rows and anything set by hand) —
+    // kept apart from the effective replacement so the selection engine can seed
+    // from real survey decisions rather than from its own output
+    row_catalog_item_id: entry.catalog_item_id || null,
+    replacement_source: cat ? (replacementSource || 'row') : null,
     new_description: cat ? [cat.description || cat.equipment_type, cat.make, cat.model].filter(Boolean).join(' · ') : '',
     new_btu: newBtu, new_seer: newSeer,
     unit_cost: n(cat?.unit_cost), labor_cost: n(cat?.labor_cost),
@@ -117,21 +175,32 @@ export function computeRow({ entry, cat, building, oh, consts, registryByModel, 
 }
 
 // Whole-project computation: entries + OH + catalogs -> rows + totals.
-export function computeProject({ entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff }) {
+export function computeProject({ entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff, selection = [] }) {
   const bById = new Map(buildings.map((b) => [b.id, b]))
   const catById = new Map(acCatalog.map((c) => [c.id, c]))
-  const registryByModel = new Map(
-    (registry || []).filter((r) => r.model_no).map((r) => [String(r.model_no).replace(/\s+/g, ' ').trim().toLowerCase(), r]))
+  const index = buildRegistryIndex(registry)
   const ohKey = (bid, st) => `${bid}|${String(st || '').trim().toLowerCase()}`
   const ohMap = new Map((ohRows || []).map((o) => [ohKey(o.building_id, o.space_type), o]))
+  // 9D-6 — the replacement is a project-level decision, so a surveyed row with
+  // no mapping of its own is resolved against the approved shortlist. A row that
+  // already carries one (pre-9D-6, or set deliberately) always wins.
+  const selCats = (selection || []).map((s) => (s.catalog_item_id ? catById.get(s.catalog_item_id) : null)).filter(Boolean)
 
-  const rows = entries.filter((e) => e.category === 'ac').map((e) => computeRow({
-    entry: e,
-    cat: e.catalog_item_id ? catById.get(e.catalog_item_id) || null : null,
-    building: bById.get(e.building_id),
-    oh: ohMap.get(ohKey(e.building_id, e.room_type)),
-    consts, registryByModel, assumedOldEff,
-  }))
+  const rows = entries.filter((e) => e.category === 'ac').map((e) => {
+    let cat = e.catalog_item_id ? catById.get(e.catalog_item_id) || null : null
+    let replacementSource = cat ? 'row' : null
+    if (!cat && selCats.length) {
+      const probe = { old_btu: oldBtu(e, index), old_seer: oldEfficiency(e, index, assumedOldEff).seer, equipment_type: e.equipment_type }
+      cat = bestFromSelection(probe, selCats, consts)
+      if (cat) replacementSource = 'selection'
+    }
+    return computeRow({
+      entry: e, cat, replacementSource,
+      building: bById.get(e.building_id),
+      oh: ohMap.get(ohKey(e.building_id, e.room_type)),
+      consts, index, assumedOldEff,
+    })
+  })
 
   const inScope = rows.filter((r) => r.in_scope)
   const totals = {
@@ -221,10 +290,13 @@ export function proposeSelection({ rows, acCatalog, consts, max = MAX_SELECTION_
   // Anything the survey has ALREADY mapped is seeded first: AC_Savings column W
   // is written from the row's own replacement, so a selection that omitted it
   // would leave the payback VLOOKUP unresolved. Seeds must still be compliant.
+  // Seed from what the SURVEY mapped, not from what this engine resolved on the
+  // last pass — otherwise the selection would seed itself and never change.
   const seedIds = []
   targets.forEach((r) => {
-    if (!r.catalog_item_id || seedIds.includes(r.catalog_item_id)) return
-    if ((compliantFor.get(r.entry_id) || []).some(({ cat }) => cat.id === r.catalog_item_id)) seedIds.push(r.catalog_item_id)
+    const own = r.row_catalog_item_id ?? (r.replacement_source == null ? r.catalog_item_id : null)
+    if (!own || seedIds.includes(own)) return
+    if ((compliantFor.get(r.entry_id) || []).some(({ cat }) => cat.id === own)) seedIds.push(own)
   })
 
   const take = (cat, covers, savTotal, seeded) => {
@@ -337,15 +409,31 @@ export function readiness({ project, rows, ohRows, entries, template, selection 
   const missingProject = TARSHID_FIELDS.filter((f) => project?.[f] == null || String(project[f]).trim() === '')
   const missingHours = (ohRows || []).filter((o) => o.hours_per_year == null).length
   const missingEflh = (ohRows || []).filter((o) => o.eflh == null).length
-  const needMapping = entries.filter((e) => e.category === 'ac' && !e.catalog_item_id).length
+  // 9D-6 — the technician no longer picks the replacement, so this is no longer
+  // "did someone fill the per-row field": it is "does the project's approved
+  // shortlist actually resolve a compliant unit for every in-scope surveyed row".
+  const needMapping = rows.filter((r) => r.in_scope && !r.catalog_item_id).length
+  const needMatching = entries.filter((e) => e.category === 'ac' && !e.registry_id).length
+  const noNameplate = entries.filter((e) => e.category === 'ac' && !e.registry_id && !e.photo_nameplate_path).length
   const noCost = rows.filter((r) => r.in_scope && r.flags.includes('no-cost')).length
   const noSpaceType = entries.filter((e) => e.category === 'ac' && !String(e.room_type || '').trim()).length
 
   const items = [
     { key: 'template', label: 'Saving-sheet template uploaded', count: template ? 0 : 1, blocking: true,
       hint: template ? `Version ${template.version}` : 'Settings → Saving Sheet Template', link: null },
-    { key: 'mapping', label: 'AC survey rows with an approved replacement mapped', count: needMapping, blocking: true,
-      hint: needMapping ? 'Survey → All entries → filter "Needs mapping"' : 'All mapped', link: 'survey' },
+    { key: 'mapping', label: 'Every in-scope AC row resolves to an approved replacement', count: needMapping, blocking: true,
+      hint: needMapping
+        ? `${needMapping} surveyed row${needMapping === 1 ? ' has' : 's have'} no compliant unit in the project selection — Saving Sheet → Project Unit Selection`
+        : 'Resolved from the project unit selection', link: null },
+    // Non-blocking on purpose: the assumed_old_eff factor is a documented
+    // TARSHID fallback, so an unmatched row still produces a defensible number —
+    // it just produces a WEAKER one, and the report says so instead of hiding it.
+    { key: 'matching', label: 'AC rows matched to an old-model registry entry', count: needMatching, blocking: false,
+      hint: needMatching
+        ? `${needMatching} row${needMatching === 1 ? '' : 's'} fall back to the assumed old efficiency — AI assist → Resolve unmatched models`
+        : 'Every baseline uses a real nameplate efficiency', link: 'survey' },
+    { key: 'nameplate', label: 'Unmatched AC rows carry a nameplate photo', count: noNameplate, blocking: false,
+      hint: noNameplate ? 'Without the nameplate the model cannot be identified later — Survey → All entries' : 'Every unmatched row is photographed', link: 'table' },
     { key: 'hours', label: 'Spaces with operating hours', count: missingHours, blocking: true,
       hint: missingHours ? 'Survey → Operating Hours' : 'All spaces have hours', link: 'hours' },
     { key: 'eflh', label: 'Spaces with EFLH', count: missingEflh, blocking: true,
