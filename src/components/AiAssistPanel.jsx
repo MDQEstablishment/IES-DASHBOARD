@@ -122,8 +122,8 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
         <div style={{ fontWeight: 700, fontSize: 14 }}>AI assist</div>
         <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, color: '#6D5A8E', background: '#F3E8FF' }}>PROPOSES · YOU DECIDE</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Btn disabled={!!busy || unmatched === 0} onClick={() => run('match')}>
-            {busy === 'match' ? 'Resolving…' : `Resolve ${num(unmatched)} unmapped model${unmatched === 1 ? '' : 's'}`}
+          <Btn variant={unmatched > 0 ? 'primary' : undefined} disabled={!!busy || unmatched === 0} onClick={() => run('match')}>
+            {busy === 'match' ? 'Identifying…' : `Identify ${num(unmatched)} unmatched old unit${unmatched === 1 ? '' : 's'}`}
           </Btn>
           <Btn disabled={!!busy || unmapped === 0} onClick={() => run('replace')}>
             {busy === 'replace' ? 'Suggesting…' : `Suggest replacements for ${num(unmapped)} row${unmapped === 1 ? '' : 's'}`}
@@ -134,6 +134,11 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 10 }}>
         The assistant only makes judgement calls (which registry model, which approved replacement) — every number is computed by the platform, not the model. Strings resolved once are remembered forever and never re-sent, so re-running costs nothing when there is no new data.
       </div>
+      {unmatched > 0 && (
+        <div style={{ fontSize: 11.5, color: '#854D0E', background: '#FAF3E3', border: '1px solid #EBDCB2', borderRadius: 8, padding: '8px 11px', marginBottom: 10 }}>
+          {num(unmatched)} AC row{unmatched === 1 ? '' : 's'} {unmatched === 1 ? 'is' : 'are'} not matched to the old-model registry, so {unmatched === 1 ? 'its' : 'their'} baseline uses the assumed old-efficiency factor instead of the real nameplate. Identifying them is the single biggest correction available to the savings numbers.
+        </div>
+      )}
 
       {unavailable && (
         <div style={{ background: '#FAF3E3', border: '1px solid #EBDCB2', color: '#854D0E', borderRadius: 8, padding: '9px 12px', fontSize: 12.5, marginBottom: 10 }}>

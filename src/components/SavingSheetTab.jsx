@@ -10,6 +10,7 @@ import { loadConstants, computeProject, readiness, resolveSelectionDescriptions,
 import { fetchAllRows } from '../lib/tarshidImport'
 import AiAssistPanel from './AiAssistPanel'
 import ProjectUnitSelection from './ProjectUnitSelection'
+import LightingReplacements from './LightingReplacements'
 
 // 9D-3 — the saving sheet as a formal deliverable: readiness → review → generate
 // → draft/approved/shared, revisioned. pmo/admin only (like COCs).
@@ -195,6 +196,9 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
       {/* ── PROJECT UNIT SELECTION (9D-4b) ────────────────────────── */}
       <ProjectUnitSelection project={project} rows={rows} acCatalog={acCatalog} consts={consts}
         canManage={canManage} selection={selection} refetch={refetchSelection} />
+
+      {/* ── LIGHTING REPLACEMENTS (9D-6) ──────────────────────────── */}
+      <LightingReplacements project={project} entries={entries} onChanged={refetchEntries} />
 
       {/* ── REVIEW ────────────────────────────────────────────────── */}
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>

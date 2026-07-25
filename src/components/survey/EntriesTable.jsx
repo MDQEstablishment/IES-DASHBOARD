@@ -14,7 +14,11 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
   const [search, setSearch] = useState('')
   const [building, setBuilding] = useState('all')
   const [category, setCategory] = useState('all')
-  const [mapping, setMapping] = useState('all') // all | linked | needs (unlinked lighting/ac)
+  // 9D-6 — two different questions, and they used to be one. "needs matching" =
+  // the OLD unit is not resolved to the registry (the AI job #1 queue);
+  // "needs replacement" = no approved unit is mapped, which is now a
+  // project-level decision and only lighting is set row-by-row.
+  const [mapping, setMapping] = useState('all')
   const [page, setPage] = useState(0)
   const [sel, setSel] = useState(() => new Set())
   const [del, setDel] = useState(null)      // single row pending delete
@@ -29,8 +33,10 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
     return entries.filter((e) => {
       if (building !== 'all' && e.building_id !== building) return false
       if (category !== 'all' && e.category !== category) return false
+      if (mapping === 'needs-match' && (e.category !== 'ac' || e.registry_id)) return false
+      if (mapping === 'matched' && (e.category !== 'ac' || !e.registry_id)) return false
+      if (mapping === 'needs-lamp' && (e.category !== 'lighting' || e.catalog_item_id)) return false
       if (mapping === 'linked' && !e.catalog_item_id) return false
-      if (mapping === 'needs' && (e.catalog_item_id || !['lighting', 'ac'].includes(e.category))) return false
       if (s) {
         const hay = [e.building?.code, e.building?.name, e.room_name, e.floor, e.make, e.model, e.equipment_type, e.remarks].filter(Boolean).join(' ').toLowerCase()
         if (!hay.includes(s)) return false
@@ -62,7 +68,7 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
     setSel(new Set()); setDel(null); setBulkDel(false)
   }
 
-  const COLS = ['', 'BLDG', 'FLOOR', 'ROOM', 'TYPE', 'CAT', 'MAP', 'EQUIP', 'MAKE', 'MODEL', 'SIZE', 'TR', 'W', 'QTY', 'INV', 'AGE', 'REMARKS', 'BY', 'WHEN']
+  const COLS = ['', 'BLDG', 'FLOOR', 'ROOM', 'TYPE', 'CAT', 'OLD UNIT', 'NEW', 'EQUIP', 'MAKE', 'MODEL', 'SIZE', 'TR', 'W', 'QTY', 'INV', 'AGE', 'REMARKS', 'BY', 'WHEN']
 
   return (
     <div>
@@ -79,10 +85,12 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
           <option value="all">All categories</option>
           {SURVEY_CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <select style={ctrl} value={mapping} onChange={reset((e) => setMapping(e.target.value))} title="Catalog mapping — linked entries feed the savings estimate">
-          <option value="all">Mapping: all</option>
-          <option value="needs">Needs mapping</option>
-          <option value="linked">Linked</option>
+        <select style={ctrl} value={mapping} onChange={reset((e) => setMapping(e.target.value))} title="Old-unit matching feeds the real baseline efficiency; the replacement is a project-level decision">
+          <option value="all">Matching: all</option>
+          <option value="needs-match">AC · needs matching</option>
+          <option value="matched">AC · matched to registry</option>
+          <option value="needs-lamp">Lighting · no replacement</option>
+          <option value="linked">Any replacement mapped</option>
         </select>
         {canManageAll && sel.size > 0 && <Btn variant="danger" icon="x" onClick={() => setBulkDel(true)}>Delete {sel.size}</Btn>}
       </div>
@@ -105,12 +113,24 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
                   <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>{e.room_name || '—'}</td>
                   <td style={{ padding: '6px', color: 'var(--text-3)' }}>{e.room_type || '—'}</td>
                   <td style={{ padding: '6px' }}>{CAT_LABEL[e.category] || e.category}</td>
+                  {/* OLD UNIT — resolved to the registry? this is what decides
+                      whether the baseline uses the real nameplate efficiency */}
+                  <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>
+                    {e.category !== 'ac'
+                      ? <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>
+                      : e.registry_id
+                        ? <span title={`Matched to the old-model registry${e.match_source === 'ai' ? ' by the assistant' : ''} — the baseline uses its real equivalent SEER`} style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓{e.match_source === 'ai' ? <span style={{ fontFamily: 'var(--mono)', fontSize: 8, marginLeft: 2 }}>AI</span> : null}</span>
+                        : <span title="Not matched to the registry — the baseline falls back to the assumed old-efficiency factor" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>match</span>}
+                  </td>
+                  {/* NEW — the approved replacement, set at project level */}
                   <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>
                     {e.catalog_item_id
-                      ? <span title="Linked to an approved catalog item — counted in the savings estimate" style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓</span>
-                      : ['lighting', 'ac'].includes(e.category)
-                        ? <span title="Not linked to a catalog item — excluded from the savings estimate (edit to map)" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>map</span>
-                        : <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>}
+                      ? <span title="An approved replacement is mapped on this row" style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓</span>
+                      : e.category === 'lighting'
+                        ? <span title="No approved lamp mapped — Saving Sheet → Lighting replacements" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>lamp</span>
+                        : e.category === 'ac'
+                          ? <span title="Resolved from the project unit selection, not per row" style={{ color: 'var(--text-3)', fontSize: 10 }}>proj</span>
+                          : <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>}
                   </td>
                   <td style={{ padding: '6px' }}>{e.equipment_type || '—'}</td>
                   <td style={{ padding: '6px' }}>{e.make || '—'}</td>
