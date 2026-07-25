@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useLiveQuery, uploadToBucket, signedUrlFor } from '../../lib/db'
-import { num } from '../../lib/format'
+import { num, roomKey } from '../../lib/format'
 import { compressImage } from '../../lib/image'
 import { Modal, Btn, Field, inputStyle } from '../ui'
 import { toast } from '../../lib/toast'
@@ -41,6 +41,20 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
     const w = parseFloat(form.room_width), h = parseFloat(form.room_height)
     if (!isNaN(w) && !isNaN(h)) set('room_area', String(Math.round(w * h * 100) / 100))
   }, [form.room_width, form.room_height]) // eslint-disable-line
+
+  // 9D-5 — rooms already known for this building. The engineer keeps typing
+  // whatever is on the door (free text is the field reality), but seeing the
+  // existing names is what makes two teams converge on ONE room instead of
+  // "Room 101" and "غرفة 101". The saved name is matched server-side by the
+  // same rule roomKey() mirrors, so the hint below is what will actually happen.
+  const NO_BUILDING = '00000000-0000-0000-0000-000000000000'
+  const { rows: buildingRooms } = useLiveQuery('rooms', (q) =>
+    q.select('id,name,floor').eq('building_id', form.building_id || NO_BUILDING).order('name'), [form.building_id])
+  const roomMatch = useMemo(() => {
+    const k = roomKey(form.room_name)
+    if (!k) return null
+    return buildingRooms.find((r) => roomKey(r.name) === k) || null
+  }, [form.room_name, buildingRooms])
 
   const isAc = form.category === 'ac'
   const isLight = form.category === 'lighting'
@@ -101,7 +115,19 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
           </select>
         </Field>
         <Field label="Floor"><input style={control} lang="en" value={form.floor} onChange={(e) => set('floor', e.target.value)} /></Field>
-        <Field label="Room name"><input style={control} value={form.room_name} onChange={(e) => set('room_name', e.target.value)} /></Field>
+        <Field label="Room name">
+          <input style={control} list="survey-room-names" value={form.room_name} autoComplete="off"
+            placeholder={buildingRooms.length ? 'Type or pick an existing room' : undefined}
+            onChange={(e) => set('room_name', e.target.value)} />
+          <datalist id="survey-room-names">
+            {buildingRooms.map((r) => <option key={r.id} value={r.name}>{r.floor ? `Floor ${r.floor}` : ''}</option>)}
+          </datalist>
+          {roomKey(form.room_name) !== '' && (
+            roomMatch
+              ? <div style={{ fontSize: 10.5, color: 'var(--ok)', marginTop: 3 }}>Links to existing room “{roomMatch.name}”</div>
+              : <div style={{ fontSize: 10.5, color: '#B45309', marginTop: 3 }}>New room — will be created in this building</div>
+          )}
+        </Field>
         <Field label="Room type">
           <input style={control} list="survey-room-types" value={form.room_type} onChange={(e) => set('room_type', e.target.value)} />
           <datalist id="survey-room-types">{ROOM_TYPES.map((t) => <option key={t} value={t} />)}</datalist>

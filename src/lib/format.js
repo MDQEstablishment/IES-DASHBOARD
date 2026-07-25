@@ -78,3 +78,19 @@ export function initials(name) {
   const p = String(name).trim().split(/\s+/)
   return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || name[0].toUpperCase()
 }
+
+// 9D-5 — the JS mirror of the DB's room_key(): the one definition of "the same
+// room". Must stay in lockstep with supabase/migrations/0098, because the UI
+// uses it to tell the engineer whether the name they typed will MATCH an
+// existing room or CREATE a new one — and the server then decides for real.
+// Strips Arabic tatweel, folds Arabic-Indic and Persian digits to Latin,
+// collapses whitespace, casefolds.
+export function roomKey(name) {
+  return String(name ?? '')
+    .replace(/ـ/g, '')
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
