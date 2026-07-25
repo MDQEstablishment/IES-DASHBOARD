@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery } from '../lib/db'
 import { Btn, Loading, Empty } from './ui'
@@ -13,11 +13,13 @@ import OperatingHours from './survey/OperatingHours'
 
 // 9B — the survey DAILY LOG. Two field teams log OLD equipment straight into the
 // project; entries merge live (realtime) and are fully attributed.
-export default function SurveyTab({ project, buildings }) {
+export default function SurveyTab({ project, buildings, initialView }) {
   const { role, user } = useAuth()
   const canWrite = can(role, CAN_SURVEY)
   const canManageAll = ['pmo', 'admin'].includes(role) || (role === 'projm' && project.pm_id === user?.id)
-  const [view, setView] = useState('log')     // 'log' | 'table'
+  // initialView lets the Saving Sheet readiness report deep-link here
+  const [view, setView] = useState(initialView || 'log')  // 'log' | 'table' | 'hours'
+  useEffect(() => { if (initialView) setView(initialView) }, [initialView])
   const [editing, setEditing] = useState(null) // null | {} (new) | row
   const [exporting, setExporting] = useState(false)
 

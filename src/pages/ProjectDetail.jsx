@@ -10,6 +10,7 @@ import { statusMeta, MANAGERS, SCOPE_STATUS_META } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../components/ProjectModals'
 import SurveyTab from '../components/SurveyTab'
+import SavingSheetTab from '../components/SavingSheetTab'
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal, ScopeChangeModal } from '../components/BuildingModals'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
@@ -28,6 +29,7 @@ const DOC_COLS = [
 
 const TABS = [
   ['survey', 'Survey'],
+  ['saving', 'Saving Sheet'],
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
   ['items', 'Items & Replacements'],
@@ -73,6 +75,7 @@ export default function ProjectDetail() {
   const { rows: seLite } = useLiveQuery('survey_entries', (q) => q.select('id,building_id').eq('project_id', id), [id])
   const surveyedSet = new Set(seLite.map((e) => e.building_id))
   const [scopeBldg, setScopeBldg] = useState(null)   // building pending manual exclude/include
+  const [surveyView, setSurveyView] = useState(null) // readiness deep-link into a Survey view
   const [scopeFilter, setScopeFilter] = useState('all')
   // ONE scope rule everywhere: surplus buildings never count toward progress,
   // COC lists or surveys. Before a freeze there is no surplus (unless manually
@@ -299,7 +302,13 @@ export default function ProjectDetail() {
       </div>
 
       {/* SURVEY tab (9B) — active buildings only: surplus is out of the survey */}
-      {tab === 'survey' && <SurveyTab project={project} buildings={activeBuildings} />}
+      {tab === 'survey' && <SurveyTab project={project} buildings={activeBuildings} initialView={surveyView} />}
+
+      {/* SAVING SHEET tab (9D-3) — pmo/admin deliverable */}
+      {tab === 'saving' && (
+        <SavingSheetTab project={project} buildings={activeBuildings}
+          onGoSurvey={(view) => { setSurveyView(view === 'hours' ? 'hours' : 'table'); setTab('survey') }} />
+      )}
 
       {/* BUILDINGS tab */}
       {tab === 'buildings' && (
