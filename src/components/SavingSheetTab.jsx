@@ -8,6 +8,7 @@ import { toast } from '../lib/toast'
 import { num, fmtDateTime } from '../lib/format'
 import { loadConstants, computeProject, readiness } from '../lib/savingSheet'
 import { fetchAllRows } from '../lib/tarshidImport'
+import AiAssistPanel from './AiAssistPanel'
 
 // 9D-3 — the saving sheet as a formal deliverable: readiness → review → generate
 // → draft/approved/shared, revisioned. pmo/admin only (like COCs).
@@ -43,7 +44,7 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
   const [genReport, setGenReport] = useState(null)
   const [confirmShare, setConfirmShare] = useState(null)
 
-  const { rows: entries, loading: le } = useLiveQuery('survey_entries', (q) =>
+  const { rows: entries, loading: le, refetch: refetchEntries } = useLiveQuery('survey_entries', (q) =>
     q.select('*').eq('project_id', project.id), [project.id])
   const { rows: ohRows } = useLiveQuery('v_operating_hours', (q) =>
     q.select('*').eq('project_id', project.id), [project.id])
@@ -171,6 +172,9 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
           </div>
         )}
       </div>
+
+      {/* ── AI ASSIST (9D-4) ──────────────────────────────────────── */}
+      <AiAssistPanel project={project} entries={entries} onChanged={refetchEntries} onGoSurvey={onGoSurvey} />
 
       {/* ── REVIEW ────────────────────────────────────────────────── */}
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>

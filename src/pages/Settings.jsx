@@ -9,6 +9,7 @@ import { fmtDateTime, num } from '../lib/format'
 import { toast } from '../lib/toast'
 import EquipmentCatalogs from '../components/EquipmentCatalogs'
 import SavingSheetTemplate from '../components/SavingSheetTemplate'
+import AiUsageMeter from '../components/AiUsageMeter'
 
 // Permission matrix reflects the REAL RBAC nav map (lib/nav roleNav), read-only.
 const NAV_IDS = ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings']
@@ -203,7 +204,12 @@ export default function Settings() {
 
           {cat === 'catalogs' && <EquipmentCatalogs role={role} />}
 
-          {cat === 'template' && <SavingSheetTemplate role={role} />}
+          {cat === 'template' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <SavingSheetTemplate role={role} />
+              <AiUsageMeter role={role} />
+            </div>
+          )}
 
           {cat === 'audit' && (
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>

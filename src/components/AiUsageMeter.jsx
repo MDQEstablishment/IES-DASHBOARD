@@ -1,0 +1,111 @@
+import { useMemo } from 'react'
+import { useLiveQuery, bgUpdate } from '../lib/db'
+import { Empty } from './ui'
+import { num, fmtDateTime } from '../lib/format'
+
+// 9D-4 — AI agent usage meter, mirroring the PDF-extraction meter pattern.
+// Shows this month's runs, tokens and estimated cost against the configurable
+// hard cap that stops calls server-side when exceeded.
+const toLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0)
+const numFilter = (s) => toLatin(s).replace(/[^\d.]/g, '')
+const usd = (v) => `$${(Number(v) || 0).toFixed(2)}`
+
+export default function AiUsageMeter({ role }) {
+  const canWrite = ['admin', 'pmo'].includes(role)
+  const monthIso = useMemo(() => {
+    const d = new Date()
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString()
+  }, [])
+  const { rows: runs } = useLiveQuery('ai_runs', (q) =>
+    q.select('*, actor:profiles!ai_runs_created_by_fkey(full_name), project:projects(code)')
+      .gte('created_at', monthIso).order('created_at', { ascending: false }).limit(50), [monthIso])
+  const { rows: settings, refetch } = useLiveQuery('ai_settings', (q) => q.select('*').order('key'))
+
+  const S = Object.fromEntries(settings.map((s) => [s.key, s]))
+  const cap = Number(S.monthly_cap_usd?.value ?? 25)
+  const spent = runs.reduce((a, r) => a + Number(r.cost_usd || 0), 0)
+  const tIn = runs.reduce((a, r) => a + (r.tokens_in || 0), 0)
+  const tOut = runs.reduce((a, r) => a + (r.tokens_out || 0), 0)
+  const cacheRead = runs.reduce((a, r) => a + (r.cache_read_tokens || 0), 0)
+  const fromCache = runs.reduce((a, r) => a + (r.rows_from_cache || 0), 0)
+  const asked = runs.reduce((a, r) => a + (r.rows_requested || 0), 0)
+  const pct = cap > 0 ? Math.min(100, Math.round((spent / cap) * 100)) : 0
+
+  const saveSetting = (key, raw) => {
+    const row = S[key]
+    if (!row) return
+    const v = key === 'monthly_cap_usd' || key === 'min_auto_confidence' ? numFilter(raw) : String(raw).trim()
+    if (!v || v === row.value) return
+    bgUpdate('ai_settings', row.key, { value: v }, { okMsg: 'Saved' }).then(() => refetch())
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16, overflow: 'hidden' }}>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>AI saving-sheet assistant</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
+        Usage this calendar month against the hard cap. When the cap is reached the assistant stops calling the API and says so — every other feature keeps working. Decisions resolved from memory cost nothing and are shown separately.
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div lang="en" dir="ltr" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>
+          <span>RUNS <b style={{ color: 'var(--text)' }}>{num(runs.length)}</b></span>
+          <span>ASKED <b style={{ color: 'var(--text)' }}>{num(asked)}</b></span>
+          <span>FROM MEMORY <b style={{ color: 'var(--ok)' }}>{num(fromCache)}</b></span>
+          <span>TOKENS <b style={{ color: 'var(--text)' }}>{num(tIn)}</b> in / <b style={{ color: 'var(--text)' }}>{num(tOut)}</b> out</span>
+          {cacheRead > 0 && <span>CACHE READ <b style={{ color: 'var(--ok)' }}>{num(cacheRead)}</b></span>}
+        </div>
+        <div lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 800, color: spent >= cap ? 'var(--bad)' : 'var(--text)' }}>
+          {usd(spent)} <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/ {usd(cap)}</span>
+        </div>
+      </div>
+      <div style={{ height: 7, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden', marginTop: 10 }}>
+        <div style={{ height: '100%', width: pct + '%', background: spent >= cap ? 'var(--bad)' : 'var(--accent)' }} />
+      </div>
+      {spent >= cap && <div style={{ fontSize: 11.5, color: 'var(--bad)', marginTop: 6 }}>Monthly cap reached — AI calls are paused until next month or until the cap is raised.</div>}
+
+      {/* settings */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 14 }}>
+        {settings.map((s) => (
+          <div key={s.key} style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 4 }}>{s.key.replace(/_/g, ' ').toUpperCase()}</span>
+            <input lang="en" dir="ltr" defaultValue={s.value} disabled={!canWrite} onBlur={(e) => saveSetting(s.key, e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)' }} />
+            <span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-3)', marginTop: 3 }}>{s.description}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontWeight: 700, fontSize: 13, margin: '16px 0 8px' }}>Recent runs</div>
+      {runs.length === 0 ? <Empty icon="box">No AI runs this month.</Empty> : (
+        <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 720 }}>
+          <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>WHEN</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>PROJECT</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>JOB</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>MODEL</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>ASKED</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>CACHED</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>TOK IN/OUT</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>COST</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>BY</th>
+          </tr></thead>
+          <tbody>
+            {runs.map((r) => (
+              <tr key={r.id} style={{ borderTop: '1px solid var(--line)', opacity: r.success ? 1 : 0.6 }}>
+                <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
+                <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10.5 }}>{r.project?.code || '—'}</td>
+                <td style={{ padding: '6px' }}>{r.job}{!r.success && <span title={r.error || ''} style={{ marginLeft: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 5, color: '#96271E', background: '#F9ECEA' }}>FAILED</span>}</td>
+                <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.model || ''}>{(r.model || '—').replace(/^claude-/, '')}</td>
+                <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(r.rows_requested || 0)}</td>
+                <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--ok)' }}>{num(r.rows_from_cache || 0)}</td>
+                <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 10.5 }}>{num(r.tokens_in || 0)} / {num(r.tokens_out || 0)}</td>
+                <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>${(Number(r.cost_usd) || 0).toFixed(4)}</td>
+                <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>{r.actor?.full_name || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table></div>
+      )}
+    </div>
+  )
+}
