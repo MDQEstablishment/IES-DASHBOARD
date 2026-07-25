@@ -278,6 +278,57 @@ export function proposeSelection({ rows, acCatalog, consts, max = MAX_SELECTION_
   }
 }
 
+// 9D-4b — the agent PROPOSES, this verifies. Every model the AI picked is
+// re-checked against the rows it claims to cover using the same isCompliant()
+// the app uses everywhere else; a pick that fails our own ±capacity / ≥savings
+// math is dropped, and whatever it leaves uncovered is filled by the
+// deterministic set-cover. Nothing unverified is ever shown to the ESCO.
+export function verifyAiSelection({ aiSelection = [], groupIndex = [], rows, acCatalog, consts, max = MAX_SELECTION_ROWS }) {
+  const catById = new Map(acCatalog.map((c) => [c.id, c]))
+  const inScope = rows.filter((r) => r.in_scope)
+  const rowById = new Map(inScope.map((r) => [r.entry_id, r]))
+  const entriesOf = new Map(groupIndex.map((g) => [g.key, g.entry_ids || []]))
+
+  const chosen = [], dropped = [], covered = new Set()
+  for (const pick of aiSelection) {
+    const cat = catById.get(pick.catalog_item_id)
+    if (!cat) { dropped.push({ description: pick.catalog_item_id, why: 'not an approved catalog unit' }); continue }
+    const targets = [...new Set((pick.covers || []).flatMap((k) => entriesOf.get(k) || []))]
+      .map((id) => rowById.get(id)).filter(Boolean)
+    const ok = [], bad = []
+    targets.forEach((r) => { const v = isCompliant(r, cat, consts); (v.ok ? ok : bad).push({ r, why: v.why }) })
+    const fresh = ok.filter(({ r }) => !covered.has(r.entry_id))
+    if (!ok.length) { dropped.push({ description: selectionDescription(cat), why: bad[0]?.why || 'covers nothing we can verify' }); continue }
+    if (bad.length) dropped.push({ description: selectionDescription(cat), partial: true, why: `${bad.length} of ${targets.length} claimed rows failed our check — ${bad[0].why}` })
+    if (!fresh.length) continue                       // already covered by an earlier pick
+    if (chosen.length >= max) break
+    fresh.forEach(({ r }) => covered.add(r.entry_id))
+    chosen.push({
+      catalog_item_id: cat.id,
+      description: selectionDescription(cat),
+      unit_cost: cat.unit_cost ?? null,
+      labor_cost: cat.labor_cost ?? null,
+      saso_ref: cat.saso_cert_ref ?? null,
+      datasheet_ref: cat.datasheet_ref ?? null,
+      covers: fresh.map(({ r }) => r.entry_id),
+      units: fresh.reduce((a, { r }) => a + (r.qty || 1), 0),
+      reason: pick.reason || 'Proposed by the assistant, verified against the capacity and savings rules',
+      from_ai: true,
+    })
+  }
+
+  // the deterministic engine fills every row the verified picks did not cover
+  const remaining = inScope.filter((r) => !covered.has(r.entry_id))
+  const det = proposeSelection({ rows: remaining, acCatalog, consts, max: Math.max(0, max - chosen.length) })
+  return {
+    chosen: [...chosen, ...det.chosen],
+    dropped,
+    uncovered: det.uncovered,
+    impossible: det.impossible,
+    overflow: det.overflow || (chosen.length >= max && remaining.length > 0),
+  }
+}
+
 // Readiness checklist — every blocker between "survey done" and "clean sheet".
 export function readiness({ project, rows, ohRows, entries, template, selection = [], selectionIssues = {} }) {
   const TARSHID_FIELDS = ['entity_poc_name', 'entity_poc_mobile', 'entity_poc_email',

@@ -5,7 +5,7 @@ import { Btn, Empty } from './ui'
 import Icon from './Icon'
 import { toast } from '../lib/toast'
 import { num } from '../lib/format'
-import { proposeSelection, selectionDescription, MAX_SELECTION_ROWS } from '../lib/savingSheet'
+import { proposeSelection, verifyAiSelection, selectionDescription, MAX_SELECTION_ROWS } from '../lib/savingSheet'
 
 // 9D-4b — the project's OWN material-submittal shortlist, written to
 // 'Aprvd Project Unit' B2:N21. The payback formula VLOOKUPs against column B,
@@ -36,6 +36,9 @@ function CostInput({ value, onSave, disabled }) {
 export default function ProjectUnitSelection({ project, rows, acCatalog, consts, canManage, selection, refetch }) {
   const [busy, setBusy] = useState(false)
   const [proposal, setProposal] = useState(null)
+  const [asking, setAsking] = useState(false)      // agent request in flight
+  const [askOpen, setAskOpen] = useState(false)
+  const [instruction, setInstruction] = useState('')
 
   const used = selection.filter((s) => s.description).length
   const unpriced = selection.filter((s) => s.description && (s.unit_cost == null || s.labor_cost == null))
@@ -50,6 +53,31 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
       return
     }
     setProposal(p)
+  }
+
+  // Direction (b) of the brief — "just give me a selection". The agent
+  // consolidates and applies the ESCO's preference; verifyAiSelection then
+  // re-runs OUR math over every pick before any of it reaches the screen.
+  const askAgent = async () => {
+    if (!consts) return
+    setAsking(true)
+    const { data, error } = await supabase.functions.invoke('saving-sheet-agent', {
+      body: { project_id: project.id, job: 'select', instruction: instruction.trim() || undefined },
+    })
+    setAsking(false)
+    if (error || data?.error) {
+      let msg = data?.message || 'The assistant is unavailable right now — “Suggest selection” still works offline.'
+      try { const j = await error?.context?.json?.(); if (j?.message) msg = j.message } catch { /* keep default */ }
+      toast(msg, 'err'); return
+    }
+    const v = verifyAiSelection({ aiSelection: data.selection || [], groupIndex: data.group_index || [], rows, acCatalog, consts })
+    if (v.chosen.length === 0) { toast('The assistant found nothing that passes our capacity and savings checks', 'err'); return }
+    setAskOpen(false)
+    setProposal({ ...v, note: data.note || '', usedAi: data.used_ai !== false, asked: data.stats?.asked ?? 0 })
+    const tin = data.stats?.tokens_in || 0, tout = data.stats?.tokens_out || 0
+    toast(data.used_ai === false
+      ? 'Resolved without asking the model (no AI cost)'
+      : `${num(data.stats?.groups || 0)} unit group${(data.stats?.groups || 0) === 1 ? '' : 's'} · ${num(tin)} in / ${num(tout)} out tokens`)
   }
 
   const applyProposal = async () => {
@@ -104,8 +132,11 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
         </span>
         {canManage && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <Btn disabled={busy} onClick={suggest}>Suggest selection</Btn>
-            <Btn disabled={busy || used >= MAX_SELECTION_ROWS} onClick={addBlank}>Add row</Btn>
+            <Btn disabled={busy || asking} onClick={suggest} title="Runs in-app, instantly, at no cost">Suggest selection</Btn>
+            <Btn disabled={busy || asking} onClick={() => setAskOpen((v) => !v)} title="Ask the assistant to consolidate, with a preference in your own words">
+              {asking ? 'Asking…' : 'Ask the assistant'}
+            </Btn>
+            <Btn disabled={busy || asking || used >= MAX_SELECTION_ROWS} onClick={addBlank}>Add row</Btn>
           </div>
         )}
       </div>
@@ -119,11 +150,29 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
         </div>
       )}
 
+      {askOpen && canManage && (
+        <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 12, marginBottom: 12, background: 'var(--bg-2, #FAF9F6)' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 7 }}>
+            Say what matters for this project and the assistant will consolidate around it — “as few models as possible”, “prefer one make”, “keep the cheapest that still qualifies”. Leave it blank to just get the tightest shortlist. Whatever it proposes is re-checked against our own capacity and savings math before you see it.
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input value={instruction} onChange={(e) => setInstruction(e.target.value)} maxLength={300}
+              placeholder="Optional — e.g. standardise on one make where possible"
+              onKeyDown={(e) => { if (e.key === 'Enter' && !asking) askAgent() }}
+              style={{ ...cell, flex: 1, minWidth: 240 }} />
+            <Btn variant="primary" disabled={asking} onClick={askAgent}>{asking ? 'Asking…' : 'Ask'}</Btn>
+            <Btn disabled={asking} onClick={() => setAskOpen(false)}>Cancel</Btn>
+          </div>
+        </div>
+      )}
+
       {proposal && (
         <div style={{ border: '1px solid #BFDFCF', background: '#E9F3EE', borderRadius: 8, padding: 12, marginBottom: 12 }}>
           <div style={{ fontWeight: 700, fontSize: 12.5, color: '#175A3E', marginBottom: 6 }}>
             Proposed shortlist — {num(proposal.chosen.length)} model{proposal.chosen.length === 1 ? '' : 's'} cover every compliant surveyed unit
+            {proposal.usedAi && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#6D5A8E', background: '#F3E8FF' }}>ASSISTANT · VERIFIED</span>}
           </div>
+          {proposal.note && <div style={{ fontSize: 11.5, color: '#175A3E', marginBottom: 6 }}>{proposal.note}</div>}
           <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 620 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
               <th style={{ padding: '6px', fontWeight: 600 }}>MODEL</th>
@@ -142,6 +191,13 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
               ))}
             </tbody>
           </table></div>
+          {proposal.dropped?.length > 0 && (
+            <div style={{ fontSize: 11.5, color: '#854D0E', marginTop: 6 }}>
+              {proposal.dropped.map((d, i) => (
+                <div key={i}>{d.partial ? 'Narrowed' : 'Dropped'} — {d.description}: {d.why}. {d.partial ? '' : 'Replaced by our own best pick.'}</div>
+              ))}
+            </div>
+          )}
           {proposal.impossible.length > 0 && (
             <div style={{ fontSize: 11.5, color: '#96271E', marginTop: 6 }}>
               {num(proposal.impossible.length)} surveyed line{proposal.impossible.length === 1 ? '' : 's'} have no compliant catalog unit at all — they stay unmapped and out of the savings total.

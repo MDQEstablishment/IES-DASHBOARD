@@ -1,9 +1,17 @@
 // supabase/functions/saving-sheet-agent/index.ts
-// Sprint 9D-4 — the saving-sheet AI agent. THREE judgement jobs only; the AI
+// Sprint 9D-4 — the saving-sheet AI agent. FOUR judgement jobs only; the AI
 // never does arithmetic (all savings math stays in the deterministic JS lib).
 //   job=match    : messy surveyed make/model -> old_model_registry row
 //   job=replace  : matched old unit -> best approved ac_catalog replacement
 //   job=adjust   : natural-language preference -> re-suggest affected rows
+//   job=select   : consolidate into the project's <=20-model submittal shortlist
+//
+// 9D-4b: `select` proposes only. Every pick is re-verified by the SAME
+// deterministic lib the app uses (savingSheet.js isCompliant / proposeSelection)
+// before the ESCO sees it; a pick that fails our own ±capacity / ≥savings math
+// is dropped and the deterministic best pick fills the gap. Candidates offered
+// to the model are pre-filtered to units that already PASS that math, so the
+// AI's judgement is spent on consolidation and preference, never on compliance.
 //
 // Secret: ANTHROPIC_API_KEY — the SAME Edge Function secret already used by
 // extract-delivery-pdf (same key, same bill). Never logged or echoed.
@@ -135,6 +143,44 @@ const MATCH_SYSTEM = [
   "- reason: one short sentence, plain English.",
 ].join("\n");
 
+const SELECT_TOOL = {
+  name: "record_selection",
+  description: "Record the consolidated shortlist of approved models this project will standardise on.",
+  input_schema: {
+    type: "object",
+    properties: {
+      selection: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            catalog_item_id: { type: "string", description: "id from the supplied candidates only" },
+            covers: { type: "array", items: { type: "string" }, description: "the group keys this model will replace" },
+            reason: { type: "string", description: "one short sentence — why this model earns a slot" },
+          },
+          required: ["catalog_item_id", "covers", "reason"],
+        },
+      },
+      note: { type: "string", description: "one sentence on anything the ESCO should know (optional)" },
+    },
+    required: ["selection"],
+  },
+};
+
+const SELECT_SYSTEM = [
+  "You build a material-submittal shortlist for a single air-conditioner retrofit project: the small set of approved models the project will standardise on.",
+  "Each surveyed group comes with candidates that ALREADY satisfy every hard constraint (capacity tolerance and minimum savings) — compliance is settled, do not re-judge it.",
+  "Your job is consolidation: cover every group with as FEW distinct models as possible, because fewer models means better negotiated pricing and simpler procurement and warranty.",
+  "RULES:",
+  "- catalog_item_id MUST be one of the supplied candidate ids. Never invent an id.",
+  "- A model may only 'cover' a group if that model appears in that group's own candidate list.",
+  "- Every group must be covered by exactly one model. Prefer one model covering many groups over several near-identical models.",
+  "- Hard ceiling: at most 20 models. If 20 cannot cover everything, cover the groups with the most units and say so in `note`.",
+  "- Tie-breakers, in order: covers more units, higher SEER, lower total cost.",
+  "- Do NOT compute savings, payback or percentages — the platform computes those and will re-check every pick.",
+  "- reason: one short sentence naming the deciding factor.",
+].join("\n");
+
 const REPLACE_SYSTEM = [
   "You choose the optimal approved replacement air-conditioner for an existing (old) unit in an energy-efficiency retrofit.",
   "You are given the old unit, the applicable constraints, and a shortlist of approved catalog candidates.",
@@ -206,7 +252,7 @@ Deno.serve(async (req) => {
 
     // ---- shared data -------------------------------------------------------
     const { data: entries } = await admin.from("survey_entries")
-      .select("id,make,model,equipment_type,tr,size_category,category,catalog_item_id,registry_id,match_source,match_confidence")
+      .select("id,make,model,equipment_type,tr,qty,inverter,building_id,room_type,size_category,category,catalog_item_id,registry_id,match_source,match_confidence")
       .eq("project_id", project_id).eq("category", "ac");
     const rows = entries || [];
 
@@ -393,6 +439,142 @@ Deno.serve(async (req) => {
         ok: true, job,
         cached, proposals,
         stats: { targets: targets.length, from_cache: cached.length, asked: distinctList.length, ...usage },
+      });
+    }
+
+    // ======================= JOB: SELECT (9D-4b) ===========================
+    // Propose the project's 'Aprvd Project Unit' shortlist. Compliance is
+    // decided HERE by the same formulas as savingSheet.js, and re-decided by
+    // that lib on the client before the ESCO sees a single row — the AI only
+    // consolidates and applies the ESCO's stated preference.
+    if (job === "select") {
+      const model = S.model_replace || "claude-sonnet-4-5-20250929";
+      const { data: consts } = await admin.from("tarshid_constants").select("key,value");
+      const C: Record<string, number> = {};
+      (consts || []).forEach((r: any) => { C[r.key] = Number(r.value) });
+      const tol = C.capacity_tolerance_pct ?? 10, minSav = C.min_savings_pct ?? 15, seasonal = C.seasonal_factor ?? 0.9;
+
+      const { data: chf } = await admin.from("category_hours_factors").select("assumed_old_eff").eq("category", "ac").maybeSingle();
+      const assumedOldEff = Number(chf?.assumed_old_eff) || 8;
+
+      const { data: catalog } = await admin.from("ac_catalog")
+        .select("id,description,equipment_type,make,model,capacity_btu,capacity_tr,seer,ieer,unit_cost,labor_cost").eq("is_active", true);
+      const cat = catalog || [];
+      const catById = new Map(cat.map((c: any) => [c.id, c]));
+      const { data: registry } = await admin.from("old_model_registry").select("id,equipment_type,make,model_no,tr,t1_btu,equivalent_seer");
+      const regById = new Map((registry || []).map((r: any) => [r.id, r]));
+      const { data: bldgs } = await admin.from("buildings").select("id,is_residential").eq("project_id", project_id);
+      const residential = new Set((bldgs || []).filter((b: any) => b.is_residential).map((b: any) => b.id));
+
+      // in-scope rows only — residential buildings and inverter units are out
+      // of replacement scope and must never pull a model into the shortlist
+      const scope = rows.filter((r: any) => !residential.has(r.building_id) && r.inverter !== true);
+
+      // group identical old units: one AI decision serves every row that shares
+      // the same old model, which is where most of the token saving comes from
+      const groups = new Map<string, any>();
+      for (const r of scope) {
+        const reg: any = r.registry_id ? regById.get(r.registry_id) : null;
+        const btu = Number(r.tr) > 0 ? Number(r.tr) * 12000 : (reg?.t1_btu != null ? Number(reg.t1_btu) : null);
+        const seer = reg?.equivalent_seer != null ? Number(reg.equivalent_seer) : assumedOldEff;
+        if (!btu || !seer) continue;
+        const key = r.registry_id || normalizeModel(`${r.make || ""} ${r.model || ""} ${r.tr || ""}`);
+        if (!key) continue;
+        const g = groups.get(key) || {
+          key, btu, seer, equipment_type: r.equipment_type || reg?.equipment_type || "",
+          make: r.make || reg?.make || "", model: r.model || reg?.model_no || "",
+          units: 0, entry_ids: [] as string[],
+        };
+        g.units += Number(r.qty) || 1;
+        g.entry_ids.push(r.id);
+        groups.set(key, g);
+      }
+      const groupList = [...groups.values()];
+
+      // compliance — the SAME math as savingSheet.js isCompliant()
+      const compliant = (g: any, c: any) => {
+        const newBtu = c.capacity_btu == null ? null : Number(c.capacity_btu);
+        const newSeer = c.seer == null ? (c.ieer == null ? null : Number(c.ieer)) : Number(c.seer);
+        if (!newBtu || !newSeer) return false;
+        if (Math.abs(((newBtu - g.btu) / g.btu) * 100) > tol) return false;
+        if (((newSeer - g.seer) / newSeer) * seasonal * 100 < minSav) return false;
+        const a = normalizeModel(g.equipment_type), b = normalizeModel(c.equipment_type || "");
+        if (a && b && !a.includes(b) && !b.includes(a)) return false;
+        return true;
+      };
+      const optionsFor = new Map<string, any[]>();
+      groupList.forEach((g) => optionsFor.set(g.key, cat.filter((c: any) => compliant(g, c))));
+      const coverable = groupList.filter((g) => (optionsFor.get(g.key) || []).length > 0);
+      const impossible = groupList.filter((g) => (optionsFor.get(g.key) || []).length === 0)
+        .map((g) => ({ key: g.key, make: g.make, model: g.model, units: g.units, entry_ids: g.entry_ids }));
+
+      if (!coverable.length) {
+        await logRun({ model, rows_requested: 0, rows_resolved: 0, rows_from_cache: 0, success: true, error: "no_compliant_options" });
+        return json({ ok: true, job: "select", selection: [], impossible, groups: groupList.length, used_ai: false,
+          message: "No approved catalog unit satisfies the capacity and savings rules for these surveyed units.", stats: { ...usage } });
+      }
+
+      // A single distinct model needs no judgement — skip the API entirely.
+      const distinctOptions = new Set<string>();
+      coverable.forEach((g) => (optionsFor.get(g.key) || []).forEach((c: any) => distinctOptions.add(c.id)));
+      if (distinctOptions.size <= 1 && !instruction) {
+        const only = catById.get([...distinctOptions][0]);
+        await logRun({ model, rows_requested: 0, rows_resolved: only ? 1 : 0, rows_from_cache: coverable.length, success: true });
+        return json({
+          ok: true, job: "select", used_ai: false, groups: groupList.length, impossible,
+          selection: only ? [{ catalog_item_id: only.id, covers: coverable.map((g) => g.key), reason: "The only approved unit that satisfies the capacity and savings rules" }] : [],
+          group_index: coverable.map((g) => ({ key: g.key, entry_ids: g.entry_ids, units: g.units })),
+          stats: { groups: groupList.length, asked: 0, ...usage },
+        });
+      }
+
+      const proposals: any[] = [];
+      let note = "";
+      for (let i = 0; i < coverable.length; i += CHUNK) {
+        const chunk = coverable.slice(i, i + CHUNK);
+        const candIds = new Set<string>();
+        const lines = chunk.map((g) => {
+          // already-compliant options only, best SEER first, capped for cost
+          const opts = (optionsFor.get(g.key) || [])
+            .slice()
+            .sort((a: any, b: any) => (Number(b.seer ?? b.ieer) || 0) - (Number(a.seer ?? a.ieer) || 0))
+            .slice(0, CAND_PER_ROW);
+          opts.forEach((c: any) => candIds.add(c.id));
+          return {
+            key: g.key, units: g.units,
+            old_unit: { make: g.make, model: g.model, equipment_type: g.equipment_type, btu: g.btu, seer: g.seer },
+            candidates: opts.map((c: any) => ({ id: c.id, description: c.description, make: c.make, model: c.model, btu: c.capacity_btu, seer: c.seer ?? c.ieer, unit_cost: c.unit_cost, labor_cost: c.labor_cost })),
+          };
+        });
+        const system = [
+          { type: "text", text: SELECT_SYSTEM, cache_control: { type: "ephemeral" } },
+        ];
+        const userContent: any[] = [{ type: "text", text: JSON.stringify({ groups: lines }) }];
+        if (instruction) userContent.push({ type: "text", text: `ESCO PREFERENCE (apply only where it still covers every group): ${instruction}` });
+        const out = await callClaude(model, system, [{ role: "user", content: userContent }], [SELECT_TOOL], "record_selection");
+        if (out?.note && !note) note = String(out.note).slice(0, 300);
+        for (const s of (out?.selection || [])) {
+          // SAFETY: real catalog id, and one we actually offered
+          if (!s.catalog_item_id || !catById.has(s.catalog_item_id) || !candIds.has(s.catalog_item_id)) continue;
+          // a model may only claim groups whose own candidate list contained it
+          const covers = (Array.isArray(s.covers) ? s.covers : [])
+            .filter((k: string) => (optionsFor.get(k) || []).some((c: any) => c.id === s.catalog_item_id));
+          if (!covers.length) continue;
+          proposals.push({ catalog_item_id: s.catalog_item_id, covers, reason: String(s.reason || "").slice(0, 200) });
+        }
+      }
+
+      await logRun({
+        model, rows_requested: coverable.length,
+        rows_resolved: proposals.length, rows_from_cache: 0, success: true,
+      });
+      return json({
+        ok: true, job: "select", used_ai: true, note,
+        selection: proposals, impossible, groups: groupList.length,
+        // the client maps group keys back to survey rows and re-verifies each
+        // pick with the deterministic lib before showing anything
+        group_index: coverable.map((g) => ({ key: g.key, entry_ids: g.entry_ids, units: g.units })),
+        stats: { groups: groupList.length, asked: coverable.length, ...usage },
       });
     }
 
