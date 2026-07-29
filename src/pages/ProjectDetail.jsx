@@ -6,7 +6,7 @@ import { useLiveQuery, bgUpdate, signedUrlFor } from '../lib/db'
 import { useAuth, can } from '../rbac'
 import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
-import { statusMeta, MANAGERS, SCOPE_STATUS_META } from '../lib/constants'
+import { statusMeta, MANAGERS, SCOPE_STATUS_META, FEATURES } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../components/ProjectModals'
 import SurveyTab from '../components/SurveyTab'
@@ -29,7 +29,8 @@ const DOC_COLS = [
 
 const TABS = [
   ['survey', 'Survey'],
-  ['saving', 'Saving Sheet'],
+  // 9E — the Saving Sheet deliverable is parked (FEATURES.savingSheet)
+  ...(FEATURES.savingSheet ? [['saving', 'Saving Sheet']] : []),
   ['buildings', 'Buildings'],
   ['rollup', 'BOQ'],
   ['items', 'Items & Replacements'],
@@ -304,8 +305,9 @@ export default function ProjectDetail() {
       {/* SURVEY tab (9B) — active buildings only: surplus is out of the survey */}
       {tab === 'survey' && <SurveyTab project={project} buildings={activeBuildings} initialView={surveyView} />}
 
-      {/* SAVING SHEET tab (9D-3) — pmo/admin deliverable */}
-      {tab === 'saving' && (
+      {/* SAVING SHEET tab (9D-3) — pmo/admin deliverable, parked behind
+          FEATURES.savingSheet (9E) */}
+      {FEATURES.savingSheet && tab === 'saving' && (
         <SavingSheetTab project={project} buildings={activeBuildings}
           onGoSurvey={(view) => { setSurveyView(view === 'hours' ? 'hours' : 'table'); setTab('survey') }} />
       )}

@@ -4,7 +4,7 @@ import { Btn, Modal, Empty } from '../ui'
 import Icon from '../Icon'
 import { toast } from '../../lib/toast'
 import { num, fmtDateTime } from '../../lib/format'
-import { SURVEY_CATEGORIES } from '../../lib/constants'
+import { SURVEY_CATEGORIES, FEATURES } from '../../lib/constants'
 
 const CAT_LABEL = Object.fromEntries(SURVEY_CATEGORIES)
 const PAGE = 100
@@ -68,7 +68,8 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
     setSel(new Set()); setDel(null); setBulkDel(false)
   }
 
-  const COLS = ['', 'BLDG', 'FLOOR', 'ROOM', 'TYPE', 'CAT', 'OLD UNIT', 'NEW', 'EQUIP', 'MAKE', 'MODEL', 'SIZE', 'TR', 'W', 'QTY', 'INV', 'AGE', 'REMARKS', 'BY', 'WHEN']
+  // the NEW (replacement) column ships with the parked Saving Sheet feature
+  const COLS = ['', 'BLDG', 'FLOOR', 'ROOM', 'TYPE', 'CAT', 'OLD UNIT', ...(FEATURES.savingSheet ? ['NEW'] : []), 'EQUIP', 'MAKE', 'MODEL', 'SIZE', 'TR', 'W', 'QTY', 'INV', 'AGE', 'REMARKS', 'BY', 'WHEN']
 
   return (
     <div>
@@ -89,8 +90,9 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
           <option value="all">Matching: all</option>
           <option value="needs-match">AC · needs matching</option>
           <option value="matched">AC · matched to registry</option>
-          <option value="needs-lamp">Lighting · no replacement</option>
-          <option value="linked">Any replacement mapped</option>
+          {/* replacement filters belong to the parked Saving Sheet feature */}
+          {FEATURES.savingSheet && <option value="needs-lamp">Lighting · no replacement</option>}
+          {FEATURES.savingSheet && <option value="linked">Any replacement mapped</option>}
         </select>
         {canManageAll && sel.size > 0 && <Btn variant="danger" icon="x" onClick={() => setBulkDel(true)}>Delete {sel.size}</Btn>}
       </div>
@@ -122,16 +124,19 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
                         ? <span title={`Matched to the old-model registry${e.match_source === 'ai' ? ' by the assistant' : ''} — the baseline uses its real equivalent SEER`} style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓{e.match_source === 'ai' ? <span style={{ fontFamily: 'var(--mono)', fontSize: 8, marginLeft: 2 }}>AI</span> : null}</span>
                         : <span title="Not matched to the registry — the baseline falls back to the assumed old-efficiency factor" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>match</span>}
                   </td>
-                  {/* NEW — the approved replacement, set at project level */}
-                  <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>
-                    {e.catalog_item_id
-                      ? <span title="An approved replacement is mapped on this row" style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓</span>
-                      : e.category === 'lighting'
-                        ? <span title="No approved lamp mapped — Saving Sheet → Lighting replacements" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>lamp</span>
-                        : e.category === 'ac'
-                          ? <span title="Resolved from the project unit selection, not per row" style={{ color: 'var(--text-3)', fontSize: 10 }}>proj</span>
-                          : <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>}
-                  </td>
+                  {/* NEW — the approved replacement, set at project level;
+                      parked with the Saving Sheet feature */}
+                  {FEATURES.savingSheet && (
+                    <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>
+                      {e.catalog_item_id
+                        ? <span title="An approved replacement is mapped on this row" style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓</span>
+                        : e.category === 'lighting'
+                          ? <span title="No approved lamp mapped — Saving Sheet → Lighting replacements" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>lamp</span>
+                          : e.category === 'ac'
+                            ? <span title="Resolved from the project unit selection, not per row" style={{ color: 'var(--text-3)', fontSize: 10 }}>proj</span>
+                            : <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>}
+                    </td>
+                  )}
                   <td style={{ padding: '6px' }}>{e.equipment_type || '—'}</td>
                   <td style={{ padding: '6px' }}>{e.make || '—'}</td>
                   <td style={{ padding: '6px' }}>{e.model || '—'}</td>

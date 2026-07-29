@@ -3,7 +3,7 @@ import Icon from '../components/Icon'
 import { Avatar, PageTitle, Loading, Empty } from '../components/ui'
 import { useAuth } from '../rbac'
 import { useLiveQuery } from '../lib/db'
-import { ROLE_ORDER, ROSTER, roleTitle, roleColor } from '../lib/constants'
+import { ROLE_ORDER, ROSTER, roleTitle, roleColor, FEATURES } from '../lib/constants'
 import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
 import { fmtDateTime, num } from '../lib/format'
 import { toast } from '../lib/toast'
@@ -31,7 +31,9 @@ const CATS = [
   { key: 'users', label: 'Users' },
   { key: 'roles', label: 'Roles & Permissions' },
   { key: 'catalogs', label: 'Approved Equipment' },
-  { key: 'template', label: 'Saving Sheet Template' },
+  // 9E — parked with the Saving Sheet feature; the catalogs tab above stays
+  // because the survey's old-unit picker reads the same imported registry
+  ...(FEATURES.savingSheet ? [{ key: 'template', label: 'Saving Sheet Template' }] : []),
   { key: 'audit', label: 'Audit Log' },
 ]
 
@@ -204,7 +206,7 @@ export default function Settings() {
 
           {cat === 'catalogs' && <EquipmentCatalogs role={role} />}
 
-          {cat === 'template' && (
+          {FEATURES.savingSheet && cat === 'template' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <SavingSheetTemplate role={role} />
               <AiUsageMeter role={role} />

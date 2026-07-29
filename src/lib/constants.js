@@ -9,6 +9,15 @@ export const DEMO_MODE = import.meta.env.DEV || import.meta.env.VITE_DEMO_MODE =
 export const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD || ''
 export const DEMO_DOMAIN = '@ies.demo.local'
 
+// 9E — feature flags. savingSheet parks the whole Saving Sheet deliverable
+// (project tab, Settings template section + AI usage meter, lighting
+// replacements card, replacement columns in the survey table) on the backlog.
+// Everything behind it stays in the codebase and the DB — flip to true to
+// revive. The survey-quality features it spawned (old-unit registry picker,
+// needs-matching queue, rooms auto-linkage, operating hours, catalog imports)
+// stand on their own and are NOT gated.
+export const FEATURES = { savingSheet: false }
+
 // role -> email (Phase 2 auth.users) + display name fallback
 export const ROSTER = {
   ceo:   { email: 'ahmed.hussam' + DEMO_DOMAIN,    name: 'Ahmed Hussam' },
