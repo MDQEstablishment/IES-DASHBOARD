@@ -63,14 +63,18 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
     let rows = 0, mem = 0
     const isMatch = result.job === 'match'
     try {
-      // cached entries (exact / remembered) — apply directly to the survey rows
+      // cached entries (exact / remembered) — apply directly to the survey rows.
+      // data.length is checked, not just error: an RLS-denied or concurrently
+      // deleted row updates 0 rows with NO error, and counting that as success
+      // would toast writes that never landed.
+      let noop = 0
       for (const c of (result.cached || [])) {
         if (!picked.has('c:' + c.entry_id)) continue
         const patch = isMatch
           ? { registry_id: c.registry_id, match_source: c.source === 'alias' ? 'ai' : 'human', match_confidence: c.confidence ?? 1 }
           : { catalog_item_id: c.catalog_item_id }
-        const { error } = await supabase.from('survey_entries').update(patch).eq('id', c.entry_id).select('id')
-        if (!error) rows++
+        const { data, error } = await supabase.from('survey_entries').update(patch).eq('id', c.entry_id).select('id')
+        if (!error && data?.length) rows++; else noop++
       }
       // AI proposals — write the survey rows AND the permanent memory
       for (let i = 0; i < (result.proposals || []).length; i++) {
@@ -79,31 +83,36 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
         if (isMatch) {
           if (!p.registry_id) continue
           for (const id of p.entry_ids || []) {
-            const { error } = await supabase.from('survey_entries')
+            const { data, error } = await supabase.from('survey_entries')
               .update({ registry_id: p.registry_id, match_source: 'ai', match_confidence: p.confidence })
               .eq('id', id).select('id')
-            if (!error) rows++
+            if (!error && data?.length) rows++; else noop++
           }
-          // alias memory: accepted-by-human, so this string never costs a token again
+          // alias memory: accepted-by-human, so this string never costs a token
+          // again — a FAILED write here means the decision WILL be re-billed,
+          // so it is surfaced, never swallowed
           const { error: aErr } = await supabase.from('model_aliases').upsert({
             raw_normalized: p.key || norm(p.raw), raw_sample: p.raw,
             registry_id: p.registry_id, confidence: p.confidence, source: 'human', reason: p.reason,
           }, { onConflict: 'raw_normalized' })
-          if (!aErr) mem++
+          if (!aErr) mem++; else toast(`Decision for "${p.raw}" was applied but NOT remembered — ${aErr.message}`, 'err')
         } else {
           if (!p.catalog_item_id) continue
           for (const id of p.entry_ids || []) {
-            const { error } = await supabase.from('survey_entries')
+            const { data, error } = await supabase.from('survey_entries')
               .update({ catalog_item_id: p.catalog_item_id }).eq('id', id).select('id')
-            if (!error) rows++
+            if (!error && data?.length) rows++; else noop++
           }
           const { error: rErr } = await supabase.from('replacement_choices').upsert({
             registry_id: p.registry_id, catalog_item_id: p.catalog_item_id, source: 'human', reason: p.reason,
           }, { onConflict: 'registry_id' })
-          if (!rErr) mem++
+          if (!rErr) mem++; else toast(`Choice for "${p.raw}" was applied but NOT remembered — ${rErr.message}`, 'err')
         }
       }
-      toast(`${num(rows)} survey row${rows === 1 ? '' : 's'} updated · ${num(mem)} decision${mem === 1 ? '' : 's'} remembered`)
+      toast(noop
+        ? `${num(rows)} updated · ${num(noop)} did not persist (deleted or not yours to edit) · ${num(mem)} remembered`
+        : `${num(rows)} survey row${rows === 1 ? '' : 's'} updated · ${num(mem)} decision${mem === 1 ? '' : 's'} remembered`,
+        noop ? 'err' : undefined)
       setResult(null); setPicked(new Set()); onChanged?.()
     } catch (e) {
       toast('Could not apply — ' + (e?.message || e), 'err')

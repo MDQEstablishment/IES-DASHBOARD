@@ -308,7 +308,7 @@ export default function ProjectDetail() {
           FEATURES.savingSheet (9E) */}
       {FEATURES.savingSheet && tab === 'saving' && (
         <SavingSheetTab project={project} buildings={activeBuildings}
-          onGoSurvey={(view) => { setSurveyView(view === 'hours' ? 'hours' : 'table'); setTab('survey') }} />
+          onGoSurvey={(view) => { setSurveyView({ v: view === 'hours' ? 'hours' : 'table' }); setTab('survey') }} />
       )}
 
       {/* BUILDINGS tab */}

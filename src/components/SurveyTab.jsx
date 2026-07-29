@@ -17,9 +17,11 @@ export default function SurveyTab({ project, buildings, initialView }) {
   const { role, user } = useAuth()
   const canWrite = can(role, CAN_SURVEY)
   const canManageAll = ['pmo', 'admin'].includes(role) || (role === 'projm' && project.pm_id === user?.id)
-  // initialView lets the Saving Sheet readiness report deep-link here
-  const [view, setView] = useState(initialView || 'log')  // 'log' | 'table' | 'hours'
-  useEffect(() => { if (initialView) setView(initialView) }, [initialView])
+  // initialView lets the Saving Sheet readiness report deep-link here. It is
+  // an OBJECT ({ v }) so clicking the same "Go fix" twice still navigates —
+  // a plain string had stable identity and the effect never re-fired.
+  const [view, setView] = useState(initialView?.v || initialView || 'log')  // 'log' | 'table' | 'hours'
+  useEffect(() => { if (initialView) setView(initialView.v || initialView) }, [initialView])
   const [editing, setEditing] = useState(null) // null | {} (new) | row
   const [exporting, setExporting] = useState(false)
 

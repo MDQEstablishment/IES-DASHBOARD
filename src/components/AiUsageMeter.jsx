@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
-import { useLiveQuery, bgUpdate } from '../lib/db'
+import { supabase } from '../lib/supabase'
+import { useLiveQuery } from '../lib/db'
 import { Empty } from './ui'
+import { toast } from '../lib/toast'
 import { num, fmtDateTime, toLatin } from '../lib/format'
 
 // 9D-4 — AI agent usage meter, mirroring the PDF-extraction meter pattern.
@@ -11,31 +13,43 @@ const usd = (v) => `$${(Number(v) || 0).toFixed(2)}`
 
 export default function AiUsageMeter({ role }) {
   const canWrite = ['admin', 'pmo'].includes(role)
+  // LOCAL month start — the card says "this calendar month", and the team is
+  // UTC+3: a UTC boundary billed the first three hours of each month backwards
   const monthIso = useMemo(() => {
     const d = new Date()
-    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString()
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString()
   }, [])
+  // recent runs for the table (capped) …
   const { rows: runs } = useLiveQuery('ai_runs', (q) =>
     q.select('*, actor:profiles!ai_runs_created_by_fkey(full_name), project:projects(code)')
       .gte('created_at', monthIso).order('created_at', { ascending: false }).limit(50), [monthIso])
+  // … but the TOTALS sum every run this month, uncapped — the server-side gate
+  // sums all rows, so a limit here made the meter read "under budget" while
+  // the Edge Function was already refusing calls
+  const { rows: allRuns } = useLiveQuery('ai_runs', (q) =>
+    q.select('cost_usd,tokens_in,tokens_out,cache_read_tokens,rows_from_cache,rows_requested')
+      .gte('created_at', monthIso), [monthIso])
   const { rows: settings, refetch } = useLiveQuery('ai_settings', (q) => q.select('*').order('key'))
 
   const S = Object.fromEntries(settings.map((s) => [s.key, s]))
   const cap = Number(S.monthly_cap_usd?.value ?? 25)
-  const spent = runs.reduce((a, r) => a + Number(r.cost_usd || 0), 0)
-  const tIn = runs.reduce((a, r) => a + (r.tokens_in || 0), 0)
-  const tOut = runs.reduce((a, r) => a + (r.tokens_out || 0), 0)
-  const cacheRead = runs.reduce((a, r) => a + (r.cache_read_tokens || 0), 0)
-  const fromCache = runs.reduce((a, r) => a + (r.rows_from_cache || 0), 0)
-  const asked = runs.reduce((a, r) => a + (r.rows_requested || 0), 0)
+  const spent = allRuns.reduce((a, r) => a + Number(r.cost_usd || 0), 0)
+  const tIn = allRuns.reduce((a, r) => a + (r.tokens_in || 0), 0)
+  const tOut = allRuns.reduce((a, r) => a + (r.tokens_out || 0), 0)
+  const cacheRead = allRuns.reduce((a, r) => a + (r.cache_read_tokens || 0), 0)
+  const fromCache = allRuns.reduce((a, r) => a + (r.rows_from_cache || 0), 0)
+  const asked = allRuns.reduce((a, r) => a + (r.rows_requested || 0), 0)
   const pct = cap > 0 ? Math.min(100, Math.round((spent / cap) * 100)) : 0
 
-  const saveSetting = (key, raw) => {
+  const saveSetting = async (key, raw) => {
     const row = S[key]
     if (!row) return
     const v = key === 'monthly_cap_usd' || key === 'min_auto_confidence' ? numFilter(raw) : String(raw).trim()
     if (!v || v === row.value) return
-    bgUpdate('ai_settings', row.key, { value: v }, { okMsg: 'Saved' }).then(() => refetch())
+    // ai_settings' primary key is `key`, not `id` — bgUpdate can't target it
+    const { data, error } = await supabase.from('ai_settings').update({ value: v }).eq('key', row.key).select('key')
+    if (error || !data?.length) { toast("Couldn't save — " + (error?.message || 'no permission'), 'err'); return }
+    toast('Saved'); refetch()
   }
 
   return (
@@ -47,7 +61,7 @@ export default function AiUsageMeter({ role }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div lang="en" dir="ltr" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>
-          <span>RUNS <b style={{ color: 'var(--text)' }}>{num(runs.length)}</b></span>
+          <span>RUNS <b style={{ color: 'var(--text)' }}>{num(allRuns.length)}</b></span>
           <span>ASKED <b style={{ color: 'var(--text)' }}>{num(asked)}</b></span>
           <span>FROM MEMORY <b style={{ color: 'var(--ok)' }}>{num(fromCache)}</b></span>
           <span>TOKENS <b style={{ color: 'var(--text)' }}>{num(tIn)}</b> in / <b style={{ color: 'var(--text)' }}>{num(tOut)}</b> out</span>

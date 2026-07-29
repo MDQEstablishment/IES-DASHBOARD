@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { bgUpdate, bgDelete } from '../lib/db'
 import { Btn, Empty } from './ui'
@@ -16,7 +16,7 @@ const cell = { padding: '5px 7px', border: '1px solid var(--line-ctrl)', borderR
 
 function CostInput({ value, onSave, disabled }) {
   const [v, setV] = useState(value == null ? '' : String(value))
-  useMemo(() => { setV(value == null ? '' : String(value)) }, [value])
+  useEffect(() => { setV(value == null ? '' : String(value)) }, [value])
   return (
     <input lang="en" dir="ltr" inputMode="decimal" value={v} disabled={disabled} placeholder="—"
       onChange={(e) => setV(numFilter(e.target.value))}
@@ -94,7 +94,7 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
       if (s.source === 'human' && s.description) continue
       await bgDelete('project_unit_selection', s.id)
     }
-    let n = 0
+    let n = 0, lastErr = null
     for (let i = 0; i < final.length; i++) {
       const row_no = i + 1
       const item = final[i]
@@ -105,12 +105,16 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
       const { error } = await supabase.from('project_unit_selection').insert({
         project_id: project.id, row_no, catalog_item_id: item.catalog_item_id, description: item.description,
         unit_cost: item.unit_cost, labor_cost: item.labor_cost, saso_ref: item.saso_ref,
-        datasheet_ref: item.datasheet_ref, source: 'ai', reason: item.reason,
+        // only genuinely AI-authored picks are recorded as 'ai' — the
+        // deterministic engine's picks are the platform's own (audited SRC chip)
+        datasheet_ref: item.datasheet_ref, source: item.from_ai ? 'ai' : 'human', reason: item.reason,
       })
       if (!error) n++
+      else lastErr = error
     }
     setBusy(false); setProposal(null); refetch()
-    toast(`${num(n)} model${n === 1 ? '' : 's'} added to the project selection`)
+    if (lastErr) toast(`${num(n)} of ${num(final.filter((f) => !f._keep).length)} added — last error: ${lastErr.message}`, 'err')
+    else toast(`${num(n)} model${n === 1 ? '' : 's'} added to the project selection`)
   }
 
   const patch = async (row, p) => { const { error } = await bgUpdate('project_unit_selection', row.id, p); if (!error) refetch() }
@@ -119,7 +123,8 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
     const next = Math.max(0, ...selection.map((s) => s.row_no)) + 1
     if (next > MAX_SELECTION_ROWS) { toast(`The sheet only holds ${MAX_SELECTION_ROWS} models (VLOOKUP range B2:N21)`, 'err'); return }
     const { error } = await supabase.from('project_unit_selection').insert({ project_id: project.id, row_no: next, source: 'human' })
-    if (!error) refetch()
+    if (error) { toast("Couldn't add a row — " + error.message, 'err'); return }
+    refetch()
   }
 
   return (

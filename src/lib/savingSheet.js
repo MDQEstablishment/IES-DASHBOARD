@@ -83,9 +83,12 @@ export function bestFromSelection(row, selCats, consts) {
     const v = isCompliant(row, cat, consts)
     if (!v.ok) continue
     if (!best) { best = { cat, savPct: v.savPct }; continue }
-    const cost = Number(cat.unit_cost), bcost = Number(best.cat.unit_cost)
+    // Number(null) is 0, so an UNPRICED unit would rank as the cheapest and
+    // always win the tie-break — null must mean "most expensive", not free
+    const costOf = (c) => (c.unit_cost == null ? Infinity : Number(c.unit_cost))
+    const cost = costOf(cat), bcost = costOf(best.cat)
     const better = v.savPct > best.savPct ||
-      (v.savPct === best.savPct && ((Number.isFinite(cost) ? cost : Infinity) < (Number.isFinite(bcost) ? bcost : Infinity) ||
+      (v.savPct === best.savPct && (cost < bcost ||
         (cost === bcost && String(cat.id) < String(best.cat.id))))
     if (better) best = { cat, savPct: v.savPct }
   }
