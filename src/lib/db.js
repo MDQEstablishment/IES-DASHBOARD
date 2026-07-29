@@ -54,15 +54,6 @@ export function useLiveQuery(table, build, deps = []) {
   return { ...state, refetch }
 }
 
-// One-shot query helper (no realtime) for detail views.
-export async function fetchOne(table, build) {
-  const base = supabase.from(table)
-  const q = build ? build(base) : base.select('*')
-  const { data, error } = await q
-  if (error) { console.error('[IES] fetchOne', table, error); return null }
-  return data
-}
-
 // ---------------------------------------------------------------------------
 // Background write helpers — optimistic by convention: the caller mutates local
 // state first and passes a `rollback` to restore it if the server rejects.
@@ -117,23 +108,6 @@ export async function bgDelete(table, id, opts = {}) {
   }
   if (opts.okMsg) toast(opts.okMsg)
   return { ok: true }
-}
-
-// ---------------------------------------------------------------------------
-// Photo upload to the private `images` bucket. 500 KB cap + image/* enforced
-// client-side (mirrors the bucket policy). Namespaced by user + date.
-// ---------------------------------------------------------------------------
-export const MAX_IMAGE_BYTES = 512000
-
-export async function uploadPhoto(file, userId) {
-  if (!file.type.startsWith('image/')) { toast('Only image files are allowed', 'err'); return { error: 'mime' } }
-  if (file.size > MAX_IMAGE_BYTES) { toast('Image exceeds the 500 KB limit', 'err'); return { error: 'size' } }
-  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
-  const date = new Date().toISOString().slice(0, 10)
-  const path = `${userId}/${date}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-  const { error } = await supabase.storage.from('images').upload(path, file, { contentType: file.type, upsert: false })
-  if (error) { toast('Upload failed — ' + error.message, 'err'); return { error } }
-  return { path }
 }
 
 export async function signedUrl(path, expires = 3600) {

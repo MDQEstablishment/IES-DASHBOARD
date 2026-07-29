@@ -12,7 +12,6 @@ const xmlEsc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').rep
 const unesc = (s) => String(s).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&')
 
 export const colToNum = (c) => [...c.toUpperCase()].reduce((a, ch) => a * 26 + (ch.charCodeAt(0) - 64), 0)
-export const numToCol = (n) => { let s = ''; while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26) } return s }
 const refParts = (ref) => { const m = /^([A-Z]+)(\d+)$/.exec(ref); return m ? { col: m[1], row: parseInt(m[2], 10) } : null }
 
 export function openXlsx(buf) {

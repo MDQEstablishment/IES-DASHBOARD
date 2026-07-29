@@ -1,7 +1,7 @@
 // RBAC-driven navigation + nested breadcrumb derivation.
 // Mirrors the .dc.html contract: the top-nav is built from `roleNav` (seed, dc
-// lines 1146-1156), NOT a flat hard-coded list. Buildings / Install-Log /
-// Documents / Daily-Progress are DRILL-INS reached by nesting, never top-nav.
+// lines 1146-1156), NOT a flat hard-coded list. Building detail, its install-log
+// item view and Daily Progress are DRILL-INS reached by nesting, never top-nav.
 
 // role -> ordered list of nav ids (verbatim from dc seed roleNav{})
 export const ROLE_NAV = {
@@ -31,10 +31,6 @@ export const NAV_CATALOG = {
 export function navForRole(role) {
   const ids = ROLE_NAV[role] || ROLE_NAV.pmo
   return ids.map((id) => NAV_CATALOG[id]).filter(Boolean)
-}
-
-export function canSeeRoute(role, navId) {
-  return (ROLE_NAV[role] || ROLE_NAV.pmo).includes(navId)
 }
 
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s)

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useLiveQuery } from '../lib/db'
-import { Btn, Empty } from './ui'
+import { Empty } from './ui'
 import { toast } from '../lib/toast'
 import { num } from '../lib/format'
 

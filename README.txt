@@ -1,38 +1,23 @@
-IES — Programme Control Platform · Prototype Package
-=====================================================
+IES PROGRAMME CONTROL PLATFORM
+==============================
 
-QUICK START
------------
-Double-click  index.html  to open the platform landing page.
-Internet connection is required on first launch (loads React + Babel from CDN).
-After that you can click any of the 10 pages.
+Tarshid energy-retrofit programme control: projects, buildings, field survey,
+materials, deliveries, doc tracker, COCs, reports.
 
-CONTENTS (10 pages, fully interactive)
---------------------------------------
-  index.html             — Landing / page selector
-  Login.html             — Sign-in (8 role tiles)
-  Dashboard.html         — Portfolio KPIs + 2-week look-ahead
-  Projects.html          — Cross-portfolio project list
-  Project-Detail.html    — Single project view (MOI-Asir)
-  Building-Detail.html   — 12-stage tracker, rooms, photos, docs
-  My-Tasks.html          — Approval chains + bottleneck detection
-  My-Escalation.html     — 5-step escalation chain + impact
-  Materials.html         — 7-step material cycle + auto-deduct
-  Reports.html           — Filter builders + quick exports
-  Settings.html          — 12-category admin self-service
+Stack: React 18 + Vite 5, Supabase (Postgres + RLS + Edge Functions + Storage),
+HashRouter, inline styles over CSS variables (src/index.css).
 
-DESIGN
-------
-- Dark sidebar (#0F172A) + light content area (#F8FAFC)
-- Inter sans-serif + JetBrains Mono for numbers/labels
-- Blue accent (#2563EB), traffic-light status colours
-- Optimised for 1480px desktop viewport (use Chrome / Edge full screen)
+Run locally:
+  npm install
+  npm run dev
 
-NOTES
------
-- All data is illustrative for the MOI-Asir programme demo
-- No backend required — pure client-side React
-- Open in Chrome / Edge / Safari (any modern browser)
+Build:  npm run build        (output in dist/)
+Deploy: push to main — GitHub Actions builds and publishes to GitHub Pages at
+        https://mdqestablishment.github.io/IES-DASHBOARD/
 
-For the formal client proposal and structured review questions, see the
-accompanying Client_Proposal.pdf and Client_Review.docx
+Database schema lives in supabase/migrations/ (applied via Supabase, not by the
+app). Feature flags live in src/lib/constants.js (FEATURES) — the Saving Sheet
+deliverable is currently parked behind FEATURES.savingSheet = false.
+
+The *.html files at the repo root are the original static design mockups the
+app was built from — reference only, not served.

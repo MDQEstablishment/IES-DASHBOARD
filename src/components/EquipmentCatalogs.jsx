@@ -11,7 +11,7 @@ import TarshidImportModal from './TarshidImportModal'
 // Sprint 9A — TARSHID-approved equipment catalogs (from the MOH-H DIP TDS).
 // Three global reference tables surfaced as a Settings panel. Everyone reads;
 // only admin/pmo write (enforced server-side; the write UI is gated to match).
-// The Saving Sheet (9C) will consume these rows by id — retire is soft
+// The survey pickers consume these rows by id — retire is soft
 // (is_active=false), never hard delete, so those references stay valid.
 
 const PAGE_SIZE = 100

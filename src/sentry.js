@@ -15,7 +15,6 @@ export function initSentry() {
       tracesSampleRate: 0.2,
       integrations: [],
     })
-    console.info('[IES] Sentry initialised.')
   } catch (e) {
     console.warn('[IES] Sentry init failed:', e)
   }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Icon from '../components/Icon'
-import { RingChart, Loading, Empty, Drawer } from '../components/ui'
+import { Loading, Empty, Drawer } from '../components/ui'
 import { useLiveQuery } from '../lib/db'
 import { ago } from '../lib/format'
 

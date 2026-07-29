@@ -26,7 +26,6 @@ h1,h2,h3,p{margin:0}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-thumb{background:#C9C3B4;border-radius:6px}
 ::-webkit-scrollbar-track{background:transparent}
-@keyframes iesPulse{0%,100%{box-shadow:0 0 0 0 rgba(194,154,75,.55)}50%{box-shadow:0 0 0 6px rgba(194,154,75,0)}}
 @keyframes iesBlink{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes iesDrawer{from{transform:translateY(-12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes iesSlideR{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -49,8 +48,6 @@ h1,h2,h3,p{margin:0}
   .ies-content{padding:14px !important}
   .ies-topmeta{display:none !important}
   .ies-bdrail{grid-template-columns:1fr !important}
-  .ies-logrow{grid-template-columns:1fr !important}
-  .ies-set2{grid-template-columns:1fr !important}
   .ies-login{grid-template-columns:1fr !important}
   .ies-loginleft{display:none !important}
 }
@@ -84,7 +81,6 @@ h1,h2,h3,p{margin:0}
 .ies-tbl tr:last-child td{border-bottom:none}
 /* Sprint 7.6 Fix #2 — global long-text guards for table cells & lists */
 .ies-ellipsis{display:inline-block;max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
-.ies-ellipsis-sm{display:inline-block;max-width:20ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .ies-clamp2{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* Sprint 8M additions — extend, don't replace */

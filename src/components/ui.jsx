@@ -62,19 +62,6 @@ export function Empty({ icon = 'doc', children = 'Nothing here yet.' }) {
   return <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 13 }}><span style={{ color: '#C9C3B4' }}><Icon name={icon} size={22} /></span><span>{children}</span></div>
 }
 
-// Section card header used across screens
-export function CardHead({ title, meta, right }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
-        {meta && <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', letterSpacing: '.5px' }}>{meta}</div>}
-      </div>
-      {right}
-    </div>
-  )
-}
-
 export function PageTitle({ kicker, title, right }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 18, flexWrap: 'wrap' }}>

@@ -61,26 +61,10 @@ export const ROLE_CARDS = [
 
 // permission groups (mirror the RLS write scopes)
 export const MANAGERS = ['projm', 'progm', 'pmo', 'ceo']
-export const PROCUREMENT = ['procm', 'proco']
-export const PMO_ADMIN = ['pmo', 'admin']
 export const CAN_INSTALL = ['proje', 'projm', 'progm', 'pmo', 'ceo']
 export const CAN_RAISE_TASK = ['proje', 'projm', 'progm', 'pmo', 'ceo', 'procm', 'proco']
 export const CAN_MOVE_MATERIAL = ['procm', 'proco', 'projm', 'progm', 'pmo', 'ceo']
 export const CAN_QA = ['projm', 'progm', 'pmo']
-
-// top-nav (owner's 11 routes, dc icon names; Project/Building detail are drill-ins)
-export const NAV = [
-  { to: '/', label: 'Daily Progress', icon: 'daily' },
-  { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-  { to: '/projects', label: 'Projects', icon: 'projects' },
-  { to: '/buildings', label: 'Buildings', icon: 'buildings' },
-  { to: '/install-log', label: 'Install Log', icon: 'reports' },
-  { to: '/tasks', label: 'Tasks', icon: 'tasks' },
-  { to: '/escalations', label: 'Escalations', icon: 'escalation' },
-  { to: '/documents', label: 'Documents', icon: 'doc' },
-  { to: '/esms', label: 'Materials', icon: 'materials' },
-  { to: '/settings', label: 'Settings', icon: 'settings' },
-]
 
 // 12-stage retrofit cycle
 export const STAGES = [
@@ -89,10 +73,6 @@ export const STAGES = [
   'WIR', 'Client Sign-off', 'COC', 'Final Payment',
 ]
 
-export const DOC_KIND = {
-  material_submittal: 'MS', method_statement: 'MOS', mock_up: 'MOCK',
-  mir: 'MIR', wir: 'WIR', coc: 'COC', other: 'DOC',
-}
 export const DOC_KIND_FULL = {
   material_submittal: 'Material Submittal', method_statement: 'Method Statement', mock_up: 'Mock-up',
   mir: 'Material Inspection', wir: 'Work Inspection', coc: 'Completion Cert.', other: 'Other',
@@ -119,14 +99,6 @@ export const STATUS = {
 export const statusMeta = (s) => STATUS[s] || ['#8A8577', '#F0EDE4', String(s ?? '—').replace(/_/g, ' ')]
 export const labelize = (s) => (s == null ? '—' : String(s).replace(/_/g, ' '))
 
-// 9B — retrofit lifecycle phase (survey -> saving_sheet -> monitoring -> closeout)
-export const PROJECT_PHASE_ORDER = ['survey', 'saving_sheet', 'monitoring', 'closeout']
-export const PROJECT_PHASE_META = {
-  survey: { label: 'Survey', color: '#A0762B', bg: '#F5EEDF' },
-  saving_sheet: { label: 'Saving Sheet', color: '#B45309', bg: '#FAF3E3' },
-  monitoring: { label: 'Monitoring', color: '#217A54', bg: '#E9F3EE' },
-  closeout: { label: 'Close-out', color: '#3B6C8F', bg: '#EAF1F6' },
-}
 // Survey capture roles (client gate; RLS w_bld/w_proj is the real enforcement)
 export const CAN_SURVEY = ['proje', 'projm', 'progm', 'pmo', 'admin']
 export const SURVEY_CATEGORIES = [['lighting', 'Lighting'], ['ac', 'AC'], ['sensor', 'Sensor'], ['other', 'Other']]
