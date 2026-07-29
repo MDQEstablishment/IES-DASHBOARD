@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useLiveQuery, uploadToBucket, signedUrlFor } from '../../lib/db'
 import { fetchAllRows } from '../../lib/tarshidImport'
 import { m2PerTon } from '../../lib/savingSheet'
-import { num, roomKey } from '../../lib/format'
+import { num, roomKey, toLatin } from '../../lib/format'
 import { compressImage } from '../../lib/image'
 import { Modal, Btn, Field, inputStyle } from '../ui'
 import { toast } from '../../lib/toast'
@@ -14,7 +14,6 @@ const PHOTO_BUCKET = 'daily-progress-photos'
 const control = { ...inputStyle, boxSizing: 'border-box', width: '100%', maxWidth: '100%' }
 
 // Latin-digit enforcement (same rule as 9A-fix): map Arabic-Indic/Persian -> Latin, strip the rest.
-const toLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0)
 const numFilter = (s) => toLatin(s).replace(/[^\d.-]/g, '')
 const ROOM_TYPES = ['Office', 'Corridor', 'Toilet', 'Meeting Room', 'Lobby', 'Reception', 'Ward', 'Clinic', 'Laboratory', 'Warehouse', 'Kitchen', 'Electrical Room', 'Staircase', 'Parking', 'Outdoor']
 

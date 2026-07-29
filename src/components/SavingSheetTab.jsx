@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
-import { useLiveQuery, bgInsert, bgUpdate, signedUrlFor } from '../lib/db'
+import { useLiveQuery, bgInsert, bgUpdate, openSigned } from '../lib/db'
 import { Btn, Empty, Loading, Modal } from './ui'
 import Icon from './Icon'
 import { toast } from '../lib/toast'
@@ -128,8 +128,7 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
   }
 
   const download = async (s) => {
-    const url = await signedUrlFor('saving-sheets', s.storage_path, 3600)
-    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the workbook", 'err')
+    await openSigned('saving-sheets', s.storage_path, 'workbook')
   }
   const setStatus = async (s, status, extra = {}) => {
     const { error } = await bgUpdate('saving_sheets', s.id, { status, ...extra }, { okMsg: `Revision ${s.revision} → ${STATUS_META[status][0]}` })

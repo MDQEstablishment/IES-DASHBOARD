@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor } from '../lib/db'
+import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, openSigned } from '../lib/db'
 import { Btn, Empty } from './ui'
 import FileDropZone from './FileDropZone'
 import { toast } from '../lib/toast'
@@ -38,8 +38,7 @@ export default function SavingSheetTemplate({ role }) {
   }
 
   const download = async (r) => {
-    const url = await signedUrlFor(BUCKET, r.storage_path, 3600)
-    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the template", 'err')
+    await openSigned(BUCKET, r.storage_path, 'template')
   }
 
   const activate = async (r) => {

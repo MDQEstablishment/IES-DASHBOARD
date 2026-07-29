@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useLiveQuery } from '../lib/db'
 import { Empty } from './ui'
 import { toast } from '../lib/toast'
-import { num } from '../lib/format'
+import { num, toLatin } from '../lib/format'
 
 // 9D-6 — the approved lamp is a project decision, exactly like the AC unit, so
 // it left the field form with it. There is no approved registry of EXISTING
@@ -11,7 +11,6 @@ import { num } from '../lib/format'
 // lighting is surveyed as wattage + nameplate photo and mapped here instead:
 // one decision per distinct surveyed fitting, applied to every row that shares
 // it, rather than the same choice retyped in every room.
-const toLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0)
 const UNIT_WORDS = new Set(['w', 'watt', 'watts', 'lm', 'lumen', 'lumens', 'k'])
 const ctrl = { padding: '7px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12.5, width: '100%', boxSizing: 'border-box' }
 

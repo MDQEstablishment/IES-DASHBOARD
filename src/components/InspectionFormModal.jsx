@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../rbac'
-import { useLiveQuery } from '../lib/db'
+import { useLiveQuery, downloadBlob } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import { compressImage } from '../lib/image'
@@ -122,8 +122,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     const res = await commitInspectionDoc({ kind, project, esm: chosenEsm, building, userId: user.id, referenceNo: refNo, revNo, title: docTitle.trim() || (chosenEsm ? chosenEsm.code : kind.toUpperCase()), storage: storage.trim(), installation: installation.trim(), bytes })
     setBusy(false)
     if (res?.error) { toast(`${kind.toUpperCase()} save failed — ${res.error.message || ''}`, 'err'); return }
-    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
-    const a = document.createElement('a'); a.href = url; a.download = res.filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), res.filename)
     toast(`${res.referenceNo} generated — added to Doc Tracker`)
     onDone?.(); onClose?.()
   }

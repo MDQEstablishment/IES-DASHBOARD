@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { zipSync } from 'fflate'
 import { supabase } from '../lib/supabase'
+import { downloadBlob } from '../lib/db'
 import { useAuth } from '../rbac'
 import { Modal, Btn, Empty, Spinner } from './ui'
 import { toast } from '../lib/toast'
@@ -116,11 +117,7 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
     const input = {}
     Object.entries(zipFiles).forEach(([name, bytes]) => { input[name] = [bytes, { level: 0 }] }) // PDFs don't recompress
     const zipped = zipSync(input)
-    const url = URL.createObjectURL(new Blob([zipped], { type: 'application/zip' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = `${project?.code || 'PROJECT'}-COCs.zip`
-    document.body.appendChild(a); a.click(); a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 5000)
+    downloadBlob(new Blob([zipped], { type: 'application/zip' }), `${project?.code || 'PROJECT'}-COCs.zip`)
   }
 
   const selCount = newRows.filter((r) => selected.has(r._i)).length

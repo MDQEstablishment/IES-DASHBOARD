@@ -145,3 +145,21 @@ export async function signedUrlFor(bucket, path, expires = 3600) {
   if (error) return null
   return data?.signedUrl || null
 }
+
+// 9E — open a storage object in a new tab. This two-liner had drifted into
+// nine copies (two of which failed silently, one bypassing signedUrlFor).
+export async function openSigned(bucket, path, label = 'file') {
+  const url = await signedUrlFor(bucket, path, 3600)
+  if (url) window.open(url, '_blank', 'noopener')
+  else toast(`Couldn't open the ${label}`, 'err')
+}
+
+// 9E — trigger a client-side file download. Four copies existed with four
+// different URL-revoke strategies; remove-then-revoke is the safe order.
+export function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = filename
+  document.body.appendChild(a); a.click(); a.remove()
+  URL.revokeObjectURL(url)
+}

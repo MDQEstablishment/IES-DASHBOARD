@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { localDayKey } from '../lib/format'
 
 // Locale-proof date picker. Native <input type="date"> defers to the OS locale
 // in Chromium (ignores lang/html-lang), so on an ar-SA machine it renders
@@ -91,7 +92,7 @@ export default function DateInput({ value = '', onChange, style, placeholder = '
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11 }}>
             <button type="button" onClick={() => { setText(''); fire(''); setOpen(false) }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>Clear</button>
-            <button type="button" onClick={() => { const t = new Date(); const v = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`; setText(v); fire(v); setOpen(false) }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 700 }}>Today</button>
+            <button type="button" onClick={() => { const v = localDayKey(new Date()); setText(v); fire(v); setOpen(false) }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 700 }}>Today</button>
           </div>
         </div>
       )}

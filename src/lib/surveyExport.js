@@ -5,7 +5,7 @@
 // (9C). AC-only columns are filled only for category 'ac'. xlsx (SheetJS) is
 // loaded lazily so it stays out of the main bundle.
 import { signedUrlFor } from './db'
-import { localDayKey } from './format'
+import { localDayKey, localToday } from './format'
 
 const PHOTO_BUCKET = 'daily-progress-photos' // survey photos live here, prefix survey/<building_id>/
 // The exported workbook is a long-lived artifact — the default 1h signed-URL
@@ -25,7 +25,9 @@ export const ESCO_HEADERS = [
   'In Repl. Scope (Yes/No)', 'AC Type Match Check', 'Calculated EFLH',
 ]
 
-const dstr = (ts) => { try { return new Date(ts).toISOString().slice(0, 10) } catch { return '' } }
+// local day, not UTC — toISOString() shifted rows logged 00:00-03:00 local
+// onto the previous day (the exact drift localDayKey exists to prevent)
+const dstr = (ts) => (ts ? localDayKey(ts) : '')
 const nz = (v) => (v == null || v === '' ? '' : v)
 
 async function resolvePhotos(entries) {
@@ -98,6 +100,6 @@ export async function exportSurveyXlsx(entries, { projectName = '', projectCode 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(main), 'New Survey')
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(attrib), 'Attribution')
-  const stamp = new Date().toISOString().slice(0, 10)
+  const stamp = localToday()
   XLSX.writeFile(wb, `survey-${(projectCode || 'export').replace(/[^\w-]/g, '')}-${stamp}.xlsx`)
 }

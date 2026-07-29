@@ -5,14 +5,17 @@
 // produces UPSERT-ready rows. NEVER deletes; numbers are rounded sanely
 // (SEER/EER 2dp, BTU/W integers, costs 2dp).
 import { supabase } from './supabase'
+import { toLatin } from './format'
 
 // ---- normalizers ------------------------------------------------------------
 const normKey = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 export const normModel = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
 const normText = (v) => { const s = String(v ?? '').replace(/\s+/g, ' ').trim(); return s || null }
+// toLatin folds BOTH Arabic-Indic and Persian digits — the local copy this
+// replaces only handled Arabic-Indic, so a Persian-digit cell imported as NaN.
 const toNum = (v) => {
   if (v == null || v === '') return null
-  const n = Number(String(v).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/,/g, ''))
+  const n = Number(toLatin(v).replace(/,/g, ''))
   return Number.isFinite(n) ? n : null
 }
 const r2 = (v) => { const n = toNum(v); return n == null ? null : Math.round(n * 100) / 100 }

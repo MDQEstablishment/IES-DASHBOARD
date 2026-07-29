@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Paperclip } from 'lucide-react'
-import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor } from '../lib/db'
+import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, openSigned } from '../lib/db'
 import { useAuth } from '../rbac'
 import Icon from './Icon'
 import { Empty, Btn, Modal, Field, inputStyle, Drawer } from './ui'
@@ -116,8 +116,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
 
   const afterChange = () => { refetch(); onChanged?.() }
   const openDoc = async (d) => {
-    const url = await signedUrlFor('project-docs', d.storage_path)
-    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the file", 'err')
+    await openSigned('project-docs', d.storage_path)
   }
 
   return (
@@ -292,7 +291,7 @@ export function DocHistoryDrawer({ doc, onClose }) {
   const { rows: events } = useLiveQuery('doc_submission_history', (q) => q.select('*').eq('doc_id', doc.id).order('action_date', { ascending: true }), [doc.id])
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name'))
   const nameById = Object.fromEntries(people.map((p) => [p.id, p.full_name]))
-  const openFile = async (p) => { const u = await signedUrlFor('project-docs', p); if (u) window.open(u, '_blank', 'noopener') }
+  const openFile = (p) => openSigned('project-docs', p)
   return (
     <Drawer open title={`History · ${doc.name}`} subtitle={`Rev ${doc.revision || 'A'} · ${doc.doc_type}`} onClose={onClose}>
       {events.length === 0 ? <Empty icon="doc">No history yet.</Empty> : (

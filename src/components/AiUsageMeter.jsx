@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
 import { useLiveQuery, bgUpdate } from '../lib/db'
 import { Empty } from './ui'
-import { num, fmtDateTime } from '../lib/format'
+import { num, fmtDateTime, toLatin } from '../lib/format'
 
 // 9D-4 — AI agent usage meter, mirroring the PDF-extraction meter pattern.
 // Shows this month's runs, tokens and estimated cost against the configurable
 // hard cap that stops calls server-side when exceeded.
-const toLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0)
 const numFilter = (s) => toLatin(s).replace(/[^\d.]/g, '')
 const usd = (v) => `$${(Number(v) || 0).toFixed(2)}`
 

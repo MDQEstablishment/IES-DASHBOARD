@@ -3,13 +3,12 @@ import { supabase } from '../../lib/supabase'
 import { useLiveQuery, bgUpdate } from '../../lib/db'
 import { Btn, Empty, Loading } from '../ui'
 import { toast } from '../../lib/toast'
-import { num } from '../../lib/format'
+import { num, toLatin } from '../../lib/format'
 
 // 9D-2 — OPERATING HOURS capture (TARSHID Instr. Step 2). Rows are NEVER typed
 // by hand: sync_operating_hours derives one row per (building, space type)
 // from the survey. ESCO fills ONLY start/end/days/weeks + EFLH; hours/year and
 // the TARSHID ref string are computed in the DB and shown read-only.
-const toLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0)
 const digitsOnly = (s) => toLatin(s).replace(/[^\d.]/g, '')
 const ctrl = { padding: '6px 8px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12, fontFamily: 'var(--mono)', boxSizing: 'border-box' }
 const hhmm = (t) => (t ? String(t).slice(0, 5) : '')

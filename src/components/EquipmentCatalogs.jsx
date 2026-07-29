@@ -5,6 +5,7 @@ import { useLiveQuery } from '../lib/db'
 import { Btn, Modal, Field, inputStyle, Loading, Empty } from './ui'
 import Icon from './Icon'
 import { toast } from '../lib/toast'
+import { toLatin } from '../lib/format'
 import { fetchAllRows } from '../lib/tarshidImport'
 import TarshidImportModal from './TarshidImportModal'
 
@@ -272,11 +273,10 @@ const chipStyle = (on) => ({ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeigh
 // and toLocaleString() otherwise render Arabic-Indic numerals on ar-locale OS —
 // same class of bug the 8X DateInput fix solved. Pin en-US for display, and
 // coerce any Arabic-Indic/Persian digits the user types back to Latin.
-const num = (v) => v == null || v === '' ? '—' : Number(v).toLocaleString('en-US')
-const toLatinDigits = (s) => String(s)
-  .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-  .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
-const numFilter = (s) => toLatinDigits(s).replace(/[^\d.-]/g, '')
+// Deliberately local, not format.js num(): here an EMPTY cell must read '—'
+// (an unpriced catalog row), where the canonical helper would print '0'.
+const num = (v) => v == null || v === '' || isNaN(v) ? '—' : Number(v).toLocaleString('en-US')
+const numFilter = (s) => toLatin(s).replace(/[^\d.-]/g, '')
 
 export default function EquipmentCatalogs({ role }) {
   const canWrite = ['admin', 'pmo'].includes(role)

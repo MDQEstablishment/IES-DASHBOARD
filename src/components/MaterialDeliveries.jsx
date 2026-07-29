@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useLiveQuery, bgInsert, bgUpdate, bgDelete } from '../lib/db'
+import { useLiveQuery, bgInsert, bgUpdate, bgDelete, openSigned } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { Empty, Btn, Modal, Field, inputStyle } from './ui'
@@ -42,8 +42,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
   const patchRow = async (id, patch) => { const { error } = await bgUpdate('material_deliveries', id, patch); if (!error) refetch() }
   const removeRow = async (id) => { const { error } = await bgDelete('material_deliveries', id); if (!error) refetch() }
   const openPdf = async (path) => {
-    const { data } = await supabase.storage.from('delivery-notes').createSignedUrl(path, 3600)
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener'); else toast("Couldn't open the PDF", 'err')
+    await openSigned('delivery-notes', path, 'PDF')
   }
 
   return (

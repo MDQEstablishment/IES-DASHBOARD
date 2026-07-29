@@ -13,8 +13,6 @@ import { useBreadcrumb } from '../breadcrumbs'
 
 const DRAFT_KEY = 'ies.draft.daily'
 
-const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 export default function DailyProgress() {
   const { user, profile } = useAuth()
   const { id: routeProject, bid: routeBid } = useParams()
@@ -149,7 +147,7 @@ export default function DailyProgress() {
     const days = []
     for (let i = 6; i >= 0; i--) {
       const dt = new Date(Date.now() - i * 86400000)
-      days.push({ key: dayKey(dt), dlabel: MON[dt.getMonth()] + ' ' + dt.getDate() })
+      days.push({ key: dayKey(dt), dlabel: fmtShort(dt) })
     }
     const buckets = new Map(days.map((d) => [d.key, { ESM1: 0, ESM2: 0, ESM3: 0 }]))
     for (const r of recent) {

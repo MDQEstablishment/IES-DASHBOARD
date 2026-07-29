@@ -4,14 +4,13 @@ import { bgUpdate, bgDelete } from '../lib/db'
 import { Btn, Empty } from './ui'
 import Icon from './Icon'
 import { toast } from '../lib/toast'
-import { num } from '../lib/format'
+import { num, toLatin } from '../lib/format'
 import { proposeSelection, verifyAiSelection, selectionDescription, MAX_SELECTION_ROWS } from '../lib/savingSheet'
 
 // 9D-4b — the project's OWN material-submittal shortlist, written to
 // 'Aprvd Project Unit' B2:N21. The payback formula VLOOKUPs against column B,
 // so description strings here are the contract with AC_Savings column W.
 // Only B/C/D (+M/N) are ours; E and F:L are the workbook's formulas.
-const toLatin = (s) => String(s).replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x0660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x06F0)
 const numFilter = (s) => toLatin(s).replace(/[^\d.]/g, '')
 const cell = { padding: '5px 7px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12, boxSizing: 'border-box' }
 

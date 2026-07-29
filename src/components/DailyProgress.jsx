@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import FileDropZone from './FileDropZone'
-import { useLiveQuery, uploadToBucket, signedUrlFor } from '../lib/db'
+import { useLiveQuery, uploadToBucket, openSigned } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { toast } from '../lib/toast'
 import { compressImage } from '../lib/image'
@@ -225,7 +225,7 @@ function HistoryRow({ batch }) {
   const esms = [...new Set(lines.map((l) => l.material?.esm?.code).filter(Boolean))].sort()
   const mono = { fontFamily: 'var(--mono)' }
 
-  const viewPhoto = async (p) => { const url = await signedUrlFor('daily-progress-photos', p); if (url) window.open(url, '_blank', 'noopener') }
+  const viewPhoto = (p) => openSigned('daily-progress-photos', p, 'photo')
 
   return (
     <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>

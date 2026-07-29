@@ -1,4 +1,4 @@
-import { useLiveQuery, signedUrlFor } from '../lib/db'
+import { useLiveQuery, openSigned } from '../lib/db'
 import { Drawer, Empty } from './ui'
 import { toast } from '../lib/toast'
 import { kindLabel } from '../lib/cocPdf'
@@ -25,8 +25,7 @@ export default function CocDetailDrawer({ coc, buildings, esmName, onClose }) {
 
   const open = async (bucket, path, label) => {
     if (!path) return
-    const url = await signedUrlFor(bucket, path)
-    if (url) window.open(url, '_blank', 'noopener'); else toast(`Couldn't open the ${label}`, 'err')
+    await openSigned(bucket, path, label)
   }
 
   const fileLink = (bucket, path, label) => path && (

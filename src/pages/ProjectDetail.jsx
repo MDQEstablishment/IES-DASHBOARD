@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Avatar, Chip, Loading, Empty, Drawer, Btn } from '../components/ui'
-import { useLiveQuery, bgUpdate, signedUrlFor } from '../lib/db'
+import { useLiveQuery, bgUpdate, openSigned } from '../lib/db'
 import { useAuth, can } from '../rbac'
 import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
@@ -110,8 +110,7 @@ export default function ProjectDetail() {
 
   const openFile = async (d) => {
     if (!d?.storage_path) { toast('No file attached to this document', 'err'); return }
-    const url = await signedUrlFor('project-docs', d.storage_path)
-    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the document", 'err')
+    await openSigned('project-docs', d.storage_path, 'document')
   }
 
   if (loading && !project) return <Loading />

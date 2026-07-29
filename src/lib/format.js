@@ -5,6 +5,14 @@ export function num(n) {
   return Number(n).toLocaleString('en-US')
 }
 
+// 9E — THE Arabic-digit coercion (Arabic-Indic ٠-٩ and Persian ۰-۹ -> Latin).
+// This was copy-pasted into seven components before it was ever exported, and
+// one of the copies (the TARSHID import) drifted to Arabic-Indic-only, letting
+// Persian digits reach parseFloat as NaN. One definition now.
+export const toLatin = (s) => String(s ?? '')
+  .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+  .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+
 export function pct(n) {
   if (n == null || isNaN(n)) return '0%'
   return Math.round(n) + '%'
@@ -86,10 +94,7 @@ export function initials(name) {
 // Strips Arabic tatweel, folds Arabic-Indic and Persian digits to Latin,
 // collapses whitespace, casefolds.
 export function roomKey(name) {
-  return String(name ?? '')
-    .replace(/ـ/g, '')
-    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
+  return toLatin(String(name ?? '').replace(/ـ/g, ''))
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()

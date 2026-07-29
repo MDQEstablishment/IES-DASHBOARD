@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useLiveQuery, signedUrlFor } from '../lib/db'
+import { useLiveQuery, openSigned } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
 import { Btn, Empty, Loading, Modal } from './ui'
@@ -77,8 +77,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
   // ── open helpers ────────────────────────────────────────────────────────
   const openPdf = async (c) => {
     if (!c.pdf_path) { toast('No PDF yet — generate it first', 'err'); return }
-    const url = await signedUrlFor('coc-pdfs', c.pdf_path)
-    if (url) window.open(url, '_blank', 'noopener'); else toast("Couldn't open the PDF", 'err')
+    await openSigned('coc-pdfs', c.pdf_path, 'PDF')
   }
   const generateOne = async (c) => {
     setBusyId(c.id)

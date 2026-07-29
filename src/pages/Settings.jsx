@@ -2,10 +2,10 @@ import { useState } from 'react'
 import Icon from '../components/Icon'
 import { Avatar, PageTitle, Loading, Empty } from '../components/ui'
 import { useAuth } from '../rbac'
-import { useLiveQuery } from '../lib/db'
+import { useLiveQuery, downloadBlob } from '../lib/db'
 import { ROLE_ORDER, ROSTER, roleTitle, roleColor, FEATURES } from '../lib/constants'
 import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
-import { fmtDateTime, num } from '../lib/format'
+import { fmtDateTime, num, localToday } from '../lib/format'
 import { toast } from '../lib/toast'
 import EquipmentCatalogs from '../components/EquipmentCatalogs'
 import SavingSheetTemplate from '../components/SavingSheetTemplate'
@@ -286,9 +286,6 @@ function exportAuditCsv(rows) {
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
   const csv = [cols.join(','), ...rows.map((r) => cols.map((c) => esc(r[c])).join(','))].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = `ies-audit-${new Date().toISOString().slice(0, 10)}.csv`
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+  downloadBlob(blob, `ies-audit-${localToday()}.csv`)
   toast('Audit log exported')
 }

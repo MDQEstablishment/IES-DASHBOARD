@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import DateInput from './DateInput'
 import FileDropZone from './FileDropZone'
-import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor } from '../lib/db'
+import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor, downloadBlob } from '../lib/db'
 import { compressImage } from '../lib/image'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../rbac'
@@ -474,11 +474,7 @@ export function ProjectImportModal({ onClose }) {
         const res = await fetch(url)
         if (!res.ok) continue
         const blob = await res.blob()
-        const a = document.createElement('a')
-        a.href = URL.createObjectURL(blob)
-        a.download = 'IES-Project-Template-v3.xlsx'
-        document.body.appendChild(a); a.click(); a.remove()
-        URL.revokeObjectURL(a.href)
+        downloadBlob(blob, 'IES-Project-Template-v3.xlsx')
         setDlState('done')
         setTimeout(() => setDlState('idle'), 3000)
         return
