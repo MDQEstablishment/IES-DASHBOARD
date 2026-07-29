@@ -26,7 +26,10 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
   const [busy, setBusy] = useState(false)
 
   const canTouch = (e) => canManageAll || e.created_by === currentUserId
-  const reset = (fn) => (...a) => { fn(...a); setPage(0) }
+  // changing a filter also clears the selection — otherwise rows selected
+  // under one filter stay selected while INVISIBLE, and "Delete N" would
+  // delete rows that are no longer on screen
+  const reset = (fn) => (...a) => { fn(...a); setPage(0); setSel(new Set()) }
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase()

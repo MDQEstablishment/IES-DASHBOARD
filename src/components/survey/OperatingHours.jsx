@@ -72,7 +72,10 @@ export default function OperatingHours({ project, canWrite }) {
   const [building, setBuilding] = useState('all')
   const [status, setStatus] = useState('all') // all | nohours | noeflh
   const [syncing, setSyncing] = useState(false)
-  const syncedRef = useRef(false)
+  // per-project guard: ProjectDetail is not remounted when navigating between
+  // projects, so a plain boolean would skip the auto-sync for every project
+  // after the first one visited
+  const syncedRef = useRef(null)
 
   const sync = async (announce) => {
     setSyncing(true)
@@ -84,7 +87,7 @@ export default function OperatingHours({ project, canWrite }) {
   }
   // derive rows from the survey automatically on first open (writers only)
   useEffect(() => {
-    if (canWrite && !syncedRef.current) { syncedRef.current = true; sync(false) }
+    if (canWrite && syncedRef.current !== project.id) { syncedRef.current = project.id; sync(false) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canWrite, project.id])
 

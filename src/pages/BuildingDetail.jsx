@@ -282,7 +282,11 @@ function Meta({ k, v }) {
 
 // ── Rooms tab — room cards with floor + item types ──────────────────────────
 function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
-  const { rows: roomItems } = useLiveQuery('room_items', (q) => q.select('*,scope:building_item_scope(sub_type)'), [])
+  // room_items has no building column — scope by this building's room ids
+  // instead of pulling the whole programme's items to render one building.
+  const roomIdsKey = rooms.map((r) => r.id).sort().join(',')
+  const { rows: roomItems } = useLiveQuery('room_items', (q) =>
+    q.select('*,scope:building_item_scope(sub_type)').in('room_id', rooms.map((r) => r.id)), [roomIdsKey])
   // 9D-5 — survey entries carry room_id now, so a room the field team already
   // surveyed can be shown as such instead of being retyped at install time.
   const { rows: surveyEntries } = useLiveQuery('survey_entries', (q) =>

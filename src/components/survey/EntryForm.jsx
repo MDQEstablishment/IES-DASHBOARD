@@ -23,13 +23,21 @@ const NUMF = ['room_width', 'room_height', 'room_area', 'tr', 'wattage', 'age_ye
 // 9D-6 — the old-model registry, fetched ONCE per session and shared by every
 // modal open. ~2.5k slim rows is a single round trip and buys instant local
 // search on a phone; re-fetching per open would not.
+// A failed or partial fetch must NOT be memoized: fetchAllRows resolves (never
+// throws) with { error, rows } holding whatever pages succeeded, and caching
+// that would show "the registry is empty — import it in Settings" for the rest
+// of the session after one flaky request. On error we return the partial rows
+// for this open but clear the cache so the next open retries.
 let registryPromise = null
 function loadRegistry() {
   if (!registryPromise) {
     registryPromise = fetchAllRows('old_model_registry',
       'id,equipment_type,make,model_no,size_category,tr,t1_btu,t1_eer,equivalent_seer,compressor_type,surveyed_unit_description,retired')
-      .then((r) => (r.rows || []).filter((x) => !x.retired))
-      .catch(() => [])
+      .then((r) => {
+        if (r.error) registryPromise = null
+        return (r.rows || []).filter((x) => !x.retired)
+      })
+      .catch(() => { registryPromise = null; return [] })
   }
   return registryPromise
 }
