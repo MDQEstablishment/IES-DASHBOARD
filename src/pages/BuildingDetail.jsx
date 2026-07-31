@@ -12,7 +12,7 @@ import { useAuth, can } from '../rbac'
 import { supabase } from '../lib/supabase'
 import { toast } from '../lib/toast'
 import { useLiveQuery, bgUpdate, bgInsert } from '../lib/db'
-import { CAN_QA, CAN_INSTALL, labelize } from '../lib/constants'
+import { CAN_INSTALL, labelize } from '../lib/constants'
 import { num, fmtShort } from '../lib/format'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments from '../components/ProjectDocuments'
@@ -36,7 +36,6 @@ export default function BuildingDetail() {
   const loc = useLocation()
   const { setLabel } = useBreadcrumb()
   const { user, role } = useAuth()
-  const isQA = can(role, CAN_QA)
   const canInstall = can(role, CAN_INSTALL)
   const [infoOpen, setInfoOpen] = useState(false)
 
@@ -74,16 +73,14 @@ export default function BuildingDetail() {
   if (!b) return <Empty icon="buildings">Building not found.</Empty>
 
   const esmOfScope = (s) => s.project_esm?.esm?.code || '—'
-  const installedFor = (scopeId) => install.filter((r) => r.scope_id === scopeId && r.qa_status === 'approved').reduce((a, r) => a + (r.qty || 0), 0)
+  // 9F — a logged installation IS the truth; there is no approval step. Only a
+  // legacy REJECTED row is excluded (the enum is dormant, never written now).
+  const installedFor = (scopeId) => install.filter((r) => r.scope_id === scopeId && r.qa_status !== 'rejected').reduce((a, r) => a + (r.qty || 0), 0)
   const totalPlanned = scopes.reduce((a, s) => a + (s.planned_qty || 0), 0)
   const totalInstalled = scopes.reduce((a, s) => a + Math.min(s.planned_qty || 0, installedFor(s.id)), 0)
   const prog = totalPlanned ? Math.round((totalInstalled / totalPlanned) * 100) : 0
   const esmCodes = [...new Set(scopes.map(esmOfScope).filter((c) => c !== '—'))]
   const scopeById = Object.fromEntries(scopes.map((s) => [s.id, s]))
-
-  const setStatus = (r, status) =>
-    bgUpdate('install_log', r.id, { qa_status: status, approved_by_id: user.id, approved_at: new Date().toISOString() },
-      { okMsg: `Marked ${status === 'approved' ? 'Approved' : 'Rejected'}` })
 
   // building-scoped activity (acts as the Comments thread — see report: comments not yet persisted)
   const ids = new Set([bid, ...install.map((r) => r.id)])
@@ -168,7 +165,7 @@ export default function BuildingDetail() {
               <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 20 }}>
                 <Link to={base} style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 13 }}>← Back to Daily Progress</Link>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '12px 0' }}>
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>{sc?.sub_type || 'Install entry'}</div><Chip status={r.qa_status} />
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>{sc?.sub_type || 'Install entry'}</div><Chip status={labelize(r.source)} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, fontSize: 13 }}>
                   <Meta k="Quantity" v={`${r.qty} units`} /><Meta k="Date" v={fmtShort(r.entry_date)} />
@@ -176,12 +173,6 @@ export default function BuildingDetail() {
                   <Meta k="Logged by" v={r.by?.full_name || '—'} /><Meta k="Photos" v={Array.isArray(r.photos) ? r.photos.length : 0} />
                 </div>
                 {r.note && <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--text-3)' }}>Note: {r.note}</div>}
-                {isQA && r.qa_status === 'pending_qa' && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                    <Btn variant="primary" icon="check" onClick={() => setStatus(r, 'approved')}>Approve</Btn>
-                    <Btn variant="danger" icon="x" onClick={() => setStatus(r, 'rejected')}>Reject</Btn>
-                  </div>
-                )}
               </div>
             )
           })()}

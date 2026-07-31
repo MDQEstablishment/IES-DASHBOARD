@@ -120,7 +120,7 @@ export default function ProjectDetail() {
   // 9C: computed over ACTIVE (non-surplus) buildings only.
   const bIds = new Set(activeBuildings.map((b) => b.id))
   const insByScope = {}
-  install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
+  install.forEach((r) => { if (r.qa_status !== 'rejected') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
 
   // Map each scope's project_esm_id → its ESM code, so the BOQ rollup buckets by
   // the scope's REAL ESM (not by guessing from material_code, which fails for

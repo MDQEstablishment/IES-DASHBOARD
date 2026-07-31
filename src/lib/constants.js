@@ -64,7 +64,6 @@ export const MANAGERS = ['projm', 'progm', 'pmo', 'ceo']
 export const CAN_INSTALL = ['proje', 'projm', 'progm', 'pmo', 'ceo']
 export const CAN_RAISE_TASK = ['proje', 'projm', 'progm', 'pmo', 'ceo', 'procm', 'proco']
 export const CAN_MOVE_MATERIAL = ['procm', 'proco', 'projm', 'progm', 'pmo', 'ceo']
-export const CAN_QA = ['projm', 'progm', 'pmo']
 
 // 12-stage retrofit cycle
 export const STAGES = [
@@ -84,7 +83,7 @@ export const STATUS = {
   on_hold: ['#B45309', '#FAF3E3', 'On-Hold'], closed: ['#56534B', '#F0EDE4', 'Closed'],
   signed: ['#217A54', '#E9F3EE', 'Signed'], in_progress: ['#A0762B', '#F5EEDF', 'In Progress'],
   pending: ['#8A8577', '#F0EDE4', 'Pending'],
-  approved: ['#217A54', '#E9F3EE', 'Approved'], pending_qa: ['#B45309', '#FAF3E3', 'Pending QA'],
+  approved: ['#217A54', '#E9F3EE', 'Approved'],
   rejected: ['#B3362B', '#F9ECEA', 'Rejected'],
   open: ['#8A8577', '#F0EDE4', 'Open'], blocked: ['#B3362B', '#F9ECEA', 'Blocked'],
   done: ['#217A54', '#E9F3EE', 'Done'], cancelled: ['#56534B', '#F0EDE4', 'Cancelled'],

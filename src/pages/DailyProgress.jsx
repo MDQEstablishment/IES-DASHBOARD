@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Icon from '../components/Icon'
-import { Loading, Empty, Chip } from '../components/ui'
+import { Loading, Empty } from '../components/ui'
 import { Can } from '../rbac'
 import { useAuth } from '../rbac'
 import { useLiveQuery, bgInsert, uploadToBucket } from '../lib/db'
@@ -36,7 +36,7 @@ export default function DailyProgress() {
 
   // today's entries by this user (for tally + today list)
   const { rows: todays, loading } = useLiveQuery('install_log',
-    (q) => q.select('id,qty,note,qa_status,created_at,scope:building_item_scope(sub_type),building:buildings(code)')
+    (q) => q.select('id,qty,note,created_at,scope:building_item_scope(sub_type),building:buildings(code)')
       .eq('installed_by_id', user.id).eq('entry_date', today()).order('created_at', { ascending: false }))
 
   // 7-day rolling installs by ESM (all visible rows, RLS filtered)
@@ -372,7 +372,6 @@ export default function DailyProgress() {
                   <th style={{ padding: '10px 8px', fontWeight: 600 }}>SUB-TYPE</th>
                   <th style={{ padding: '10px 8px', fontWeight: 600, textAlign: 'right' }}>QTY</th>
                   <th style={{ padding: '10px 8px', fontWeight: 600 }}>LOCATION</th>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>STATUS</th>
                 </tr>
               </thead>
               <tbody>
@@ -383,7 +382,6 @@ export default function DailyProgress() {
                     <td style={{ padding: '10px 8px' }}>{t.scope?.sub_type || '—'}</td>
                     <td style={{ padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--ok)' }}>{t.qty}</td>
                     <td style={{ padding: '10px 8px', color: 'var(--text-3)' }}>{t.note || '—'}</td>
-                    <td style={{ padding: '10px 14px' }}><Chip status={t.qa_status} /></td>
                   </tr>
                 ))}
               </tbody>

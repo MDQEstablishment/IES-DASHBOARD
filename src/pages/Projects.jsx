@@ -54,7 +54,7 @@ export default function Projects() {
 
   // approved-installed qty per scope
   const insByScope = {}
-  install.forEach((r) => { if (r.qa_status === 'approved') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
+  install.forEach((r) => { if (r.qa_status !== 'rejected') insByScope[r.scope_id] = (insByScope[r.scope_id] || 0) + r.qty })
 
   // building -> project map
   const bProj = {}

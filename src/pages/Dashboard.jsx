@@ -54,7 +54,7 @@ export default function Dashboard() {
 
   // approved-installed per scope, capped at planned_qty
   const installedByScope = {}
-  install.forEach((r) => { if (r.qa_status === 'approved') installedByScope[r.scope_id] = (installedByScope[r.scope_id] || 0) + (r.qty || 0) })
+  install.forEach((r) => { if (r.qa_status !== 'rejected') installedByScope[r.scope_id] = (installedByScope[r.scope_id] || 0) + (r.qty || 0) })
   const bP = {}; buildings.forEach((b) => { bP[b.id] = b.project_id })
 
   let planned = 0, installed = 0
