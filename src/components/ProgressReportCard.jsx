@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { zipSync } from 'fflate'
 import { supabase } from '../lib/supabase'
 import { useLiveQuery, downloadBlob } from '../lib/db'
 import { Btn, Loading } from './ui'
@@ -18,7 +19,9 @@ export default function ProgressReportCard() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState(localToday())
   const [estDates, setEstDates] = useState({})
+  const [withAnnex, setWithAnnex] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [step, setStep] = useState('')
   const [result, setResult] = useState(null)
 
   const { rows: projects, loading } = useLiveQuery('projects', (q) =>
@@ -74,7 +77,7 @@ export default function ProgressReportCard() {
           ? supabase.from('install_log').select('scope_id,qty,entry_date,qa_status').in('scope_id', scopeIds).lte('entry_date', to)
           : Promise.resolve({ data: [] }),
         supabase.from('material_deliveries').select('quantity,status,actual_date,esm_id').eq('project_id', project.id),
-        supabase.from('building_photos').select('building_id,caption,taken_at,storage_path,source').in('building_id', bIds).order('taken_at'),
+        supabase.from('building_photos').select('building_id,caption,taken_at,storage_path,source,esm').in('building_id', bIds).order('taken_at'),
       ])
       if (ilRes.error) throw ilRes.error
 
@@ -91,16 +94,44 @@ export default function ProgressReportCard() {
         photos, from, to, estDates, asOf: localToday(),
       })
 
+      // The annex is built BEFORE the workbook: it assigns each photograph a
+      // page number, and those numbers are written into the Site Evidence
+      // index so the two documents agree.
+      let annex = null
+      if (withAnnex && data.evidence.length > 0) {
+        setStep('Preparing photographs…')
+        const { buildPhotoAnnex } = await import('../lib/reportPhotoAnnex')
+        annex = await buildPhotoAnnex({ evidence: data.evidence, meta: data.meta })
+        if (annex.evidence?.length) {
+          const pageOf = new Map(annex.evidence.map((e) => [e.storage_path, e.annex_page]))
+          data.evidence = data.evidence.map((e) => ({ ...e, annex_page: pageOf.get(e.storage_path) ?? null }))
+        }
+        if (annex.note) data.warnings = [...data.warnings, annex.note]
+      }
+
+      setStep('Filling the workbook…')
       const { buildProgressReport } = await import('../lib/progressReportGen')
       const { bytes, report } = await buildProgressReport({ templatePath: template.storage_path, data })
-      const name = `${(project.code || 'project').replace(/[^\w-]/g, '')}-progress-report-${from}-to-${to}.xlsx`
-      downloadBlob(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name)
-      setResult({ report, data, name })
+      const base = `${(project.code || 'project').replace(/[^\w-]/g, '')}-progress-report-${from}-to-${to}`
+      let name
+      if (annex?.bytes) {
+        // one download, both documents — same zipSync bundling the COC wizard uses
+        const zipped = zipSync({
+          [`${base}.xlsx`]: [new Uint8Array(bytes), { level: 0 }],
+          [`${base}-photo-annex.pdf`]: [new Uint8Array(annex.bytes), { level: 0 }],
+        })
+        name = `${base}.zip`
+        downloadBlob(new Blob([zipped], { type: 'application/zip' }), name)
+      } else {
+        name = `${base}.xlsx`
+        downloadBlob(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name)
+      }
+      setResult({ report, data, name, annex })
       toast(`${name} downloaded`)
     } catch (e) {
       toast('Could not generate the report — ' + (e?.message || e), 'err')
     }
-    setBusy(false)
+    setBusy(false); setStep('')
   }
 
   if (loading) return <Loading />
@@ -158,9 +189,15 @@ export default function ProgressReportCard() {
         </div>
       )}
 
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, marginBottom: 12, cursor: 'pointer' }}>
+        <input type="checkbox" checked={withAnnex} onChange={(e) => setWithAnnex(e.target.checked)} />
+        Include the site photograph annex
+        <span style={{ color: 'var(--text-3)', fontSize: 11.5 }}>— adds a branded PDF of site photographs and delivers both files as one ZIP</span>
+      </label>
+
       <Btn variant="primary" icon="doc" disabled={busy || !template || !projectId} onClick={generate}
         title={!template ? 'Upload a report template in Settings first' : !projectId ? 'Pick a project' : undefined}>
-        {busy ? 'Generating…' : 'Generate report'}
+        {busy ? (step || 'Generating…') : 'Generate report'}
       </Btn>
 
       {result && (
@@ -171,6 +208,7 @@ export default function ProgressReportCard() {
             {' '}ESM rows {num(result.report.esm_table.rows || 0)} · daily rows {num(result.report.daily_log.rows || 0)} ·
             {' '}buildings {num(result.report.buildings.rows || 0)} · evidence {num(result.report.evidence.rows || 0)} ·
             {' '}charts refreshed {num(result.report.charts_refreshed || 0)}
+            {result.annex?.bytes && <> · annex {num(result.annex.pages)} pages, {num(result.annex.indexed)} photographs</>}
           </div>
           {[result.report.esm_table.error, result.report.daily_log.error, result.report.buildings.error, result.report.documents.error, result.report.evidence.error]
             .filter(Boolean).map((e, i) => <div key={i} style={{ color: '#96271E', marginTop: 3 }}>Template: {e}</div>)}

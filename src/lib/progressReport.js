@@ -54,6 +54,28 @@ export function estimatedCompletion(project) {
 const round1 = (v) => Math.round(v * 10) / 10
 const pctOf = (part, whole) => (whole > 0 ? Math.min(100, round1((part / whole) * 100)) : 0)
 
+// The report template's tables are keyed by CATEGORY (Lights / A/C / Sensors),
+// not by ESM code, so every ESM has to land in one of three buckets. Order
+// matters: "Lighting Control" is a SENSOR row, not a lighting row, so the
+// control/sensor test has to run before the lighting test.
+export function esmCategory(esm) {
+  const t = `${esm?.code || ''} ${esm?.name || ''}`.toLowerCase()
+  if (/sensor|control|occupanc|daylight/.test(t)) return 'sensors'
+  if (/\ba\/?c\b|air.?cond|hvac|chiller|split/.test(t)) return 'ac'
+  if (/light|lamp|luminaire|led/.test(t)) return 'lights'
+  return null
+}
+
+// Match a label written in the TEMPLATE ("Lights", "A/C", "Sensors") to the
+// same bucket, so row order is read from the sheet rather than assumed.
+export function labelCategory(label) {
+  const t = String(label || '').toLowerCase()
+  if (/sensor|control/.test(t)) return 'sensors'
+  if (/a\/?c|air|hvac/.test(t)) return 'ac'
+  if (/light|lamp/.test(t)) return 'lights'
+  return null
+}
+
 export function assembleReportData({
   project, buildings = [], scopes = [], projectEsms = [], install = [],
   deliveries = [], warehouse = [], documents = [], cocs = [], photos = [],
@@ -132,6 +154,7 @@ export function assembleReportData({
     const actualPerDay = workedDays > 0 ? round1(installedRaw / workedDays) : 0
     return {
       code, name: esmNameOf.get(code) || code,
+      category: esmCategory({ code, name: esmNameOf.get(code) }),
       total, installed, installed_raw: installedRaw, delivered,
       in_warehouse: inWarehouse, warehouse_computed: warehouseComputed, discrepancy,
       remaining, completion_pct: pctOf(installed, total),
@@ -177,10 +200,13 @@ export function assembleReportData({
     d[code] = (d[code] || 0) + (Number(r.qty) || 0)
   })
 
+  const catOfCodeEarly = new Map(codes.map((c) => [c, esmCategory({ code: c, name: esmNameOf.get(c) })]))
+  const openingCat = { lights: 0, ac: 0, sensors: 0 }
+  codes.forEach((c) => { const k = catOfCodeEarly.get(c); if (k && k in openingCat) openingCat[k] += opening[c] || 0 })
   const cum = { ...opening }
   const daily = [{
     date: '', day_name: 'Opening balance (before period)', opening: true,
-    per_esm: { ...opening }, total: 0, cumulative: { ...opening },
+    per_esm: { ...opening }, per_category: { ...openingCat }, total: 0, cumulative: { ...opening },
   }]
   dayList.forEach((d) => {
     const perEsm = {}
@@ -190,7 +216,9 @@ export function assembleReportData({
       perEsm[c] = v; tot += v
       cum[c] = (cum[c] || 0) + v
     })
-    daily.push({ date: d, day_name: dayName(d), opening: false, per_esm: perEsm, total: tot, cumulative: { ...cum } })
+    const perCat = { lights: 0, ac: 0, sensors: 0 }
+    codes.forEach((c) => { const k = catOfCodeEarly.get(c); if (k && k in perCat) perCat[k] += perEsm[c] || 0 })
+    daily.push({ date: d, day_name: dayName(d), opening: false, per_esm: perEsm, per_category: perCat, total: tot, cumulative: { ...cum } })
   })
   const dailyTotals = {
     per_esm: Object.fromEntries(codes.map((c) => [c, daily.reduce((a, r) => a + (r.opening ? 0 : r.per_esm[c] || 0), 0)])),
@@ -198,11 +226,20 @@ export function assembleReportData({
   }
 
   // ── per-building progress (same capped rule) ──────────────────────────────
+  const catOfCode = new Map(codes.map((c) => [c, esmCategory({ code: c, name: esmNameOf.get(c) })]))
   const buildingRows = buildings.map((b) => {
     const mine = projectScopes.filter((s) => s.building_id === b.id)
     const planned = mine.reduce((a, s) => a + (Number(s.planned_qty) || 0), 0)
     const installed = mine.reduce((a, s) => a + Math.min(Number(s.planned_qty) || 0, installedByScopeToDate.get(s.id) || 0), 0)
-    return { code: b.code || '', name: b.name || '', planned, installed, remaining: Math.max(0, planned - installed), completion_pct: pctOf(installed, planned) }
+    const per = { lights: { planned: 0, installed: 0 }, ac: { planned: 0, installed: 0 }, sensors: { planned: 0, installed: 0 } }
+    mine.forEach((s) => {
+      const cat = catOfCode.get(esmOfScope(s))
+      if (!cat || !per[cat]) return
+      per[cat].planned += Number(s.planned_qty) || 0
+      per[cat].installed += Math.min(Number(s.planned_qty) || 0, installedByScopeToDate.get(s.id) || 0)
+    })
+    return { code: b.code || '', name: b.name || '', planned, installed, per_category: per,
+      remaining: Math.max(0, planned - installed), completion_pct: pctOf(installed, planned) }
   }).sort((a, b) => String(a.code).localeCompare(String(b.code)))
 
   // ── documents / COCs ─────────────────────────────────────────────────────
@@ -218,6 +255,8 @@ export function assembleReportData({
     total: cocs.length,
     issued: cocs.filter((c) => c.status === 'sent').length,
     pending: cocs.filter((c) => c.status !== 'sent').length,
+    by_status: [...new Set(cocs.map((c) => c.status).filter(Boolean))].sort()
+      .map((s) => ({ status: s, count: cocs.filter((c) => c.status === s).length })),
   }
 
   // ── site evidence index (the annex holds the images themselves) ───────────
@@ -228,7 +267,8 @@ export function assembleReportData({
       building: p.building_code || '',
       room: p.room_name || '',
       date: p.taken_at ? String(p.taken_at).slice(0, 10) : '',
-      caption: p.caption || p.source || '',
+      category: p.esm || p.source || '',
+      caption: p.caption || '',
       storage_path: p.storage_path, bucket: p.bucket,
     }))
 
