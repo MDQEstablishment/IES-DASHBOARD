@@ -75,16 +75,18 @@ export function readSheet(zip, sheet) {
   return { cells, maxRow, xml }
 }
 
-// Locate the header row: the first row (within `scan` rows) containing at
-// least `minHits` of the given header labels. Returns { row, cols } where cols
-// maps normalized header text -> column letter.
-export function findHeaderRow(sheetData, labels, { scan = 12, minHits = 3 } = {}) {
+// Locate the header row: the first row in [from, scan] containing at least
+// `minHits` of the given header labels. Returns { row, cols } where cols maps
+// normalized header text -> column letter.
+// `from` (9F) lets a caller find a SECOND table further down the same sheet —
+// the progress report stacks the daily installation log under the ESM table.
+export function findHeaderRow(sheetData, labels, { scan = 12, minHits = 3, from = 1 } = {}) {
   const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
   const wanted = labels.map(norm)
   const byRow = new Map()
   sheetData.cells.forEach((c, ref) => {
     const p = refParts(ref)
-    if (!p || p.row > scan || c.v == null || c.v === '') return
+    if (!p || p.row < from || p.row > scan || c.v == null || c.v === '') return
     if (!byRow.has(p.row)) byRow.set(p.row, [])
     byRow.get(p.row).push({ col: p.col, text: String(c.v) })
   })
@@ -186,6 +188,28 @@ export function patchSheet(zip, sheet, patches, { skipFormulas = true } = {}) {
   delete zip.files['xl/calcChain.xml']
   zip.files[sheet.path] = strToU8(xml)
   return written
+}
+
+// 9F — drop the cached series values baked into chart XML.
+//
+// A chart stores BOTH a reference to its source range and a <c:numCache> /
+// <c:strCache> copy of the values as they were when the file was saved. Excel
+// refreshes those on recalculation, but viewers that don't recalculate
+// (LibreOffice, most previewers, Google Sheets import) plot the CACHE — so a
+// freshly generated report would render the template's placeholder numbers
+// while the cells beside it show the real ones. Removing the caches leaves the
+// range references intact and forces every renderer to read the sheet.
+export function stripChartCaches(zip) {
+  let charts = 0
+  for (const path of Object.keys(zip.files)) {
+    if (!/^xl\/charts\/chart\d*\.xml$/.test(path)) continue
+    const before = strFromU8(zip.files[path])
+    const after = before
+      .replace(/<c:numCache>[\s\S]*?<\/c:numCache>/g, '')
+      .replace(/<c:strCache>[\s\S]*?<\/c:strCache>/g, '')
+    if (after !== before) { zip.files[path] = strToU8(after); charts++ }
+  }
+  return charts
 }
 
 // Force a full recalculation when the file opens.
