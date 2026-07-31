@@ -3,9 +3,11 @@ import { useAuth } from '../rbac'
 import { useLiveQuery } from '../lib/db'
 import { Loading } from '../components/ui'
 import { roleTitle } from '../lib/constants'
+import ProgressReportCard from '../components/ProgressReportCard'
 
-// Reports (dc r_reports, 917-948). Materials Consumption (live bars) · Tarsheed
-// (locked placeholder) · Employee Performance (PMO+CEO only) · ESM-vs-Plan.
+// Reports. Client Progress Report (9F — the real generator, replacing the
+// "awaiting client format" placeholder) · Materials Consumption (live bars) ·
+// Employee Performance (PMO+CEO only) · ESM-vs-Plan (still a suggestion).
 export default function Reports() {
   const { role } = useAuth()
   const empAllowed = role === 'pmo' || role === 'ceo'
@@ -58,20 +60,19 @@ export default function Reports() {
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 0' }}>Reports</h1>
       </div>
 
-      <div className="ies-2col" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14, marginBottom: 14, alignItems: 'start' }}>
-        {/* 1 · Materials Consumption */}
+      {/* 9F — the real client report generator */}
+      <ProgressReportCard />
+
+      <div style={{ marginBottom: 14 }}>
+        {/* Materials Consumption */}
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>1 · Materials Consumption</div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Materials Consumption</div>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 7, background: consBars.length === 0 ? '#E5E7EB' : '#217A54', color: consBars.length === 0 ? 'var(--text-3)' : '#fff', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>All projects</option></select>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>This year</option></select>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>Group by ESM</option><option>By sub-type</option><option>By building</option></select>
-          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 14 }}>Every material consumed across the programme to date, by quantity.</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {consBars.length === 0 ? <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No consumption recorded yet.</div> : consBars.map((b, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -85,22 +86,13 @@ export default function Reports() {
             ))}
           </div>
         </div>
-
-        {/* 2 · Tarsheed (locked) */}
-        <div style={{ background: '#fff', border: '1px dashed var(--line)', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: 200 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: '#B45309', fontWeight: 700 }}>2 · AWAITING CLIENT FORMAT</div>
-          <div style={{ fontWeight: 700, fontSize: 15, margin: '8px 0 6px' }}>Tarsheed Excel</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.45 }}>Tarsheed report template — awaiting client format. Once received, this report will export to the exact Excel layout the client submits to Tarsheed.</div>
-          <div style={{ marginTop: 14, alignSelf: 'flex-start', fontSize: 12, fontWeight: 600, padding: '8px 13px', borderRadius: 6, border: '1px solid var(--line)', color: 'var(--text-3)', background: '#FAFAFA' }}>Locked — pending template</div>
-        </div>
       </div>
 
-      {/* 3 · Employee Performance (PMO + CEO only) */}
+      {/* Employee Performance (PMO + CEO only) */}
       {empAllowed && (
         <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>3 · Employee Performance <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#6D5A8E', background: '#F0EDF6', padding: '2px 7px', borderRadius: 5, marginLeft: 6 }}>PMO + CEO ONLY</span></div>
-            <select style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12 }}><option>This month</option><option>Quarter</option><option>Year</option></select>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Employee Performance <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#6D5A8E', background: '#F0EDF6', padding: '2px 7px', borderRadius: 5, marginLeft: 6 }}>PMO + CEO ONLY</span></div>
           </div>
           <div className="ies-table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
@@ -117,7 +109,7 @@ export default function Reports() {
               </thead>
               <tbody>
                 {empPerf.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: '14px 8px', color: 'var(--text-3)' }}>No task activity in range.</td></tr>
+                  <tr><td colSpan={7} style={{ padding: '14px 8px', color: 'var(--text-3)' }}>No task activity yet.</td></tr>
                 ) : empPerf.map((e, i) => (
                   <tr key={i} style={{ borderTop: '1px solid var(--line)' }}>
                     <td style={{ padding: '10px 8px', fontWeight: 600 }}>{e.name}</td>
