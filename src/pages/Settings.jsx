@@ -10,6 +10,7 @@ import { toast } from '../lib/toast'
 import EquipmentCatalogs from '../components/EquipmentCatalogs'
 import SavingSheetTemplate from '../components/SavingSheetTemplate'
 import AiUsageMeter from '../components/AiUsageMeter'
+import ReportTemplate from '../components/ReportTemplate'
 
 // Permission matrix reflects the REAL RBAC nav map (lib/nav roleNav), read-only.
 const NAV_IDS = ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings']
@@ -34,6 +35,7 @@ const CATS = [
   // 9E — parked with the Saving Sheet feature; the catalogs tab above stays
   // because the survey's old-unit picker reads the same imported registry
   ...(FEATURES.savingSheet ? [{ key: 'template', label: 'Saving Sheet Template' }] : []),
+  { key: 'report', label: 'Report Template' },
   { key: 'audit', label: 'Audit Log' },
 ]
 
@@ -212,6 +214,8 @@ export default function Settings() {
               <AiUsageMeter role={role} />
             </div>
           )}
+
+          {cat === 'report' && <ReportTemplate role={role} />}
 
           {cat === 'audit' && (
             <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
