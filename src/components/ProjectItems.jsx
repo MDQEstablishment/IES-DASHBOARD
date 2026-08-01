@@ -3,6 +3,7 @@ import { useLiveQuery, bgInsert, bgUpdate, bgDelete } from '../lib/db'
 import { useAuth } from '../rbac'
 import { Empty, Btn } from './ui'
 import { toast } from '../lib/toast'
+import { CONTROL_ESM_RE } from '../lib/constants'
 import { read, utils, writeFileXLSX } from 'xlsx'
 
 const EDIT_ROLES = ['admin', 'pmo', 'projm', 'proje']
@@ -34,10 +35,14 @@ export default function ProjectItems({ projectId, project }) {
   // 9H(1) — consumables that replace nothing, so they are deliberately NOT
   // pairs: the certificate prints them in their own «البنود الأخرى» table.
   const { rows: others, refetch: refO } = useLiveQuery('project_other_installed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
+  // 9H(2) — which lighting fixture each controller controls. The certificate has
+  // always drawn these three columns; nothing ever filled them.
+  const { rows: links, refetch: refL } = useLiveQuery('project_control_links', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
   const { rows: pEsms } = useLiveQuery('project_esms', (q) => q.select('custom_name,ordinal,esm:esms(code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
   const esms = pEsms.filter((pe) => pe.esm).map((pe) => ({ code: pe.esm.code, name: pe.custom_name || pe.esm.name }))
   const [open, setOpen] = useState({})
   const [importErrors, setImportErrors] = useState([])
+  const [draft, setDraft] = useState({})   // per-ESM new-control-link picker
   const refreshAll = () => { refI(); refR(); refP() }
 
   const addOther = async (esm) => {
@@ -46,6 +51,16 @@ export default function ProjectItems({ projectId, project }) {
   }
   const saveO = async (id, patch) => { const { error } = await bgUpdate('project_other_installed_items', id, patch); if (!error) refO() }
   const delOther = async (id) => { await bgDelete('project_other_installed_items', id); refO() }
+
+  const addLink = async (esm, controlId, controlledId) => {
+    const { error } = await bgInsert('project_control_links', {
+      project_id: projectId, esm_code: esm, control_item_id: controlId, controlled_item_id: controlledId,
+    })
+    if (error) { toast(error.message?.includes('unique') ? 'That pair is already linked' : error.message, 'err'); return }
+    refL()
+  }
+  const saveL = async (id, patch) => { const { error } = await bgUpdate('project_control_links', id, patch); if (!error) refL() }
+  const delLink = async (id) => { await bgDelete('project_control_links', id); refL() }
 
   const insById = Object.fromEntries(installed.map((r) => [r.id, r]))
   const remById = Object.fromEntries(removed.map((r) => [r.id, r]))
@@ -92,6 +107,13 @@ export default function ProjectItems({ projectId, project }) {
     return [...ps, ...soI, ...soR]
   }
   const othersForEsm = (esm) => others.filter((o) => (o.esm_code || '') === esm)
+  // Control-ness is a property of the ESM, not the item — the same test the
+  // certificate uses to decide which table an installed item belongs in.
+  const esmNameByCode = Object.fromEntries(esms.map((e) => [e.code, e.name]))
+  const isControlEsm = (code) => CONTROL_ESM_RE.test(esmNameByCode[code] || '')
+  const lightingItems = installed.filter((r) => !isControlEsm(r.esm_code))
+  const linksForEsm = (esm) => links.filter((l) => (l.esm_code || '') === esm)
+  const itemLabel = (it) => [it?.item_description, it?.model_code].filter(Boolean).join(' ') || '(unnamed)'
 
   const exportCsv = () => {
     const out = []
@@ -288,6 +310,62 @@ export default function ProjectItems({ projectId, project }) {
                     </table></div>
                   )}
               </div>
+
+              {/* 9H(2) — lighting-control mapping. Only meaningful for a control
+                  ESM, so it appears only there. The certificate prints the
+                  controlled fixture's ROW NUMBER, which it computes at render
+                  time from its own table — nothing here stores a number. */}
+              {isControlEsm(e.code) && (
+                <div style={{ marginTop: 14, borderTop: '1px dashed var(--line)', paddingTop: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>Controls which lighting items</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Printed on the certificate and on the ESM2 work-inspection form. Entered once, here.</span>
+                  </div>
+                  {lightingItems.length === 0
+                    ? <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Add lighting items under a lighting ESM first — there is nothing to control yet.</div>
+                    : (
+                      <>
+                        <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+                          <thead><tr style={{ textAlign: 'left' }}>{th('CONTROL ITEM')}{th('CONTROLS →')}{th('QTY CONTROLLED')}{canEdit && th('')}</tr></thead>
+                          <tbody>
+                            {linksForEsm(e.code).length === 0 && <tr><td colSpan={4} style={{ padding: 8, color: 'var(--text-3)', fontSize: 11.5 }}>No mapping yet — the certificate prints these three columns blank.</td></tr>}
+                            {linksForEsm(e.code).map((l) => (
+                              <tr key={l.id} style={{ borderTop: '1px solid var(--line)' }}>
+                                <td style={{ padding: '4px 7px', fontSize: 11.5, fontWeight: 600 }}>{itemLabel(insById[l.control_item_id])}</td>
+                                <td style={{ padding: '4px 7px', fontSize: 11.5 }}>{itemLabel(insById[l.controlled_item_id])}</td>
+                                <td style={{ padding: 2, width: 120 }}>
+                                  <Cell value={l.controlled_qty} type="num" align="right"
+                                    placeholder={String(insById[l.controlled_item_id]?.total_quantity ?? '')}
+                                    onSave={(v) => saveL(l.id, { controlled_qty: numOrNull(v) })} />
+                                </td>
+                                {canEdit && <td style={{ padding: 2, width: 40, textAlign: 'center' }}><button title="Remove link" onClick={() => delLink(l.id)} style={{ color: 'var(--bad)' }}>🗑</button></td>}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table></div>
+                        {canEdit && (
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+                            <select value={draft[e.code]?.control || ''} onChange={(ev) => setDraft((d) => ({ ...d, [e.code]: { ...d[e.code], control: ev.target.value } }))}
+                              style={{ padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 11.5 }}>
+                              <option value="">Control item…</option>
+                              {installed.filter((r) => r.esm_code === e.code).map((r) => <option key={r.id} value={r.id}>{itemLabel(r)}</option>)}
+                            </select>
+                            <span style={{ color: 'var(--text-3)' }}>→</span>
+                            <select value={draft[e.code]?.controlled || ''} onChange={(ev) => setDraft((d) => ({ ...d, [e.code]: { ...d[e.code], controlled: ev.target.value } }))}
+                              style={{ padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 11.5 }}>
+                              <option value="">Lighting item it controls…</option>
+                              {lightingItems.map((r) => <option key={r.id} value={r.id}>{r.esm_code} · {itemLabel(r)}</option>)}
+                            </select>
+                            <button
+                              disabled={!draft[e.code]?.control || !draft[e.code]?.controlled}
+                              onClick={() => { addLink(e.code, draft[e.code].control, draft[e.code].controlled); setDraft((d) => ({ ...d, [e.code]: {} })) }}
+                              style={{ fontSize: 12, fontWeight: 700, color: (draft[e.code]?.control && draft[e.code]?.controlled) ? 'var(--accent)' : 'var(--text-3)', cursor: (draft[e.code]?.control && draft[e.code]?.controlled) ? 'pointer' : 'default' }}>+ Link</button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                </div>
+              )}
             </>}
           </div>
         )

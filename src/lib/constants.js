@@ -109,6 +109,11 @@ export const statusMeta = (s) => STATUS[s] || ['#8A8577', '#F0EDE4', String(s ??
 export const labelize = (s) => (s == null ? '—' : String(s).replace(/_/g, ' '))
 
 // Survey capture roles (client gate; RLS w_bld/w_proj is the real enforcement)
+// 9H(2) — an ESM is a lighting-CONTROL measure when its name says so. The COC
+// has always used this test to split controllers out of the lighting table;
+// exported here so the mapping editor and the assembler cannot drift apart.
+export const CONTROL_ESM_RE = /control|sensor/i
+
 export const CAN_SURVEY = ['proje', 'projm', 'progm', 'pmo', 'admin']
 export const SURVEY_CATEGORIES = [['lighting', 'Lighting'], ['ac', 'AC'], ['sensor', 'Sensor'], ['other', 'Other']]
 

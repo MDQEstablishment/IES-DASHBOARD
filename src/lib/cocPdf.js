@@ -6,9 +6,9 @@ import { supabase } from './supabase'
 import { uploadToBucket } from './db'
 import { generateDocPdf } from './docPdf'
 import { localToday } from './format'
+import { CONTROL_ESM_RE as CTRL_RE } from './constants'
 
 const AC_RE = /\ba\/?c\b|air.?cond|cool|hvac/i
-const CTRL_RE = /control|sensor/i
 
 // Display name for a certificate's scope: AC if every covered ESM is an AC
 // measure, Lighting otherwise. esmName maps code -> display name.
@@ -44,7 +44,7 @@ export async function ensureCocSettings(projectId, esmOpts) {
 // generating in bulk reuse the same context across COCs.
 export async function fetchCocContext(projectId) {
   const { data: auth } = await supabase.auth.getUser()
-  const [proj, settings, buildings, pesms, installed, removed, other, me] = await Promise.all([
+  const [proj, settings, buildings, pesms, installed, removed, other, links, me] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).single(),
     supabase.from('coc_project_settings').select('*').eq('project_id', projectId).maybeSingle(),
     supabase.from('buildings').select('*').eq('project_id', projectId),
@@ -54,6 +54,8 @@ export async function fetchCocContext(projectId) {
     // 9H(1) — consumables that are installed but replace nothing (cable, lamp
     // holders, connecting switches). The COC has always printed their table.
     supabase.from('project_other_installed_items').select('*').eq('project_id', projectId),
+    // 9H(2) — which lighting item each controller controls.
+    supabase.from('project_control_links').select('*').eq('project_id', projectId),
     // 8V Issue 2 — the ESCO column of the approval grid auto-fills with the
     // generating engineer's name; nothing else about the signer is read.
     auth?.user?.id
@@ -66,7 +68,7 @@ export async function fetchCocContext(projectId) {
     project: proj.data, settings: settings.data || null,
     buildings: buildings.data || [],
     esmName, installed: installed.data || [], removed: removed.data || [],
-    other: other.data || [],
+    other: other.data || [], controlLinks: links.data || [],
     currentUserName: me.data?.full_name || '',
   }
 }
@@ -149,6 +151,34 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
   })
   const isCtrl = (it) => CTRL_RE.test(esmName[it.esm_code] || '')
 
+  // 9H(2) — resolve the control mapping. "رقم بند الانارة المتحكم بها" is the
+  // controlled fixture's ROW NUMBER in this certificate's own lighting table,
+  // so it is computed here from that table's order and never stored: a
+  // certificate covering a different set of buildings renumbers its rows, and a
+  // stored number would silently point at the wrong fixture.
+  const lightRows = ins.filter((it) => !isCtrl(it))
+  const refNoById = new Map(lightRows.map((it, i) => [it.id, i + 1]))
+  const linksByControl = new Map()
+  ;(ctx.controlLinks || []).forEach((l) => {
+    if (!linksByControl.has(l.control_item_id)) linksByControl.set(l.control_item_id, [])
+    linksByControl.get(l.control_item_id).push(l)
+  })
+  const controlRows = ins.filter(isCtrl).flatMap((it) => {
+    // A link is only printable when its target is on THIS certificate — a
+    // reference number pointing outside the table would be worse than blank.
+    const links = (linksByControl.get(it.id) || []).filter((l) => refNoById.has(l.controlled_item_id))
+    if (!links.length) return [{ ...mapLight(it), ctrlRefNo: '', ctrlRefDesc: '', ctrlTotal: '' }]
+    return links.map((l) => {
+      const target = lightRows.find((x) => x.id === l.controlled_item_id)
+      return {
+        ...mapLight(it),
+        ctrlRefNo: refNoById.get(l.controlled_item_id),
+        ctrlRefDesc: [target?.item_description, target?.model_code].filter(Boolean).join(' '),
+        ctrlTotal: l.controlled_qty ?? target?.total_quantity ?? '',
+      }
+    })
+  })
+
   // 8U Issue 1 — signing (names, titles, date) is TARSHID's scope and happens on
   // paper after this tool produces the PDF. The certificate carries no signer
   // identities; the الاعتماد grid renders as a blank form. The platform is
@@ -172,8 +202,8 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
       ? `${single.location_lat}, ${single.location_lng}` : '',
     descriptionLines: coc.esm_codes.map((c) => esmName[c] || c),
     kind,
-    installed: (kind === 'ac' ? ins.map(mapAc) : ins.filter((it) => !isCtrl(it)).map(mapLight)),
-    installedControls: kind === 'ac' ? [] : ins.filter(isCtrl).map((it) => ({ ...mapLight(it), ctrlRefNo: '', ctrlRefDesc: '', ctrlTotal: '' })),
+    installed: (kind === 'ac' ? ins.map(mapAc) : lightRows.map(mapLight)),
+    installedControls: kind === 'ac' ? [] : controlRows,
     installedOther: oth.map((it) => ({ description: it.item_description || '', qty: it.qty })),
     removed: (kind === 'ac' ? rem.map(mapAc) : rem.map(mapLight)),
     meterNo: single?.elec_meter_no || '',
