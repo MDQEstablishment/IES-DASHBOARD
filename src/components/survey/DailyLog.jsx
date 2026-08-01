@@ -74,16 +74,16 @@ export default function SurveyDailyLog({ entries, buildings }) {
       {days.length === 0 ? <Empty icon="daily">No survey entries for this filter.</Empty> : days.map((d) => {
         const open = !(collapsed[d.day] ?? false)
         return (
-          <div key={d.day} style={{ border: '1px solid var(--line)', borderRadius: 10, marginBottom: 12, overflow: 'hidden', background: '#fff' }}>
+          <div key={d.day} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', marginBottom: 12, overflow: 'hidden', background: 'var(--surface-1)' }}>
             <button onClick={() => setCollapsed((p) => ({ ...p, [d.day]: open }))}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 14px', background: d.day === todayKey() ? '#F5EEDF' : 'var(--bg)', cursor: 'pointer', border: 'none' }}>
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 14px', background: d.day === todayKey() ? 'var(--accent-tint)' : 'var(--bg)', cursor: 'pointer', border: 'none' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <Icon name={open ? 'chevron' : 'chevronr'} size={14} />
-                <span style={{ fontWeight: 700, fontSize: 13.5 }}>{fmtDate(d.day)}{d.day === todayKey() && <span style={{ marginLeft: 7, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#A0762B', background: '#EFE3C8' }}>TODAY</span>}</span>
+                <span style={{ fontWeight: 700, fontSize: 13.5 }}>{fmtDate(d.day)}{d.day === todayKey() && <span style={{ marginLeft: 7, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: '#EFE3C8' }}>TODAY</span>}</span>
               </span>
               <span style={{ display: 'flex', gap: 12, alignItems: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>
                 <span>{num(d.rows.length)} entries</span><span>{num(d.units)} units</span>
-                <span style={{ display: 'flex', gap: 5 }}>{Object.entries(d.cats).map(([c, n]) => <span key={c} style={{ padding: '1px 7px', borderRadius: 10, background: '#fff', border: '1px solid var(--line)' }}>{CAT_LABEL[c] || c} {num(n)}</span>)}</span>
+                <span style={{ display: 'flex', gap: 5 }}>{Object.entries(d.cats).map(([c, n]) => <span key={c} style={{ padding: '1px 7px', borderRadius: 'var(--radius-m)', background: 'var(--surface-1)', border: '1px solid var(--line)' }}>{CAT_LABEL[c] || c} {num(n)}</span>)}</span>
               </span>
             </button>
             {open && (
@@ -100,7 +100,7 @@ export default function SurveyDailyLog({ entries, buildings }) {
                           <tr key={e.id} style={{ borderTop: '1px solid var(--line)' }}>
                             <td style={{ padding: '6px 7px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{e.building?.code || '—'}</td>
                             <td style={{ padding: '6px 7px', whiteSpace: 'nowrap' }}>{[e.floor, e.room_name].filter(Boolean).join(' · ') || '—'}</td>
-                            <td style={{ padding: '6px 7px' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '1px 7px', borderRadius: 6, color: '#A0762B', background: '#F5EEDF' }}>{CAT_LABEL[e.category] || e.category}</span></td>
+                            <td style={{ padding: '6px 7px' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: 'var(--accent-tint)' }}>{CAT_LABEL[e.category] || e.category}</span></td>
                             <td style={{ padding: '6px 7px', color: 'var(--text-2)' }}>
                               {[e.make, e.model, e.category === 'ac' && e.tr ? `${num(e.tr)} TR` : e.category === 'lighting' && e.wattage ? `${num(e.wattage)} W` : ''].filter(Boolean).join(' ') || e.equipment_type || '—'}
                               {/* replacement chips belong to the parked Saving
@@ -109,7 +109,7 @@ export default function SurveyDailyLog({ entries, buildings }) {
                               {FEATURES.savingSheet && (e.catalog_item_id
                                 ? <span title="Linked to an approved catalog item" style={{ marginLeft: 6, color: 'var(--ok)', fontWeight: 700, fontSize: 10.5 }}>✓</span>
                                 : ['lighting', 'ac'].includes(e.category)
-                                  ? <span title="Needs catalog mapping for the savings estimate" style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>map</span>
+                                  ? <span title="Needs catalog mapping for the savings estimate" style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-s)', color: 'var(--warn)', background: 'var(--warn-bg)' }}>map</span>
                                   : null)}
                             </td>
                             <td style={{ padding: '6px 7px', textAlign: 'right', fontFamily: 'var(--mono)', fontSize: 11 }}>×{num(e.qty)}</td>
@@ -128,4 +128,4 @@ export default function SurveyDailyLog({ entries, buildings }) {
   )
 }
 
-const ctrl = { padding: '8px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12.5 }
+const ctrl = { padding: '8px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 'var(--radius-s)', background: 'var(--surface-1)', fontSize: 12.5 }

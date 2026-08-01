@@ -48,7 +48,7 @@ export default function SurveyTab({ project, buildings, initialView }) {
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       {/* summary strip */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
         <Stat label="BUILDINGS SURVEYED" value={`${num(stats.surveyedB)} / ${num(buildings.length)}`} />
@@ -60,9 +60,9 @@ export default function SurveyTab({ project, buildings, initialView }) {
 
       {/* toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-        <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
+        <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', overflow: 'hidden' }}>
           {[['log', 'Daily Log'], ['table', 'All entries'], ['hours', 'Operating Hours']].map(([k, l]) => (
-            <button key={k} onClick={() => setView(k)} style={{ padding: '7px 14px', fontSize: 12.5, fontWeight: view === k ? 700 : 500, background: view === k ? '#F5EEDF' : '#fff', color: view === k ? 'var(--accent)' : 'var(--text-3)', border: 'none', cursor: 'pointer' }}>{l}</button>
+            <button key={k} onClick={() => setView(k)} style={{ padding: '7px 14px', fontSize: 12.5, fontWeight: view === k ? 700 : 500, background: view === k ? 'var(--accent-tint)' : 'var(--surface-1)', color: view === k ? 'var(--accent)' : 'var(--text-3)', border: 'none', cursor: 'pointer' }}>{l}</button>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -91,8 +91,8 @@ export default function SurveyTab({ project, buildings, initialView }) {
 
 function Stat({ label, value, highlight, mono }) {
   return (
-    <div style={{ flex: '1 1 130px', minWidth: 120, border: '1px solid var(--line)', borderRadius: 8, padding: '9px 12px', background: highlight ? '#F5EEDF' : 'var(--bg)' }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)' }}>{label}</div>
+    <div style={{ flex: '1 1 130px', minWidth: 120, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '9px 12px', background: highlight ? 'var(--accent-tint)' : 'var(--bg)' }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{label}</div>
       <div style={{ fontWeight: 700, fontSize: mono ? 12.5 : 17, marginTop: 3, fontFamily: mono ? 'var(--mono)' : undefined }}>{value}</div>
     </div>
   )

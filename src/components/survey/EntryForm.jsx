@@ -188,7 +188,7 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
           {roomKey(form.room_name) !== '' && (
             roomMatch
               ? <div style={{ fontSize: 10.5, color: 'var(--ok)', marginTop: 3 }}>Links to existing room “{roomMatch.name}”</div>
-              : <div style={{ fontSize: 10.5, color: '#B45309', marginTop: 3 }}>New room — will be created in this building</div>
+              : <div style={{ fontSize: 10.5, color: 'var(--warn)', marginTop: 3 }}>New room — will be created in this building</div>
           )}
         </Field>
         <Field label="Room type">
@@ -267,7 +267,7 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
         )}
         {isAc && <div style={{ minWidth: 0, gridColumn: '1 / -1' }}><DerivedEquivalent matched={matched} btu={derivedBtu} loading={registry === null} linked={!!form.registry_id} /></div>}
         {needsPhoto && (
-          <div style={{ minWidth: 0, gridColumn: '1 / -1', marginBottom: 14, border: '1px solid #EBDCB2', background: '#FAF3E3', borderRadius: 8, padding: '8px 11px', fontSize: 11.5, color: '#854D0E' }}>
+          <div style={{ minWidth: 0, gridColumn: '1 / -1', marginBottom: 14, border: '1px solid #EBDCB2', background: 'var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '8px 11px', fontSize: 11.5, color: 'var(--warn-deep)' }}>
             <b>Nameplate photo required.</b> {isAc
               ? 'This unit is not matched to the registry, so the photo is the only record of what it is — the assistant reads these to identify the model later.'
               : 'There is no approved registry for existing fittings, so the photo plus the wattage is the record of what was there.'}
@@ -292,7 +292,7 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
 const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 14px' }
 // derived-from-the-registry fields are shown, never typed
 const ro = { background: 'var(--bg)', color: 'var(--text-2)' }
-const SectionLabel = ({ children }) => <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-3)', margin: '4px 0 8px' }}>{children}</div>
+const SectionLabel = ({ children }) => <div style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', margin: '4px 0 8px' }}>{children}</div>
 
 // 9D-6 — searchable picker over OLD_MODEL_REGISTRY: the unit standing in the
 // room, not its replacement. Picking one stores registry_id (+ match_source
@@ -363,14 +363,14 @@ function OldUnitPicker({ registry, matched, value, refValue, matchSource, matchC
   const byAi = value && matchSource === 'ai'
   return (
     <div style={{ minWidth: 0, marginBottom: 14 }}>
-      <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 6 }}>
+      <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
         Old unit — registry model{' '}
-        <span style={{ color: value ? 'var(--ok)' : '#B45309', textTransform: 'none', letterSpacing: 0 }}>
+        <span style={{ color: value ? 'var(--ok)' : 'var(--warn)', textTransform: 'none', letterSpacing: 0 }}>
           {value ? (byAi ? `· matched by the assistant${matchConfidence ? ` (${num(Math.round(Number(matchConfidence) * 100))}%)` : ''}` : '· matched') : '· needs matching'}
         </span>
       </span>
       {value ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--line)', borderRadius: 8, padding: '7px 10px', background: '#E9F3EE' }} title={matched ? titleOf(matched) : ''}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '7px 10px', background: 'var(--ok-bg)' }} title={matched ? titleOf(matched) : ''}>
           <span lang="en" dir="ltr" style={{ fontSize: 12.5, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {matched ? labelOf(matched) : loading ? 'Loading the registry…' : 'Linked model is no longer in the registry'}
           </span>
@@ -382,7 +382,7 @@ function OldUnitPicker({ registry, matched, value, refValue, matchSource, matchC
             placeholder={loading ? 'Loading the registry…' : rows.length ? 'Search make, model or tonnage — e.g. Gree, GWC, 2 TR…' : 'The old-model registry is empty — import it in Settings'}
             onChange={(e) => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
           {open && !loading && (matches.length > 0 || q.trim() !== '') && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
               {matches.length > 0 ? matches.map((r) => (
                 <button key={r.id} type="button" title={titleOf(r)} onMouseDown={(e) => { e.preventDefault(); onPick(r); setOpen(false); setQ('') }}
                   className="ies-row-hover" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, background: 'none', cursor: 'pointer' }}>
@@ -412,16 +412,16 @@ function DerivedEquivalent({ matched, btu, loading, linked }) {
     ['T1 EER', matched?.t1_eer],
   ]
   return (
-    <div style={{ marginBottom: 14, border: '1px solid var(--line)', borderRadius: 8, padding: '9px 11px', background: matched ? '#F7FAF8' : 'var(--bg)' }}>
+    <div style={{ marginBottom: 14, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '9px 11px', background: matched ? '#F7FAF8' : 'var(--bg)' }}>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         {cells.map(([l, v]) => (
           <div key={l} style={{ minWidth: 84 }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-3)' }}>{l}</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, letterSpacing: '.8px', color: 'var(--text-3)' }}>{l}</div>
             <div lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700 }}>{v == null ? '—' : num(v)}</div>
           </div>
         ))}
       </div>
-      <div style={{ fontSize: 10.5, marginTop: 5, color: matched ? '#1D6A49' : '#B45309' }}>
+      <div style={{ fontSize: 10.5, marginTop: 5, color: matched ? 'var(--ok-deep)' : 'var(--warn)' }}>
         {loading && linked ? 'Reading the registry…'
           : matched ? 'Derived from the registry match — the baseline uses this real nameplate efficiency.'
             : 'No registry match: the baseline will fall back to the assumed old-efficiency factor and the row stays flagged until it is matched.'}
@@ -463,10 +463,10 @@ function PhotoSlot({ label, path, buildingId, onPath, required }) {
 
   return (
     <div style={{ minWidth: 0, marginBottom: 14 }}>
-      <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: required && !path ? '#B45309' : 'var(--text-3)', marginBottom: 6 }}>{label}</span>
+      <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, color: required && !path ? 'var(--warn)' : 'var(--text-3)', marginBottom: 6 }}>{label}</span>
       {path ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {url ? <img src={url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--line)' }} /> : <span style={{ fontSize: 11, color: 'var(--text-3)' }}>attached</span>}
+          {url ? <img src={url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)' }} /> : <span style={{ fontSize: 11, color: 'var(--text-3)' }}>attached</span>}
           <button onClick={() => onPath('')} style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--bad)', background: 'none' }}>Remove</button>
         </div>
       ) : (

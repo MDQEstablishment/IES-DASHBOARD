@@ -10,7 +10,7 @@ import { num, toLatin } from '../../lib/format'
 // from the survey. ESCO fills ONLY start/end/days/weeks + EFLH; hours/year and
 // the TARSHID ref string are computed in the DB and shown read-only.
 const digitsOnly = (s) => toLatin(s).replace(/[^\d.]/g, '')
-const ctrl = { padding: '6px 8px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12, fontFamily: 'var(--mono)', boxSizing: 'border-box' }
+const ctrl = { padding: '6px 8px', border: '1px solid var(--line-ctrl)', borderRadius: 'var(--radius-s)', background: 'var(--surface-1)', fontSize: 12, fontFamily: 'var(--mono)', boxSizing: 'border-box' }
 const hhmm = (t) => (t ? String(t).slice(0, 5) : '')
 const complete = (r) => r.start_time != null && r.end_time != null && r.days_per_week != null && r.weeks_per_year != null
 
@@ -145,7 +145,7 @@ export default function OperatingHours({ project, canWrite }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <span lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text-3)' }}>
           <b style={{ color: withHours === rows.length && rows.length > 0 ? 'var(--ok)' : 'var(--text)' }}>{num(withHours)}</b> of {num(rows.length)} spaces have hours
-          {' · '}<b style={{ color: missingEflh > 0 ? '#B45309' : 'var(--ok)' }}>{num(missingEflh)}</b> missing EFLH
+          {' · '}<b style={{ color: missingEflh > 0 ? 'var(--warn)' : 'var(--ok)' }}>{num(missingEflh)}</b> missing EFLH
         </span>
         <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', flexWrap: 'wrap' }}>
           <select style={{ ...ctrl, fontFamily: 'var(--font)' }} value={building} onChange={(e) => setBuilding(e.target.value)}>
@@ -167,15 +167,15 @@ export default function OperatingHours({ project, canWrite }) {
       {loading && rows.length === 0 ? <Loading /> : rows.length === 0 ? (
         <Empty icon="daily">No spaces yet — survey entries with a room type create rows here{canWrite ? ' (auto-synced on open)' : ''}.</Empty>
       ) : filtered.length === 0 ? <Empty icon="daily">No spaces match this filter.</Empty> : groups.map((g) => (
-        <div key={g.id} style={{ border: '1px solid var(--line)', borderRadius: 10, marginBottom: 12, overflow: 'hidden', opacity: g.residential ? 0.6 : 1 }}>
+        <div key={g.id} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', marginBottom: 12, overflow: 'hidden', opacity: g.residential ? 0.6 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', background: 'var(--bg)', borderBottom: '1px solid var(--line)', flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{g.code}</span>
             <span style={{ fontWeight: 600, fontSize: 12.5 }}>{g.name}</span>
-            {g.residential && <span title="Residential — excluded from TARSHID savings scope; hours stay editable" style={{ fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#A39D8E', background: '#F0EDE4' }}>RESIDENTIAL · EXCLUDED</span>}
+            {g.residential && <span title="Residential — excluded from TARSHID savings scope; hours stay editable" style={{ fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--text-faint)', background: 'var(--line-soft)' }}>RESIDENTIAL · EXCLUDED</span>}
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginLeft: 'auto' }}>{num(g.rows.filter(complete).length)}/{num(g.rows.length)} filled</span>
             {canWrite && g.rows.length > 1 && (
               <button className="ies-hover" title="Copy the first complete row's start/end/days/weeks to every other space in this building"
-                onClick={() => copyDown(g)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', padding: '4px 9px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff' }}>
+                onClick={() => copyDown(g)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', padding: '4px 9px', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)', background: 'var(--surface-1)' }}>
                 Apply same hours to all
               </button>
             )}
@@ -189,7 +189,7 @@ export default function OperatingHours({ project, canWrite }) {
                 <tr key={r.id} style={{ borderTop: '1px solid var(--line)' }}>
                   <td style={{ padding: '6px', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {r.space_type}
-                    {!r.has_entries && <span title="No survey entries carry this space type any more — the row is kept, nothing is deleted" style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 5, color: '#A39D8E', background: '#F0EDE4' }}>NO ENTRIES</span>}
+                    {!r.has_entries && <span title="No survey entries carry this space type any more — the row is kept, nothing is deleted" style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-s)', color: 'var(--text-faint)', background: 'var(--line-soft)' }}>NO ENTRIES</span>}
                   </td>
                   <td style={{ padding: '4px 6px' }}><TimeInput value={r.start_time} disabled={!canWrite} onSave={(v) => save(r, { start_time: v })} /></td>
                   <td style={{ padding: '4px 6px' }}><TimeInput value={r.end_time} disabled={!canWrite} onSave={(v) => save(r, { end_time: v })} /></td>

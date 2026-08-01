@@ -8,7 +8,7 @@ import { SURVEY_CATEGORIES, FEATURES } from '../../lib/constants'
 
 const CAT_LABEL = Object.fromEntries(SURVEY_CATEGORIES)
 const PAGE = 100
-const ctrl = { padding: '8px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12.5 }
+const ctrl = { padding: '8px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 'var(--radius-s)', background: 'var(--surface-1)', fontSize: 12.5 }
 
 export default function SurveyEntriesTable({ entries, buildings, canManageAll, currentUserId, onEdit }) {
   const [search, setSearch] = useState('')
@@ -111,7 +111,7 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
             </tr></thead>
             <tbody>
               {rows.map((e) => (
-                <tr key={e.id} style={{ borderTop: '1px solid var(--line)', background: sel.has(e.id) ? '#F5EEDF' : undefined }}>
+                <tr key={e.id} style={{ borderTop: '1px solid var(--line)', background: sel.has(e.id) ? 'var(--accent-tint)' : undefined }}>
                   <td style={{ padding: '6px' }}>{canManageAll && <input type="checkbox" checked={sel.has(e.id)} onChange={() => toggle(e.id)} />}</td>
                   <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10.5, whiteSpace: 'nowrap' }}>{e.building?.code || '—'}</td>
                   <td style={{ padding: '6px' }}>{e.floor || '—'}</td>
@@ -125,7 +125,7 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
                       ? <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>
                       : e.registry_id
                         ? <span title={`Matched to the old-model registry${e.match_source === 'ai' ? ' by the assistant' : ''} — the baseline uses its real equivalent SEER`} style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓{e.match_source === 'ai' ? <span style={{ fontFamily: 'var(--mono)', fontSize: 8, marginLeft: 2 }}>AI</span> : null}</span>
-                        : <span title="Not matched to the registry — the baseline falls back to the assumed old-efficiency factor" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>match</span>}
+                        : <span title="Not matched to the registry — the baseline falls back to the assumed old-efficiency factor" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--warn)', background: 'var(--warn-bg)' }}>match</span>}
                   </td>
                   {/* NEW — the approved replacement, set at project level;
                       parked with the Saving Sheet feature */}
@@ -134,7 +134,7 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
                       {e.catalog_item_id
                         ? <span title="An approved replacement is mapped on this row" style={{ color: 'var(--ok)', fontWeight: 700, fontSize: 11 }}>✓</span>
                         : e.category === 'lighting'
-                          ? <span title="No approved lamp mapped — Saving Sheet → Lighting replacements" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#B45309', background: '#FAF3E3' }}>lamp</span>
+                          ? <span title="No approved lamp mapped — Saving Sheet → Lighting replacements" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--warn)', background: 'var(--warn-bg)' }}>lamp</span>
                           : e.category === 'ac'
                             ? <span title="Resolved from the project unit selection, not per row" style={{ color: 'var(--text-3)', fontSize: 10 }}>proj</span>
                             : <span style={{ color: 'var(--text-3)', fontSize: 10 }}>n/a</span>}
@@ -154,8 +154,8 @@ export default function SurveyEntriesTable({ entries, buildings, canManageAll, c
                   <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDateTime(e.created_at)}</td>
                   <td style={{ padding: '6px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {canTouch(e) && <>
-                      <button className="ies-hover" title="Edit" onClick={() => onEdit(e)} style={{ padding: 4, borderRadius: 6, color: 'var(--text-3)' }}><Icon name="edit" size={13} /></button>
-                      <button className="ies-hover" title="Delete" onClick={() => setDel(e)} style={{ padding: 4, borderRadius: 6, color: 'var(--bad)' }}><Icon name="x" size={14} /></button>
+                      <button className="ies-hover" title="Edit" onClick={() => onEdit(e)} style={{ padding: 4, borderRadius: 'var(--radius-s)', color: 'var(--text-3)' }}><Icon name="edit" size={13} /></button>
+                      <button className="ies-hover" title="Delete" onClick={() => setDel(e)} style={{ padding: 4, borderRadius: 'var(--radius-s)', color: 'var(--bad)' }}><Icon name="x" size={14} /></button>
                     </>}
                   </td>
                 </tr>

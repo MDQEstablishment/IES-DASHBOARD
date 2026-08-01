@@ -115,7 +115,7 @@ export default function BuildingChat({ buildingId, user }) {
   const canEdit = (m) => m.user_id === user.id && (Date.now() - new Date(m.created_at).getTime()) < EDIT_WINDOW_MS
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 14, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
         <MessageSquare size={15} /> Chat
       </div>
@@ -123,7 +123,7 @@ export default function BuildingChat({ buildingId, user }) {
       <div ref={listRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 360, overflowY: 'auto', paddingRight: 2 }}>
         {msgs.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '26px 8px' }}>
-            <MessageSquare size={22} color="#C9C3B4" />
+            <MessageSquare size={22} color="var(--text-faint)" />
             <div style={{ fontSize: 12.5, marginTop: 6 }}>No messages yet — start the conversation</div>
           </div>
         ) : msgs.map((m) => {
@@ -140,14 +140,14 @@ export default function BuildingChat({ buildingId, user }) {
                 </div>
                 {editId === m.id ? (
                   <div style={{ marginTop: 4 }}>
-                    <textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} style={{ width: '100%', minHeight: 48, border: '1px solid var(--line)', borderRadius: 6, padding: '7px 9px', fontSize: 12.5, resize: 'vertical' }} />
+                    <textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} style={{ width: '100%', minHeight: 48, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '7px 9px', fontSize: 12.5, resize: 'vertical' }} />
                     <div style={{ display: 'flex', gap: 6, marginTop: 4, justifyContent: 'flex-end' }}>
                       <button onClick={() => setEditId(null)} style={{ fontSize: 11.5, color: 'var(--text-3)', fontWeight: 600 }}>Cancel</button>
                       <button onClick={() => saveEdit(m)} style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700 }}>Save</button>
                     </div>
                   </div>
                 ) : (
-                  <div style={{ marginTop: 3, fontSize: 12.5, lineHeight: 1.45, background: mine ? '#F5EEDF' : '#FAF8F2', border: '1px solid var(--line)', borderRadius: 10, padding: '7px 10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', textAlign: 'left' }}>
+                  <div style={{ marginTop: 3, fontSize: 12.5, lineHeight: 1.45, background: mine ? 'var(--accent-tint)' : 'var(--hover)', border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: '7px 10px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', textAlign: 'left' }}>
                     {renderBody(m.body, mNames)}
                   </div>
                 )}
@@ -166,11 +166,11 @@ export default function BuildingChat({ buildingId, user }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
         <div style={{ flex: 1, position: 'relative' }}>
           {mention && filtered.length > 0 && (
-            <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', zIndex: 40 }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--text-3)', padding: '6px 10px 4px' }}>MENTION</div>
+            <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', zIndex: 40 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '6px 10px 4px' }}>MENTION</div>
               {filtered.map((p, i) => (
                 <button key={p.id} type="button" onMouseDown={(e) => { e.preventDefault(); pickMention(p) }}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', textAlign: 'left', background: i === mention.index ? '#F5EEDF' : 'transparent', cursor: 'pointer' }}>
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', textAlign: 'left', background: i === mention.index ? 'var(--accent-tint)' : 'transparent', cursor: 'pointer' }}>
                   <Avatar name={p.full_name} color={roleColor(p.role)} size={22} />
                   <span style={{ lineHeight: 1.2 }}>
                     <span style={{ display: 'block', fontWeight: 600, fontSize: 12.5 }}>{p.full_name}</span>
@@ -185,10 +185,10 @@ export default function BuildingChat({ buildingId, user }) {
             onKeyDown={onKeyDown}
             placeholder="Write a message…  @ to mention  ·  Enter to send, Shift+Enter for a new line"
             rows={1}
-            style={{ width: '100%', boxSizing: 'border-box', resize: 'none', minHeight: 38, maxHeight: 96, border: '1px solid var(--line)', borderRadius: 6, padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4 }} />
+            style={{ width: '100%', boxSizing: 'border-box', resize: 'none', minHeight: 38, maxHeight: 96, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '9px 11px', fontSize: 12.5, lineHeight: 1.4 }} />
         </div>
         <button onClick={send} disabled={!body.trim() || busy}
-          style={{ padding: '9px 14px', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 12.5, border: 'none', cursor: body.trim() && !busy ? 'pointer' : 'default', opacity: body.trim() && !busy ? 1 : 0.5 }}>Send</button>
+          style={{ padding: '9px 14px', borderRadius: 'var(--radius-s)', background: 'var(--accent)', color: 'var(--surface-1)', fontWeight: 700, fontSize: 12.5, border: 'none', cursor: body.trim() && !busy ? 'pointer' : 'default', opacity: body.trim() && !busy ? 1 : 0.5 }}>Send</button>
       </div>
     </div>
   )

@@ -18,15 +18,15 @@ const Lbl = ({ children }) => <span style={{ display: 'block', fontFamily: 'var(
 // a collapsible Daily Log history of past batches.
 const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
 // Colored ESM pills (8J-2): ESM1 indigo, ESM2 violet, ESM3 teal.
-const ESM_PILL = { ESM1: { c: '#3E5C8A', bg: '#EBF0F7' }, ESM2: { c: '#6D5A8E', bg: '#F0EDF6' }, ESM3: { c: '#2A7A72', bg: '#E8F3F1' } }
-const esmPill = (code) => ESM_PILL[code] || { c: '#8A8577', bg: '#F0EDE4' }
+const ESM_PILL = { ESM1: { c: 'var(--esm1)', bg: 'var(--esm1-bg)' }, ESM2: { c: 'var(--esm2)', bg: 'var(--esm2-bg)' }, ESM3: { c: 'var(--esm3)', bg: 'var(--esm3-bg)' } }
+const esmPill = (code) => ESM_PILL[code] || { c: 'var(--text-3)', bg: 'var(--line-soft)' }
 const num = (v) => (v == null ? 0 : Number(v))
 const today = localToday
 const ACCEPT = '.jpg,.jpeg,.png,.heic,.heif,image/*'
 
 function EsmBadge({ code, style }) {
   const p = esmPill(code)
-  return <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, color: p.c, background: p.bg, borderRadius: 6, padding: '3px 8px', ...style }}>{code || 'ESM'}</span>
+  return <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, color: p.c, background: p.bg, borderRadius: 'var(--radius-s)', padding: '3px 8px', ...style }}>{code || 'ESM'}</span>
 }
 
 export default function DailyProgress({ buildingId, projectId, buildingCode, canWrite, user }) {
@@ -113,7 +113,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
   return (
     <>
       {/* ── LOG TODAY'S WORK PAD ─────────────────────────────────────────── */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 20, marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
           <div style={{ flex: 1, minWidth: 160 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Log today’s work · {buildingCode}</div>
@@ -133,7 +133,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
         {!canWrite ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Read-only — your role can view the log but not record work.</div> : (<>
           <Btn icon="plus" style={{ padding: '7px 11px', fontSize: 12, marginBottom: lines.length ? 12 : 0 }} onClick={addLine}>Add sub-type</Btn>
           {lines.length === 0 && (
-            <div style={{ marginTop: 10, padding: '14px 16px', border: '1px dashed var(--line)', borderRadius: 10, background: '#FCFBF7', fontSize: 12.5, color: 'var(--text-3)' }}>
+            <div style={{ marginTop: 10, padding: '14px 16px', border: '1px dashed var(--line)', borderRadius: 'var(--radius-m)', background: 'var(--raised)', fontSize: 12.5, color: 'var(--text-3)' }}>
               ↑ {batches.length === 0 ? 'No work logged yet' : 'Nothing added for today yet'} — start by adding a sub-type above.
             </div>
           )}
@@ -147,7 +147,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
             const avail = m ? (availByVar[m.id] || 0) : 0
             const over = m && num(l.qty) > avail
             return (
-              <div key={l.key} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 14, marginBottom: 10, background: '#FCFBF7' }}>
+              <div key={l.key} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 14, marginBottom: 10, background: 'var(--raised)' }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   <EsmBadge code={m?.esm?.code} style={{ marginTop: 22 }} />
                   <div style={{ flex: 2, minWidth: 200 }}>
@@ -177,7 +177,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
                     <Lbl>Photos</Lbl>
                     <FileDropZone compact multi accept={ACCEPT} maxSizeMb={10} onFiles={(files) => setLine(l.key, { files })} helperText="JPG, PNG or HEIC" />
                   </div>
-                  <button title="Remove line" onClick={() => rmLine(l.key)} style={{ marginTop: 22, width: 28, height: 28, borderRadius: 7, border: '1px solid var(--line)', background: '#fff', color: 'var(--bad)', fontWeight: 700, cursor: 'pointer' }}>×</button>
+                  <button title="Remove line" onClick={() => rmLine(l.key)} style={{ marginTop: 22, width: 28, height: 28, borderRadius: 'var(--radius-s)', border: '1px solid var(--line)', background: 'var(--surface-1)', color: 'var(--bad)', fontWeight: 700, cursor: 'pointer' }}>×</button>
                 </div>
                 {/* read-only progress strip with bar */}
                 <div style={{ marginTop: 12 }}>
@@ -188,8 +188,8 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
                     <span style={{ fontWeight: 700, color: 'var(--text)' }}>{pct}%</span>
                     <span style={{ marginLeft: 'auto', color: over ? 'var(--bad)' : 'var(--text-3)' }}>Warehouse: {avail}{over ? ` · need ${num(l.qty)}` : ''}</span>
                   </div>
-                  <div style={{ height: 6, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden', marginTop: 6 }}>
-                    <div style={{ height: '100%', width: Math.min(100, pct) + '%', background: pct >= 90 ? '#217A54' : 'var(--accent)' }} />
+                  <div style={{ height: 6, borderRadius: 4, background: 'var(--track)', overflow: 'hidden', marginTop: 6 }}>
+                    <div style={{ height: '100%', width: Math.min(100, pct) + '%', background: pct >= 90 ? 'var(--ok)' : 'var(--accent)' }} />
                   </div>
                 </div>
               </div>
@@ -204,7 +204,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
       </div>
 
       {/* ── DAILY LOG HISTORY ─────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 20 }}>
+      <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 20 }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Daily Log <span style={{ ...mono, fontSize: 10, color: 'var(--text-3)', marginLeft: 6 }}>HISTORY</span></div>
         {batches.length === 0 ? <Empty icon="daily">No work logged in this building yet.</Empty> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -228,8 +228,8 @@ function HistoryRow({ batch }) {
   const viewPhoto = (p) => openSigned('daily-progress-photos', p, 'photo')
 
   return (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-      <button onClick={() => setOpen((o) => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: open ? '#FAF8F2' : '#fff', cursor: 'pointer', textAlign: 'left' }}>
+    <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', overflow: 'hidden' }}>
+      <button onClick={() => setOpen((o) => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: open ? 'var(--hover)' : 'var(--surface-1)', cursor: 'pointer', textAlign: 'left' }}>
         <span style={{ ...mono, fontWeight: 700, fontSize: 12.5, minWidth: 110 }}>{fmtDate(batch.date)}</span>
         <span style={{ display: 'flex', gap: 4 }}>{esms.map((e) => <EsmBadge key={e} code={e} />)}</span>
         <span style={{ ...mono, fontSize: 11.5, color: 'var(--text-3)', marginLeft: 'auto' }}>{units} units · {lines.length} line{lines.length === 1 ? '' : 's'} · {workers} worker{workers === 1 ? '' : 's'} · {perWorker}/worker</span>

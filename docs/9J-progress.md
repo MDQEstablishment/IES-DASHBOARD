@@ -100,9 +100,30 @@ above 12 onto the 16px card radius, which turned `borderRadius: 20` **pills**
 (status badges, ring buttons) into rounded rectangles. The rule now sends >= 20
 to a true pill and leaves 2-4px hairline notches alone.
 
+### 9J(3) — Survey / field group
+`survey/EntryForm` · `survey/OperatingHours` · `survey/EntriesTable` ·
+`survey/DailyLog` · `SurveyTab` · `BuildingDetail` · `DailyProgress` (page +
+component) · `BuildingChat` · `BuildingPhotos` · `BuildingMaterialsPlan`
+
+| item | state |
+| --- | --- |
+| 11 files restyled via the shared token pass | ☑ |
+| build clean | ☑ |
+| census freeze — empty diff, no whitelist | ☑ |
+| lib manifest — 18/18 unchanged | ☑ |
+| harnesses green — 179 assertions | ☑ |
+| diff audit — 117 insertions / 117 deletions, zero non-styling lines | ☑ |
+| **tap targets preserved (sprint rule 5)** — every `minHeight`/`height`/control padding byte-identical before and after | ☑ |
+| screenshots + overflow at 390×844 | ⏳ pending credential |
+
+These are the field team's daily tools, so the restyle deliberately touched no
+sizing at all: the pass rewrites colour, radius, shadow, border and font only.
+The measured proof is above — the full multiset of tap-target dimensions is
+unchanged, not merely "no smaller".
+
 ## Remaining commits
 
-☐ 9J(3) Survey/field · ☐ 9J(4) Materials ·
+☐ 9J(4) Materials ·
 ☐ 9J(5) Docs/COCs · ☐ 9J(6) Tasks/Escalations · ☐ 9J(7) Reports ·
 ☐ 9J(8) Settings · ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
 assertion, and the full screenshot set once the credential lands).
