@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './rbac'
 import { ProjectProvider } from './project'
@@ -6,17 +7,26 @@ import Shell from './components/Shell'
 import Login from './components/Login'
 import { Loading, Toaster } from './components/ui'
 
-import Dashboard from './pages/Dashboard'
-import Projects from './pages/Projects'
-import ProjectDetail from './pages/ProjectDetail'
-import BuildingDetail from './pages/BuildingDetail'
-import DailyProgress from './pages/DailyProgress'
-import DesignSystem from './pages/DesignSystem'
-import Tasks from './pages/Tasks'
-import Escalations from './pages/Escalations'
-import ManageEsms from './pages/ManageEsms'
-import Reports from './pages/Reports'
-import Settings from './pages/Settings'
+// 9K(4) — every routed page is split out. They were static imports, so one
+// bundle carried the whole platform: opening the dashboard downloaded the
+// 709-building map, the spreadsheet reader, the PDF generators and the Arabic
+// shaper, none of which that screen uses. Each page now arrives when its route
+// is first visited, and the heavy libraries land with the page that needs them.
+//
+// Shell, Login and ui stay static: the shell is on screen for every route, and
+// Login is what an unauthenticated visitor sees first — deferring either would
+// only add a round trip to the critical path.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Projects = lazy(() => import('./pages/Projects'))
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
+const BuildingDetail = lazy(() => import('./pages/BuildingDetail'))
+const DailyProgress = lazy(() => import('./pages/DailyProgress'))
+const DesignSystem = lazy(() => import('./pages/DesignSystem'))
+const Tasks = lazy(() => import('./pages/Tasks'))
+const Escalations = lazy(() => import('./pages/Escalations'))
+const ManageEsms = lazy(() => import('./pages/ManageEsms'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 function FullScreen({ children }) {
   return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>{children}</div>
@@ -32,6 +42,10 @@ export default function App() {
   return (
     <ProjectProvider>
       <BreadcrumbProvider>
+        {/* One boundary around the routes: the page chunk is fetched on the
+            first visit to its route and cached by the browser thereafter, so
+            this fallback is a brief spinner once, not on every navigation. */}
+        <Suspense fallback={<FullScreen><Loading /></FullScreen>}>
         <Routes>
           <Route element={<Shell />}>
             {/* dashboard is the landing route; root + legacy /home redirect to it */}
@@ -57,6 +71,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>
+        </Suspense>
       </BreadcrumbProvider>
       <Toaster />
     </ProjectProvider>
