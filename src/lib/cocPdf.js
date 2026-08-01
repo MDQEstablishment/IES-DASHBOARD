@@ -44,7 +44,7 @@ export async function ensureCocSettings(projectId, esmOpts) {
 // generating in bulk reuse the same context across COCs.
 export async function fetchCocContext(projectId) {
   const { data: auth } = await supabase.auth.getUser()
-  const [proj, settings, buildings, pesms, installed, removed, other, links, me] = await Promise.all([
+  const [proj, settings, buildings, pesms, installed, removed, other, links, acCat, me] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).single(),
     supabase.from('coc_project_settings').select('*').eq('project_id', projectId).maybeSingle(),
     supabase.from('buildings').select('*').eq('project_id', projectId),
@@ -56,10 +56,13 @@ export async function fetchCocContext(projectId) {
     supabase.from('project_other_installed_items').select('*').eq('project_id', projectId),
     // 9H(2) — which lighting item each controller controls.
     supabase.from('project_control_links').select('*').eq('project_id', projectId),
+    // 9H(3) — approved-equipment catalog, used ONLY to fill a blank capacity or
+    // efficiency on an AC certificate. Manual values always win.
+    supabase.from('ac_catalog').select('model,capacity_btu,seer').eq('is_active', true),
     // 8V Issue 2 — the ESCO column of the approval grid auto-fills with the
     // generating engineer's name; nothing else about the signer is read.
     auth?.user?.id
-      ? supabase.from('profiles').select('full_name').eq('id', auth.user.id).maybeSingle()
+      ? supabase.from('profiles').select('full_name,job_title').eq('id', auth.user.id).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
   const esmName = {}
@@ -69,7 +72,8 @@ export async function fetchCocContext(projectId) {
     buildings: buildings.data || [],
     esmName, installed: installed.data || [], removed: removed.data || [],
     other: other.data || [], controlLinks: links.data || [],
-    currentUserName: me.data?.full_name || '',
+    acCatalog: acCat.data || [],
+    currentUserName: me.data?.full_name || '', currentUserTitle: me.data?.job_title || '',
   }
 }
 
@@ -137,18 +141,39 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
   const ins = ctx.installed.filter(inScope)
   const rem = ctx.removed.filter(inScope)
   const oth = (ctx.other || []).filter(inScope)
+  // 9H(3) — approved-equipment fallback. model_code is free text, so this is a
+  // name match, not a join: exact case-insensitive model, active rows only. A
+  // manual value always wins; a miss leaves the cell blank and says so. The
+  // certificate never invents a capacity it cannot source.
+  const notices = []
+  const catByModel = new Map((ctx.acCatalog || [])
+    .filter((c) => c.model)
+    .map((c) => [String(c.model).trim().toLowerCase(), c]))
+  const fromCatalog = (it) => (it.model_code ? catByModel.get(String(it.model_code).trim().toLowerCase()) : null)
+
   const mapLight = (it) => ({
     description: [it.item_description, it.model_code].filter(Boolean).join(' '),
     qty: it.total_quantity,
     power: it.capacity_value != null ? `${it.capacity_value}${it.capacity_unit || 'W'}` : '',
     returned: it.returned_to_facility !== false,
   })
-  const mapAc = (it) => ({
-    description: [it.item_description, it.model_code].filter(Boolean).join(' '),
-    qty: it.total_quantity,
-    kbtu: it.capacity_value ?? '', seer: it.efficiency_value ?? '',
-    returned: it.returned_to_facility !== false,
-  })
+  const mapAc = (it) => {
+    const needsCap = it.capacity_value == null
+    const needsEff = it.efficiency_value == null
+    const cat = (needsCap || needsEff) ? fromCatalog(it) : null
+    if ((needsCap || needsEff) && !cat && it.model_code) {
+      notices.push(`${it.item_description || it.model_code}: no active catalog entry for model "${it.model_code}" — capacity/efficiency left blank`)
+    } else if (cat) {
+      notices.push(`${it.item_description || it.model_code}: capacity/efficiency filled from the approved-equipment catalog`)
+    }
+    return {
+      description: [it.item_description, it.model_code].filter(Boolean).join(' '),
+      qty: it.total_quantity,
+      kbtu: it.capacity_value ?? cat?.capacity_btu ?? '',
+      seer: it.efficiency_value ?? cat?.seer ?? '',
+      returned: it.returned_to_facility !== false,
+    }
+  }
   const isCtrl = (it) => CTRL_RE.test(esmName[it.esm_code] || '')
 
   // 9H(2) — resolve the control mapping. "رقم بند الانارة المتحكم بها" is the
@@ -209,12 +234,14 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     meterNo: single?.elec_meter_no || '',
     subscriptionNo: single?.elec_subscription_no || '',
     accountNo: single?.elec_account_no || '',
-    attachmentsChecked: [],
+    attachmentsChecked: coc.attachments_checked || [],
     // 8V Issue 2 — only the ESCO column of the الاعتماد grid is auto-filled:
     // the generating engineer's name + the generation date. TARSHID and the
     // government-entity columns stay blank (signed later, on paper, by TARSHID).
     escoSignerName: ctx.currentUserName || '',
+    escoSignerTitle: ctx.currentUserTitle || '',
     generationDate: fmtDate(localToday()),
+    notices,
   }
 }
 
@@ -231,14 +258,14 @@ export async function generateAndUploadCocPdf(coc, coveredBuildingIds, ctx, user
   const { data: res, error: rpcErr } = await supabase.rpc('mark_coc_generated', { p_coc_id: coc.id, p_pdf_path: path })
   if (rpcErr) return { error: rpcErr }
   if (!res?.ok) return { error: { message: res?.error || 'mark_coc_generated failed' } }
-  return { ok: true, path, bytes, filename }
+  return { ok: true, path, bytes, filename, notices: data.notices || [] }
 }
 
 // Preview a plan row (no COC row exists yet): fake a draft coc from the row.
-export async function renderCocPreview(row, ctx, code = 'PREVIEW') {
+export async function renderCocPreview(row, ctx, code = 'PREVIEW', attachments = []) {
   const coc = {
     id: null, project_id: ctx.project?.id, code, reference_no: code,
-    revision: 1, esm_codes: row.esm_codes || [],
+    revision: 1, esm_codes: row.esm_codes || [], attachments_checked: attachments,
   }
   const data = assembleCocPdfData(coc, row.building_ids || [], ctx)
   return await generateDocPdf('coc', data)

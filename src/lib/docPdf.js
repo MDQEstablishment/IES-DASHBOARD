@@ -43,7 +43,7 @@ const AR = {
   attachments: 'مرفقات', approval: 'الاعتماد',
   specs: 'مواصفات', samples: 'عينات', drawings: 'مخططات تفصيلية', photos: 'صور', boq: 'مرجع للكميات', testReport: 'تقرير إختبار عينات', inspReport: 'تقرير فحص عينات', other: 'أخرى (  )',
   govRep: 'ممثل الجهة الحكومية', tarshid: 'الشركة الوطنية لخدمات كفاءة الطاقة', contractor: 'الشركة المنفذة',
-  name: 'الإسم', role: 'الوظيفة', signature: 'التوقيع', date: 'التاريخ',
+  name: 'الإسم', role: 'الوظيفة', signature: 'التوقيع', date: 'التاريخ', mobile: 'رقم الجوال',
   yes: 'نعم', no: 'لا',
 }
 
@@ -585,6 +585,9 @@ export async function renderCoc(rawData, assets) {
     { label: AR.role, h: 24, key: 'role' },
     { label: AR.signature, h: 34, key: 'sig' },
     { label: AR.date, h: 22, key: 'date' },
+    // 9H(3) — the signed samples carry a mobile row. No phone number is stored
+    // anywhere in the platform, so all three columns print blank for signing.
+    { label: AR.mobile, h: 22, key: 'mobile' },
   ]
   const drawCell = (txt, cxm, yMid) => {
     if (!txt) return
@@ -605,6 +608,7 @@ export async function renderCoc(rawData, assets) {
       if (row.key === 'head') rtlC(h, cxm, yMid, { size: 8, bold: true })
       // ESCO column only (gi === 0): name + generation date; everything else blank.
       else if (gi === 0 && row.key === 'name') drawCell(data.escoSignerName, cxm, yMid)
+      else if (gi === 0 && row.key === 'role') drawCell(data.escoSignerTitle, cxm, yMid)
       else if (gi === 0 && row.key === 'date') drawCell(data.generationDate, cxm, yMid)
       cx -= orgColW
     })
@@ -641,6 +645,7 @@ function normalizeCocData(d) {
     attachmentsChecked: d.attachmentsChecked || [],
     // 8U/8V — the approval grid's ESCO column (only) auto-fills with the generating
     // engineer's name + generation date; TARSHID/entity columns stay blank.
-    escoSignerName: d.escoSignerName || '', generationDate: d.generationDate || '',
+    escoSignerName: d.escoSignerName || '', escoSignerTitle: d.escoSignerTitle || '',
+    generationDate: d.generationDate || '',
   }
 }
