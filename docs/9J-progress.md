@@ -154,8 +154,22 @@ modal embed LIVE PDF previews of generator output. The generators are untouched
 (manifest), and the panes they render into keep their exact geometry, so the
 previewed document cannot reflow. Only the chrome around the iframe changed.
 
+### 9J(6) — Tasks / Escalations
+`Tasks` · `Escalations`
+
+| item | state |
+| --- | --- |
+| 2 files restyled + 13 labels sentence-cased (decision b) | ☑ |
+| build clean · census empty · manifest 18/18 · 179 assertions | ☑ |
+| diff audit — 47/47, zero non-styling lines | ☑ |
+| screenshots | ⏳ pending credential |
+
+The 9G status controls are untouched: the select still offers exactly the moves
+migration 0102/0103 will accept from the signed-in person, and the census proves
+no handler moved.
+
 ## Remaining commits
 
-☐ 9J(6) Tasks/Escalations · ☐ 9J(7) Reports ·
+☐ 9J(7) Reports ·
 ☐ 9J(8) Settings · ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
 assertion, and the full screenshot set once the credential lands).

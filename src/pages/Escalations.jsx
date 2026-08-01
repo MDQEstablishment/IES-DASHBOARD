@@ -80,21 +80,21 @@ export default function Escalations() {
 
   return (
     <>
-      <PageTitle kicker="HIERARCHY CHAIN" title="Escalations"
+      <PageTitle kicker="Hierarchy chain" title="Escalations"
         right={!noManager && <Btn variant="primary" icon="plus" onClick={() => { setPrefill(null); setShowNew(true) }}>Raise escalation</Btn>} />
 
       {noManager && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5EEDF', border: '1px solid #E7D9B8', color: '#8A6524', borderRadius: 8, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--accent-tint)', border: '1px solid #E7D9B8', color: 'var(--accent-hover)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
           <Icon name="alert" size={15} />You sit at the top of the chain — escalations route up to you; you don't raise them.
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 8, padding: 3, background: '#fff', marginBottom: 16, width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: 3, background: 'var(--surface-1)', marginBottom: 16, width: 'fit-content' }}>
         {tabs.map((t) => {
           const active = activeTab === t.k
           return (
             <button key={t.k} onClick={() => setTab(t.k)} style={{
-              padding: '6px 16px', fontSize: 12.5, fontWeight: 600, borderRadius: 7,
+              padding: '6px 16px', fontSize: 12.5, fontWeight: 600, borderRadius: 'var(--radius-s)',
               color: active ? 'var(--accent)' : 'var(--text-3)', background: active ? 'rgba(160,118,43,.10)' : 'transparent', cursor: 'pointer',
             }}>{t.l} ({counts[t.k]})</button>
           )
@@ -134,9 +134,9 @@ function Card({ e, me, people, focused, onAck, onResolve, onClose, onHigher }) {
 
   return (
     <div style={{
-      background: focused ? '#FBF6EA' : '#fff',
+      background: focused ? '#FBF6EA' : 'var(--surface-1)',
       border: `1px solid ${focused ? 'var(--accent)' : 'var(--line)'}`,
-      borderRadius: 10, padding: 16,
+      borderRadius: 'var(--radius-m)', padding: 16,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -144,16 +144,16 @@ function Card({ e, me, people, focused, onAck, onResolve, onClose, onHigher }) {
           <Chip status={e.status} />
           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{ago(e.created_at)}</span>
           {e.level > 1 && (
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: '#96271E', background: '#F9ECEA' }}>
-              LEVEL {e.level}
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, color: 'var(--bad-deep)', background: 'var(--bad-bg)' }}>
+              Level {e.level}
             </span>
           )}
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {canAck && <Action onClick={() => onAck(e)} bg="#FAF3E3" fg="#B45309" bd="#EBDCB2">Acknowledge</Action>}
-          {canResolve && <Action onClick={() => onResolve(e)} bg="#E9F3EE" fg="#1D6A49" bd="#BFDFCF">Resolve…</Action>}
+          {canAck && <Action onClick={() => onAck(e)} bg="var(--warn-bg)" fg="var(--warn)" bd="var(--warn-bg)">Acknowledge</Action>}
+          {canResolve && <Action onClick={() => onResolve(e)} bg="var(--ok-bg)" fg="var(--ok-deep)" bd="var(--ok-bg)">Resolve…</Action>}
           {canClose && <Action onClick={() => onClose(e)} bg="#EEF1F6" fg="#3A4A63" bd="#D2DAE6">Close</Action>}
-          {canHigher && <Action onClick={() => onHigher(e)} bg="#F9ECEA" fg="#96271E" bd="#EBCFC9">Escalate higher ↑</Action>}
+          {canHigher && <Action onClick={() => onHigher(e)} bg="var(--bad-bg)" fg="var(--bad-deep)" bd="var(--bad-bg)">Escalate higher ↑</Action>}
         </div>
       </div>
 
@@ -161,14 +161,14 @@ function Card({ e, me, people, focused, onAck, onResolve, onClose, onHigher }) {
       {e.description && <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 3 }}>{e.description}</div>}
 
       {e.resolution_note && (
-        <div style={{ marginTop: 10, background: '#F6F8F7', border: '1px solid #DCE7E1', borderLeft: '3px solid #217A54', borderRadius: 7, padding: '9px 12px' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: '#1D6A49', marginBottom: 3 }}>RESOLUTION</div>
+        <div style={{ marginTop: 10, background: '#F6F8F7', border: '1px solid #DCE7E1', borderLeft: '3px solid #217A54', borderRadius: 'var(--radius-s)', padding: '9px 12px' }}>
+          <div style={{ fontSize: 12, color: 'var(--ok-deep)', marginBottom: 3 }}>Resolution</div>
           <div style={{ fontSize: 12.5, whiteSpace: 'pre-wrap' }}>{e.resolution_note}</div>
         </div>
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '12px 0', fontSize: 12.5 }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: 'var(--text-3)', background: '#F0EDE4' }}>{e.building?.code || '—'}</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 999, color: 'var(--text-3)', background: 'var(--line-soft)' }}>{e.building?.code || '—'}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <Avatar name={e.raised_by?.full_name} color={roleColor(e.raised_by?.role)} size={22} />
           <span style={{ whiteSpace: 'nowrap' }}>{e.raised_by?.full_name || '—'}</span>
@@ -209,20 +209,20 @@ function RealChain({ e, people }) {
       {chain.map((p, i) => {
         const passed = i < at || (settled && i === at)
         const isCur = !settled && i === at
-        const bg = passed ? '#217A54' : isCur ? '#B3362B' : '#fff'
-        const bd = passed ? '#217A54' : isCur ? '#B3362B' : 'var(--line)'
-        const fg = passed ? '#1D6A49' : isCur ? '#B3362B' : 'var(--text-3)'
+        const bg = passed ? 'var(--ok)' : isCur ? 'var(--bad)' : 'var(--surface-1)'
+        const bd = passed ? 'var(--ok)' : isCur ? 'var(--bad)' : 'var(--line)'
+        const fg = passed ? 'var(--ok-deep)' : isCur ? 'var(--bad)' : 'var(--text-3)'
         return (
           <div key={p.id} style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }} title={p.full_name}>
-              <span style={{ width: 22, height: 22, borderRadius: '50%', background: bg, border: `1px solid ${bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flex: 'none' }}>
-                {passed && <Icon name="check" size={12} style={{ color: '#fff' }} />}
+              <span style={{ width: 22, height: 22, borderRadius: '50%', background: bg, border: `1px solid ${bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--surface-1)', flex: 'none' }}>
+                {passed && <Icon name="check" size={12} style={{ color: 'var(--surface-1)' }} />}
               </span>
               <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, color: fg, whiteSpace: 'nowrap' }}>
                 {p.full_name?.split(' ')[0] || '—'}
               </span>
             </div>
-            {i < chain.length - 1 && <span style={{ width: 26, height: 2, background: i < at ? '#BFDFCF' : 'var(--line)', margin: '0 8px' }} />}
+            {i < chain.length - 1 && <span style={{ width: 26, height: 2, background: i < at ? 'var(--ok-bg)' : 'var(--line)', margin: '0 8px' }} />}
           </div>
         )
       })}
@@ -233,7 +233,7 @@ function RealChain({ e, people }) {
 function Action({ onClick, bg, fg, bd, children }) {
   return (
     <button onClick={onClick} style={{
-      fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7,
+      fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 'var(--radius-s)',
       background: bg, color: fg, border: `1px solid ${bd}`, cursor: 'pointer',
     }}>{children}</button>
   )
@@ -299,7 +299,7 @@ function NewEscalation({ onClose, user, prefill }) {
     <Modal open title="Raise an escalation" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !valid}>{busy ? 'Saving…' : 'Raise'}</Btn></>}>
       {prefill && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9ECEA', border: '1px solid #EBCFC9', color: '#96271E', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid #EBCFC9', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
           <Icon name="tasks" size={14} />Linked to the blocked task “{prefill.title}”.
         </div>
       )}

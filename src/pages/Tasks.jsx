@@ -149,7 +149,7 @@ export default function Tasks() {
 
   return (
     <div data-screen-label="My Tasks">
-      <PageTitle kicker="MY QUEUE" title={`Tasks for ${profile?.full_name || 'me'}`}
+      <PageTitle kicker="My queue" title={`Tasks for ${profile?.full_name || 'me'}`}
         right={can(role, CAN_RAISE_TASK) && (
           <Btn variant="primary" icon="plus" onClick={() => setShowNew(true)}>New Task</Btn>
         )} />
@@ -157,12 +157,12 @@ export default function Tasks() {
 
       {/* Tabs + status filter pills */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-        <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 8, padding: 3, background: '#fff' }}>
+        <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: 3, background: 'var(--surface-1)' }}>
           {tabs.map((k) => {
             const active = scopeKey === k
             return (
               <button key={k} onClick={() => setTabAndReset(k)} style={{
-                padding: '6px 14px', fontSize: 12.5, fontWeight: 600, borderRadius: 7,
+                padding: '6px 14px', fontSize: 12.5, fontWeight: 600, borderRadius: 'var(--radius-s)',
                 color: active ? 'var(--accent)' : 'var(--text-3)',
                 background: active ? 'rgba(160,118,43,.10)' : 'transparent',
                 cursor: 'pointer',
@@ -175,9 +175,9 @@ export default function Tasks() {
             const active = statusFilter === s.v
             return (
               <button key={s.v} onClick={() => setFilterAndReset(s.v)} style={{
-                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'),
-                background: active ? '#F5EEDF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
+                background: active ? 'var(--accent-tint)' : 'var(--surface-1)', color: active ? 'var(--accent)' : 'var(--text-3)',
               }}>{s.l}</button>
             )
           })}
@@ -188,18 +188,18 @@ export default function Tasks() {
       {scopeKey === 'team' && <TeamPerformance rows={rows} />}
 
       {/* Task table */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', overflow: 'hidden' }}>
         {loading ? <Loading /> : filtered.length === 0 ? <Empty icon="tasks">No tasks in this view.</Empty> : (
           <div className="ies-table-wrap" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 880 }}>
               <thead>
-                <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)', background: '#FCFBF7' }}>
-                  <th style={{ padding: '11px 14px', fontWeight: 600 }}>TITLE</th>
-                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>ASSIGNEE</th>
-                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>BUILDING</th>
-                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>PRIORITY</th>
-                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>STATUS</th>
-                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>DUE</th>
+                <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)', background: 'var(--raised)' }}>
+                  <th style={{ padding: '11px 14px', fontWeight: 600 }}>Title</th>
+                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>Assignee</th>
+                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>Building</th>
+                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>Priority</th>
+                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>Status</th>
+                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>Due</th>
                 </tr>
               </thead>
               <tbody>
@@ -222,7 +222,7 @@ export default function Tasks() {
                         {t.status === 'blocked' && (
                           <button onClick={() => escalate(t)} style={{
                             marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
-                            padding: '4px 9px', borderRadius: 7, background: '#F9ECEA', color: '#96271E', border: '1px solid #EBCFC9', cursor: 'pointer',
+                            padding: '4px 9px', borderRadius: 'var(--radius-s)', background: 'var(--bad-bg)', color: 'var(--bad-deep)', border: '1px solid #EBCFC9', cursor: 'pointer',
                           }}>
                             <Icon name="escalation" size={12} />Raise an escalation about this
                           </button>
@@ -232,7 +232,7 @@ export default function Tasks() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           {t.assignee
                             ? <Avatar name={t.assignee.full_name} color={roleColor(t.assignee.role)} size={24} />
-                            : <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#E3DFD3', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700 }}>{initials(null)}</span>}
+                            : <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--line)', color: 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700 }}>{initials(null)}</span>}
                           <span style={{ whiteSpace: 'nowrap' }}>{t.assignee?.full_name || 'Unassigned'}</span>
                         </div>
                       </td>
@@ -244,7 +244,7 @@ export default function Tasks() {
                         {moves.length ? (
                           <select value={t.status} onChange={(e) => onStatusChange(t, e.target.value)}
                             style={{
-                              fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 20,
+                              fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999,
                               color: sc, background: sb, border: `1px solid ${sc}33`, cursor: 'pointer',
                             }}>
                             <option value={t.status}>{statusMeta(t.status)[2]}</option>
@@ -252,9 +252,9 @@ export default function Tasks() {
                           </select>
                         ) : <Chip status={t.status} />}
                       </td>
-                      <td style={{ padding: '12px 8px', fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap', color: overdue ? '#B3362B' : 'var(--text-3)' }}>
+                      <td style={{ padding: '12px 8px', fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap', color: overdue ? 'var(--bad)' : 'var(--text-3)' }}>
                         {fmtDate(t.due_date)}
-                        {overdue && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, color: '#B3362B', background: '#F9ECEA' }}>overdue</span>}
+                        {overdue && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, color: 'var(--bad)', background: 'var(--bad-bg)' }}>overdue</span>}
                       </td>
                     </tr>
                   )
@@ -302,30 +302,30 @@ function TeamPerformance({ rows }) {
   const topOldest = [...openTasks].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(0, 3)
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Team Performance</div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>OPEN QUEUE HEALTH</div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>Open queue health</div>
       </div>
       <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: '120px 150px 1fr', gap: 18, alignItems: 'start' }}>
         <Perf label="AVG AGE" value={`${avgAge}d`} />
         {avgCycle == null
           ? (
             <div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>AVG CYCLE · 30D</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Avg cycle · 30d</div>
               <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.4 }}>No tasks closed in the last 30 days.</div>
             </div>
           )
-          : <Perf label="AVG CYCLE · 30D" value={`${avgCycle}d`} color="#217A54" />}
+          : <Perf label="AVG CYCLE · 30D" value={`${avgCycle}d`} color="var(--ok)" />}
         <div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>TOP 3 OLDEST OPEN</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>Top 3 oldest open</div>
           {topOldest.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>None open.</div> : topOldest.map((t) => (
             <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderTop: '1px solid var(--line)' }}>
               <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {t.title}
                 <span style={{ color: 'var(--text-3)', fontWeight: 500 }}> · {t.assignee?.full_name || 'Unassigned'}</span>
               </span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#B45309', flex: 'none' }}>{dayAge(t.created_at)}d</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--warn)', flex: 'none' }}>{dayAge(t.created_at)}d</span>
             </div>
           ))}
         </div>
@@ -337,7 +337,7 @@ function TeamPerformance({ rows }) {
 function Perf({ label, value, color }) {
   return (
     <div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{label}</div>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6, color: color || 'var(--text)' }}>{value}</div>
     </div>
   )
