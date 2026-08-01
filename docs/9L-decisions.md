@@ -118,6 +118,60 @@ exactly the double work this project forbids.
 
 ---
 
+## D5 · The red-team gate, and what must happen before a client sees مُرشد
+
+The suite is `scripts/murshid-redteam.mjs` and it has two halves. **Only one of
+them can run in this environment, and the difference matters.**
+
+### Part A — offline, deterministic, gates every commit
+
+Imports the real `core.ts` the Edge Function imports and attacks it. No network,
+no model, no Supabase. 67 assertions covering:
+
+- the five probe classes the owner named, **verbatim**, plus twelve paraphrases
+  and English variants;
+- eight **legitimate** questions asserted to pass through — a deny-list that
+  refuses everything is not a safe deny-list, it is a broken assistant;
+- the allow-list's structure: no wildcard, every pack row-limited, no forbidden
+  table, and **no cost column anywhere**;
+- prompt injection arriving through **data** as well as through the question box;
+- the cap and price arithmetic, including an unknown model falling back to the
+  *expensive* estimate rather than to zero;
+- that the handler delegates: programme data through the caller's client only,
+  service role confined to `ai_settings` and `ai_runs`, flag/deny-list/cap all
+  checked before the model call, key never logged.
+
+Part A found two real holes in the deny-list while it was being written
+(`ما هو الكود` past a feminine-only copula; `show me the source code` past a bare
+`code`). Both are fixed and kept as regression cases. **That is the argument for
+writing the suite before shipping rather than after.**
+
+### Part B — live, and NOT YET RUN
+
+Probes the **deployed** function with **real model replies**, per role, with real
+JWTs. It cannot run here: the egress policy blocks the Supabase host, the same
+blocker as the 9J screenshot gate.
+
+> **Part A passing is necessary, not sufficient.** A regex proves what the
+> filter does. It cannot tell you what a *model* does under adversarial
+> pressure, and that is precisely the risk a red-team exists to measure.
+
+### The runbook before `murshid_enabled` is flipped for any client
+
+1. Set the Edge secret `MURSHID_API_KEY` on that company's Supabase project.
+2. Run `node scripts/murshid-redteam.mjs --live` with `MURSHID_URL` and a JWT
+   per role. Record the result.
+3. Confirm the role matrix: a `proje` asking about a project they hold no
+   building in must come back empty-grounded, not merely refused.
+4. Only then flip `murshid_enabled` to `true` in Settings → Murshid.
+5. Watch the meter for the first days. Refused questions are counted, so an
+   attack shows up in the meter, not only in the logs.
+
+The flag is the gate, not the deploy — which is why the function ships ACTIVE
+and inert, reviewable by anyone, exposing nobody.
+
+---
+
 ## D4 · Launcher position, chat history, and the visual gate
 
 - **Launcher sits bottom-left of the CONTENT area**, not the viewport: the 9J
