@@ -9,8 +9,25 @@ import { useBreadcrumb } from '../breadcrumbs'
 import { useLiveQuery, bgUpdate } from '../lib/db'
 import { fmtClock, ago } from '../lib/format'
 
-// 8W — the top-bar bell: live unread @mention notifications (0088). Each row
-// deep-links to the building whose chat holds the mention and marks itself read.
+// 8W/9G(3) — the top-bar bell. Seven kinds of notification now arrive here:
+// the chat @mention from 0088, plus the six task/escalation lifecycle events
+// from 0104. Each row states what actually happened and deep-links to the page
+// AND the tab that holds it, then marks itself read.
+//
+// The tab is derived from the type rather than searched for, because the
+// recipient is decided by the type: you are notified about a task assignment as
+// the assignee (Mine), and about it being blocked or done as the person who
+// raised it (Delegated).
+const NOTIF_COPY = {
+  mention: { text: (n) => `mentioned you${n.building?.code ? ` · ${n.building.code}` : ''}` },
+  task_assigned: { text: () => 'assigned you a task', to: '/tasks', tab: 'mine' },
+  task_blocked: { text: () => 'blocked a task you raised', to: '/tasks', tab: 'delegated' },
+  task_done: { text: () => 'completed a task you raised', to: '/tasks', tab: 'delegated' },
+  escalation_raised: { text: () => 'escalated something to you', to: '/escalations', tab: 'tome' },
+  escalation_acknowledged: { text: () => 'acknowledged your escalation', to: '/escalations', tab: 'mine' },
+  escalation_resolved: { text: () => 'resolved your escalation', to: '/escalations', tab: 'mine' },
+}
+
 function NotifBell() {
   const { profile } = useAuth()
   const nav = useNavigate()
@@ -30,7 +47,12 @@ function NotifBell() {
   const openOne = async (n) => {
     setOpen(false)
     if (!n.read_at) { await bgUpdate('notifications', n.id, { read_at: new Date().toISOString() }); refetch?.() }
-    if (n.project_id && n.building_id) nav(`/projects/${n.project_id}/buildings/${n.building_id}`)
+    const c = NOTIF_COPY[n.type]
+    if (c?.to) {
+      nav(c.to, { state: { focusTab: c.tab, focusTask: n.task_id || null, focusEscalation: n.escalation_id || null } })
+    } else if (n.project_id && n.building_id) {
+      nav(`/projects/${n.project_id}/buildings/${n.building_id}`)
+    }
   }
   const markAll = async () => {
     await Promise.all(notifs.filter((n) => !n.read_at).map((n) => bgUpdate('notifications', n.id, { read_at: new Date().toISOString() })))
@@ -55,7 +77,10 @@ function NotifBell() {
             <button key={n.id} className="ies-row-hover" onClick={() => openOne(n)} style={{ width: '100%', display: 'flex', gap: 9, padding: '8px 10px', borderRadius: 6, textAlign: 'left', background: n.read_at ? 'transparent' : '#F5EEDF' }}>
               <Avatar name={n.actor?.full_name} size={26} />
               <span style={{ lineHeight: 1.3, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 12 }}><b>{n.actor?.full_name || 'Someone'}</b> mentioned you{n.building?.code ? ` · ${n.building.code}` : ''}</span>
+                <span style={{ display: 'block', fontSize: 12 }}>
+                  <b>{n.actor?.full_name || 'Someone'}</b>{' '}
+                  {(NOTIF_COPY[n.type] || NOTIF_COPY.mention).text(n)}
+                </span>
                 {n.body_preview && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body_preview}</span>}
                 <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)', marginTop: 1 }}>{ago(n.created_at)}</span>
               </span>

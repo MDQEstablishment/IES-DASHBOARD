@@ -21,6 +21,7 @@ export default function Escalations() {
   const [prefill, setPrefill] = useState(null)
   const [tab, setTab] = useState('mine')
   const [resolving, setResolving] = useState(null)
+  const [focusId, setFocusId] = useState(null)
 
   const { rows, loading } = useLiveQuery('escalations', (q) =>
     q.select('*,raised_by:profiles!escalations_raised_by_id_fkey(full_name,role),raised_to:profiles!escalations_raised_to_id_fkey(full_name,role),building:buildings(code,name)')
@@ -28,13 +29,15 @@ export default function Escalations() {
 
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name,role,manager_id'))
 
-  // A task can hand us a prefilled escalation (the blocked-task bridge on Tasks).
+  // Two things can navigate here with state: the blocked-task bridge on Tasks
+  // (arrive with the form open and prefilled), and the notification bell
+  // (arrive on the right tab with the row highlighted).
   useEffect(() => {
-    const t = location.state?.fromTask
-    if (!t) return
-    setPrefill(t)
-    setShowNew(true)
-    navigate(location.pathname, { replace: true, state: null }) // don't reopen on back
+    const s = location.state
+    if (!s) return
+    if (s.fromTask) { setPrefill(s.fromTask); setShowNew(true) }
+    if (s.focusEscalation) { setTab(s.focusTab || 'mine'); setFocusId(s.focusEscalation) }
+    if (s.fromTask || s.focusEscalation) navigate(location.pathname, { replace: true, state: null })
   }, [location.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Does anyone actually report to me? That — not a role list — is what decides
@@ -107,7 +110,7 @@ export default function Escalations() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {list.map((e) => (
-            <Card key={e.id} e={e} me={user?.id} people={people}
+            <Card key={e.id} e={e} me={user?.id} people={people} focused={e.id === focusId}
               onAck={acknowledge} onResolve={setResolving} onClose={close} onHigher={escalateHigher} />
           ))}
         </div>
@@ -119,7 +122,7 @@ export default function Escalations() {
   )
 }
 
-function Card({ e, me, people, onAck, onResolve, onClose, onHigher }) {
+function Card({ e, me, people, focused, onAck, onResolve, onClose, onHigher }) {
   const isRaiser = e.raised_by_id === me
   const isRecipient = e.raised_to_id === me
 
@@ -130,7 +133,11 @@ function Card({ e, me, people, onAck, onResolve, onClose, onHigher }) {
   const canHigher = isRaiser && (e.status === 'resolved' || e.status === 'closed')
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+    <div style={{
+      background: focused ? '#FBF6EA' : '#fff',
+      border: `1px solid ${focused ? 'var(--accent)' : 'var(--line)'}`,
+      borderRadius: 10, padding: 16,
+    }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Chip status={e.severity} />

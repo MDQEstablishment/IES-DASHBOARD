@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Avatar, Chip, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import DateInput from '../components/DateInput'
@@ -67,11 +67,25 @@ const dayAge = (d) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getT
 export default function Tasks() {
   const { user, profile, role } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const isManager = can(role, MANAGERS)
   const [tab, setTab] = useState('mine')
   const [statusFilter, setStatusFilter] = useState('active')
   const [page, setPage] = useState(0)
   const [showNew, setShowNew] = useState(false)
+  const [focusId, setFocusId] = useState(null)
+
+  // Arriving from the notification bell: land on the tab that actually holds
+  // the task, and show every status so a completed one is not filtered away.
+  useEffect(() => {
+    const s = location.state
+    if (!s?.focusTask) return
+    setTab(s.focusTab || 'mine')
+    setStatusFilter('all')
+    setPage(0)
+    setFocusId(s.focusTask)
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { rows: people } = useLiveQuery('profiles', (q) =>
     q.select('id,full_name,role,manager_id').eq('archived', false).order('full_name'))
@@ -197,7 +211,11 @@ export default function Tasks() {
                   const moves = nextStates(t, user?.id, canTouch)
                   const [sc, sb] = statusMeta(t.status)
                   return (
-                    <tr key={t.id} style={{ borderTop: '1px solid var(--line)' }}>
+                    <tr key={t.id} style={{
+                      borderTop: '1px solid var(--line)',
+                      background: t.id === focusId ? '#FBF6EA' : undefined,
+                      boxShadow: t.id === focusId ? 'inset 3px 0 0 var(--accent)' : undefined,
+                    }}>
                       <td style={{ padding: '12px 14px', maxWidth: 320 }}>
                         <div style={{ fontWeight: 600 }}>{t.title}</div>
                         {t.description && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{t.description}</div>}
