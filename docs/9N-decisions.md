@@ -141,14 +141,70 @@ and it would have been smuggled in under a schema sprint.
 
 ---
 
-## N5 · The intermediate `acknowledged` notification (see 0123)
+## N5 · The intermediate `acknowledged` notification — migration 0123
 
 Because `escalations_transition_guard` forbids skipping states, an auto-resolve
 of an `open` escalation performs two updates, so `escalations_notify` fires
 twice and the raiser receives `escalation_acknowledged` immediately followed by
 `escalation_resolved` — when no human ever acknowledged anything.
 
-The guard is right and the intermediate write stays. What is wrong is the
-notification, and only for the system actor. Handled in migration 0123; the
-reasoning, and the proof that human acknowledgements still notify exactly as
-before, are recorded there.
+**The first notification is a lie**, and it is the more reassuring of the two:
+it says a person has picked this up and is looking at it. It arrives
+milliseconds before the message saying the matter is already closed.
+
+### What was rejected
+
+- **Relaxing the guard** to let the sweep jump `open -> resolved`. The guard is
+  what makes this a lifecycle rather than a status column. Punching a hole in a
+  state machine to silence a notification trades a real invariant for a cosmetic
+  one, and the hole would be open to every caller, not just this one.
+- **Dropping the intermediate UPDATE.** The guard requires it; without it the
+  sweep cannot run at all.
+- **Suppressing `escalation_acknowledged` generally.** It is the most useful
+  notification this system sends — the answer to *"has anyone even seen this?"*.
+
+### The mechanism
+
+`escalations_autoclose` raises a transaction-local GUC immediately before the
+intermediate write and lowers it immediately after, so the `resolved`
+notification — the one the raiser actually needs — still goes out:
+
+```sql
+set local ies.suppress_ack_notify = 'on';
+update public.escalations set status = 'acknowledged' where id = r.id;
+set local ies.suppress_ack_notify = 'off';
+```
+
+`escalations_notify` reads it with `current_setting('ies.suppress_ack_notify',
+true)`. **The second argument is `missing_ok` and it is essential** — reading an
+unset custom GUC otherwise raises `undefined_object`, which would make the
+trigger throw on every ordinary escalation update in every session that had
+never set it.
+
+`set local` is the right scope: confined to the current transaction, so it
+cannot leak into the next statement pg_cron runs or into a concurrent session;
+rolled back automatically if the transaction aborts; and **not settable from
+PostgREST** — a client would have to issue `set local` inside the same
+transaction as the update, which the REST interface gives no way to do.
+
+### The proof — both actors, run against the live database
+
+Both cases use the same escalation shape and the same two status moves, so the
+**only** variable is who performed them. Run inside a subtransaction that rolls
+itself back; the counts survive in plpgsql variables, the rows do not.
+
+| actor | `escalation_acknowledged` | `escalation_resolved` | expected |
+| --- | --- | --- | --- |
+| **system** (`escalations_autoclose`) | **0** | **1** | 0 / 1 ✓ |
+| **human** (two plain UPDATEs) | **1** | **1** | 1 / 1 ✓ |
+
+`VERDICT=PASS`, with `leftover scaffolding rows=0` asserted in the same block.
+
+The second row is the one that matters. The suppression is keyed to the actor
+and to nothing else: **a human acknowledgement still notifies exactly as it did
+before this migration.** A fix that quietened both would have been easy to write
+and would have cost more than the defect.
+
+Confirmed after the fact: the two live escalations are still `open` and
+`acknowledged`, and no scaffolding row of any kind survives in `escalations`,
+`tasks` or `notifications`.
