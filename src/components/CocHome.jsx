@@ -113,9 +113,12 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
       if (prior) {
         // Restore the prior revision FIRST and stop if it fails — deleting the
         // newer rev anyway would leave the chain pointing at a dead row.
-        const { data: pd, error: pErr } = await supabase.from('cocs')
-          .update({ superseded_by_coc_id: null, status: prior.feedback_outcome || 'rejected' }).eq('id', prior.id).select('id')
-        if (pErr || !pd?.length) { toast("Couldn't restore the prior revision — " + (pErr?.message || 'no permission'), 'err'); return }
+        // 9K(1c): status and superseded_by_coc_id are certificate STATE, which
+        // only the workflow may move (migration 0114). The RPC recomputes the
+        // same status this call used to send — the prior revision's feedback
+        // outcome, or 'rejected' — server-side.
+        const { data: pd, error: pErr } = await supabase.rpc('restore_prior_coc_revision', { p_superseding_coc_id: c.id })
+        if (pErr || !pd?.ok) { toast("Couldn't restore the prior revision — " + (pErr?.message || pd?.error || 'no permission'), 'err'); return }
       }
       const { error } = await supabase.from('cocs').delete().eq('id', c.id)
       if (error) { toast("Couldn't delete — " + error.message, 'err'); return }

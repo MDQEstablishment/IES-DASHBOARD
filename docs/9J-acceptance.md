@@ -312,13 +312,14 @@ shared primitives: Btn×3, Empty×1, Modal×1
 | database effect | count |
 | --- | --- |
 | `from:coc_project_settings` | 1 |
-| `from:cocs` | 2 |
+| `from:cocs` | 1 |
 | `read:coc_covered_buildings` | 1 |
 | `read:coc_project_settings` | 1 |
 | `read:cocs` | 1 |
 | `rpc:coc_plan_preview` | 1 |
 | `rpc:create_coc_revision` | 1 |
 | `rpc:mark_coc_sent` | 1 |
+| `rpc:restore_prior_coc_revision` | 1 |
 
 shared primitives: Btn×9, Empty×1, Loading×1, Modal×1
 
