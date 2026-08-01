@@ -73,21 +73,21 @@ export default function Settings() {
 
   return (
     <div data-screen-label="Settings">
-      <PageTitle kicker="ADMINISTRATION" title="Settings" />
+      <PageTitle kicker="Administration" title="Settings" />
 
       {/* Your account */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <Avatar name={profile?.full_name} color={roleColor(role)} size={40} />
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{profile?.full_name || '—'}</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{roleTitle(role)} · {user?.email || '—'}</div>
         </div>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#A0762B', background: '#F5EEDF' }}>Your account</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: 'var(--accent-tint)' }}>Your account</span>
       </div>
 
       {/* AI PDF extraction — monthly usage cap (PMO/admin) */}
       {showCap && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 14, marginBottom: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 14, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>AI delivery-note extraction</div>
@@ -97,7 +97,7 @@ export default function Settings() {
               {num(usedThisMonth)} <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/ {num(PDF_CAP)}</span>
             </div>
           </div>
-          <div style={{ height: 7, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden', marginTop: 10 }}>
+          <div style={{ height: 7, borderRadius: 4, background: 'var(--track)', overflow: 'hidden', marginTop: 10 }}>
             <div style={{ height: '100%', width: capPct + '%', background: usedThisMonth >= PDF_CAP ? 'var(--bad)' : 'var(--accent)' }} />
           </div>
           {usedThisMonth >= PDF_CAP && <div style={{ fontSize: 11.5, color: 'var(--bad)', marginTop: 6 }}>Monthly limit reached — extraction is paused until next month. Deliveries can still be entered manually.</div>}
@@ -121,7 +121,7 @@ export default function Settings() {
         {/* Panel */}
         <div>
           {cat === 'users' && (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
+            <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>Users</div>
               </div>
@@ -133,12 +133,12 @@ export default function Settings() {
               {peopleLoading ? <Loading /> : people.length === 0 ? <Empty icon="settings">No profiles visible.</Empty> : (
                 <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
                   <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)' }}>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>USER</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>ROLE</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>EMAIL</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>REPORTS TO</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Projects this user is assigned to as Project Manager (PM) or Project Engineer (Eng)">ASSIGNED TO</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>User</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Role</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Email</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Reports to</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Projects this user is assigned to as Project Manager (PM) or Project Engineer (Eng)">Assigned to</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Status</th>
                     {canAdminUsers && <th style={{ padding: '9px 8px', fontWeight: 600 }} />}
                   </tr></thead>
                   <tbody>
@@ -157,19 +157,19 @@ export default function Settings() {
                           {(assignedByUser[u.id] || []).length === 0
                             ? <span style={{ color: 'var(--text-3)' }}>—</span>
                             : <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                                {assignedByUser[u.id].map((c) => <span key={c} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 6, color: '#A0762B', background: '#F5EEDF' }}>{c}</span>)}
+                                {assignedByUser[u.id].map((c) => <span key={c} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: 'var(--accent-tint)' }}>{c}</span>)}
                               </span>}
                         </td>
                         <td style={{ padding: '10px 8px' }}>
                           {u.archived
-                            ? <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#A39D8E', background: '#F0EDE4' }}>archived</span>
-                            : <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#1D6A49', background: '#E9F3EE' }}>active</span>}
+                            ? <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-s)', color: 'var(--text-faint)', background: 'var(--line-soft)' }}>archived</span>
+                            : <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>active</span>}
                         </td>
                         {canAdminUsers && (
                           <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                             {/* Mirrors profiles_guard(): you cannot edit yourself or anyone at or above your rank. */}
                             {u.id !== profile?.id && canManageRole(role, u.role) && (
-                              <button onClick={() => setEditing(u)} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--accent)', cursor: 'pointer' }}>Edit</button>
+                              <button onClick={() => setEditing(u)} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)', background: 'var(--surface-1)', color: 'var(--accent)', cursor: 'pointer' }}>Edit</button>
                             )}
                           </td>
                         )}
@@ -182,7 +182,7 @@ export default function Settings() {
           )}
 
           {cat === 'roles' && (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
+            <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Roles &amp; Permissions</div>
               <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
                 Access is role-driven and enforced server-side via row-level security. The areas below are illustrative — there is no per-user editor.
@@ -191,11 +191,11 @@ export default function Settings() {
                 {ROLE_ORDER.map((r) => {
                   const access = ROLE_ACCESS[r] || []
                   return (
-                    <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--line)', borderRadius: 10, padding: '11px 13px', flexWrap: 'wrap' }}>
+                    <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 12, border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: '11px 13px', flexWrap: 'wrap' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 9, width: 200 }}>
                         <Avatar name={ROSTER[r]?.name} color={roleColor(r)} size={28} />
                         <span>
-                          <span style={{ display: 'block', fontWeight: 700, fontSize: 13 }}>{roleTitle(r)}{r === role && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#A0762B', background: '#F5EEDF' }}>you</span>}</span>
+                          <span style={{ display: 'block', fontWeight: 700, fontSize: 13 }}>{roleTitle(r)}{r === role && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: 'var(--accent-tint)' }}>you</span>}</span>
                           <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>{ROLE_DESC[r]}</span>
                         </span>
                       </span>
@@ -204,8 +204,8 @@ export default function Settings() {
                           const ok = access.includes(area)
                           return (
                             <span key={area} title={areaLabel(area)}
-                              style={{ fontSize: 11, padding: '3px 9px', borderRadius: 6, fontWeight: 600,
-                                background: ok ? '#F5EEDF' : 'var(--bg)', color: ok ? '#A0762B' : '#C9C3B4',
+                              style={{ fontSize: 11, padding: '3px 9px', borderRadius: 'var(--radius-s)', fontWeight: 600,
+                                background: ok ? 'var(--accent-tint)' : 'var(--bg)', color: ok ? 'var(--accent)' : 'var(--text-faint)',
                                 border: '1px solid ' + (ok ? '#EFE3C8' : 'var(--line)'), display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               {ok && <Icon name="check" size={11} />}{areaLabel(area)}
                             </span>
@@ -231,12 +231,12 @@ export default function Settings() {
           {cat === 'report' && <ReportTemplate role={role} />}
 
           {cat === 'audit' && (
-            <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
+            <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>Audit Log</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>last {audit?.length || 0} events</span>
-                  <button onClick={() => exportAuditCsv(filteredAudit)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, padding: '6px 11px', borderRadius: 7, border: '1px solid var(--line)', background: '#fff', color: 'var(--text)' }}><Icon name="upload" size={13} />Export CSV</button>
+                  <button onClick={() => exportAuditCsv(filteredAudit)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 700, padding: '6px 11px', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)', background: 'var(--surface-1)', color: 'var(--text)' }}><Icon name="upload" size={13} />Export CSV</button>
                 </div>
               </div>
               {/* action filter chips (dc auditFilters) */}
@@ -245,8 +245,8 @@ export default function Settings() {
                   const active = auditAction === a
                   return (
                     <button key={a} onClick={() => setAuditAction(a)} style={{
-                      padding: '4px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, textTransform: 'capitalize',
-                      border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'), background: active ? '#F5EEDF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
+                      padding: '4px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 600, textTransform: 'capitalize',
+                      border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'), background: active ? 'var(--accent-tint)' : 'var(--surface-1)', color: active ? 'var(--accent)' : 'var(--text-3)',
                     }}>{a}</button>
                   )
                 })}
@@ -258,11 +258,11 @@ export default function Settings() {
               ) : (
                 <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 680 }}>
                   <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-                    <th style={{ padding: 8, fontWeight: 600 }}>TIME</th>
-                    <th style={{ padding: 8, fontWeight: 600 }}>ACTOR</th>
-                    <th style={{ padding: 8, fontWeight: 600 }}>ACTION</th>
-                    <th style={{ padding: 8, fontWeight: 600 }}>ENTITY</th>
-                    <th style={{ padding: 8, fontWeight: 600 }}>SUMMARY</th>
+                    <th style={{ padding: 8, fontWeight: 600 }}>Time</th>
+                    <th style={{ padding: 8, fontWeight: 600 }}>Actor</th>
+                    <th style={{ padding: 8, fontWeight: 600 }}>Action</th>
+                    <th style={{ padding: 8, fontWeight: 600 }}>Entity</th>
+                    <th style={{ padding: 8, fontWeight: 600 }}>Summary</th>
                   </tr></thead>
                   <tbody>
                     {filteredAudit.map((a) => (
@@ -386,12 +386,12 @@ function UserEditor({ u, myRole, people, nameById, onClose }) {
       {!u.archived && (
         <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
           {!confirmArchive ? (
-            <button onClick={() => setConfirmArchive(true)} style={{ fontSize: 12, fontWeight: 700, color: '#B3362B', cursor: 'pointer' }}>
+            <button onClick={() => setConfirmArchive(true)} style={{ fontSize: 12, fontWeight: 700, color: 'var(--bad)', cursor: 'pointer' }}>
               Archive this person…
             </button>
           ) : (
-            <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#96271E', marginBottom: 6 }}>Archive {u.full_name}?</div>
+            <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 12 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--bad-deep)', marginBottom: 6 }}>Archive {u.full_name}?</div>
               <div style={{ fontSize: 12, color: '#7A2A22', lineHeight: 1.5, marginBottom: 10 }}>
                 They lose access immediately, and the database hands their work over in the same
                 transaction: anyone reporting to them moves up to {nameById[u.manager_id] || 'nobody'},

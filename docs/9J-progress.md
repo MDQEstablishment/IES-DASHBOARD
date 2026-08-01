@@ -181,7 +181,18 @@ no handler moved.
 
 Report *generation* is untouched — only the card chrome around it changed.
 
+### 9J(8) — Settings
+`Settings`
+
+| item | state |
+| --- | --- |
+| restyled + 12 labels sentence-cased | ☑ |
+| build clean · census empty · manifest 18/18 · 179 assertions | ☑ |
+| diff audit — 33/33, zero non-styling lines | ☑ |
+| **user-administration guard unchanged** — `canAdminUsers = ['pmo','admin']`, and the 9G(4) rank rules behind it are untouched | ☑ |
+| screenshots | ⏳ pending credential |
+
 ## Remaining commits
 
-☐ 9J(8) Settings · ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
+☐ ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
 assertion, and the full screenshot set once the credential lands).
