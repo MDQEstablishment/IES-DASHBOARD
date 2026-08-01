@@ -137,8 +137,25 @@ unchanged, not merely "no smaller".
 restyle changed only its chrome; the scroll container and sticky header that
 keep it usable are untouched, verified by count rather than by eye.
 
+### 9J(5) — Documents / COCs group
+`ProjectDocuments` · `CocHome` · `CocGenerateWizard` · `CocDetailDrawer` ·
+`CocFeedbackModal` · `InspectionFormModal`
+
+| item | state |
+| --- | --- |
+| 6 files restyled | ☑ |
+| build clean · census empty · manifest 18/18 · 179 assertions | ☑ |
+| diff audit — 58/58, zero non-styling lines | ☑ |
+| **live PDF preview panes untouched** — every pane dimension (`flex: 0 0 410px`, `0 0 360px`, `minHeight 420/540`, `height 520`) identical, same line numbers | ☑ |
+| screenshots | ⏳ pending credential |
+
+The plan flagged this group as risky because the COC wizard and the inspection
+modal embed LIVE PDF previews of generator output. The generators are untouched
+(manifest), and the panes they render into keep their exact geometry, so the
+previewed document cannot reflow. Only the chrome around the iframe changed.
+
 ## Remaining commits
 
-☐ 9J(5) Docs/COCs · ☐ 9J(6) Tasks/Escalations · ☐ 9J(7) Reports ·
+☐ 9J(6) Tasks/Escalations · ☐ 9J(7) Reports ·
 ☐ 9J(8) Settings · ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
 assertion, and the full screenshot set once the credential lands).

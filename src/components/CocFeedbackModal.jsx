@@ -80,7 +80,7 @@ export default function CocFeedbackModal({ coc, onClose, onDone }) {
       </>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
         {OUTCOMES.map(([v, label, desc]) => (
-          <label key={v} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid ' + (outcome === v ? 'var(--accent)' : 'var(--line)'), background: outcome === v ? '#F5EEDF' : '#fff', borderRadius: 10, padding: '9px 12px', cursor: 'pointer' }}>
+          <label key={v} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px solid ' + (outcome === v ? 'var(--accent)' : 'var(--line)'), background: outcome === v ? 'var(--accent-tint)' : 'var(--surface-1)', borderRadius: 'var(--radius-m)', padding: '9px 12px', cursor: 'pointer' }}>
             <input type="radio" name="coc-outcome" checked={outcome === v} onChange={() => setOutcome(v)} style={{ marginTop: 2 }} />
             <span><span style={{ fontWeight: 700, fontSize: 13 }}>{label}</span>
               <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{desc}</span></span>

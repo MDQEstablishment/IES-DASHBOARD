@@ -168,13 +168,13 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 4 }}>Progress</div>
               {progress.map((s) => (
-                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: s.state === 'failed' ? 'var(--bad)' : s.state === 'done' ? '#217A54' : 'var(--text-3)' }}>
+                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: s.state === 'failed' ? 'var(--bad)' : s.state === 'done' ? 'var(--ok)' : 'var(--text-3)' }}>
                   <span style={{ fontFamily: 'var(--mono)', width: 14 }}>{stateDot(s.state)}</span>{s.label}
                 </div>
               ))}
               {notices.length > 0 && (
-                <div style={{ marginTop: 8, background: '#F5E9CE', border: '1px solid #EBDCB2', borderRadius: 8, padding: '8px 11px' }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#854D0E', marginBottom: 4 }}>Worth checking before you send these</div>
+                <div style={{ marginTop: 8, background: 'var(--warn-bg)', border: '1px solid #EBDCB2', borderRadius: 'var(--radius-s)', padding: '8px 11px' }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--warn-deep)', marginBottom: 4 }}>Worth checking before you send these</div>
                   <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, color: '#7A5B12', lineHeight: 1.5 }}>
                     {notices.map((n, i) => <li key={i}>{n}</li>)}
                   </ul>
@@ -187,7 +187,7 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
                 <div style={{ fontWeight: 700, fontSize: 12.5 }}>New certificates to create</div>
                 {newRows.map((r) => (
                   <label key={r._i} onMouseEnter={() => setPreviewKey(r._i)}
-                    style={{ display: 'flex', alignItems: 'flex-start', gap: 8, border: '1px solid ' + (previewKey === r._i ? 'var(--accent)' : 'var(--line)'), borderRadius: 10, padding: '9px 11px', cursor: 'pointer', fontSize: 12.5 }}>
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 8, border: '1px solid ' + (previewKey === r._i ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-m)', padding: '9px 11px', cursor: 'pointer', fontSize: 12.5 }}>
                     <input type="checkbox" checked={selected.has(r._i)} onChange={() => toggle(r._i)} style={{ marginTop: 2 }} />
                     <span>
                       <span style={{ fontWeight: 600 }}>{rowLabel(r)}</span>
@@ -201,7 +201,7 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
                 <div style={{ fontWeight: 700, fontSize: 12.5, marginTop: 4 }}>Drafts still needing a PDF</div>
                 {drafts.map((c) => (
                   <div key={c.id} onMouseEnter={() => setPreviewKey('draft:' + c.id)}
-                    style={{ border: '1px solid ' + (previewKey === 'draft:' + c.id ? 'var(--accent)' : 'var(--line)'), borderRadius: 10, padding: '9px 11px', fontSize: 12.5 }}>
+                    style={{ border: '1px solid ' + (previewKey === 'draft:' + c.id ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-m)', padding: '9px 11px', fontSize: 12.5 }}>
                     <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{c.code}{c.revision > 1 ? ` · Rev ${c.revision}` : ''}</span>
                     <span style={{ color: 'var(--text-3)' }}> — PDF will be generated</span>
                   </div>
@@ -209,7 +209,7 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
               </>}
               {/* 9H(3) — the attachments row the certificate has always printed
                   with eight empty boxes. One decision for the whole run. */}
-              <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 11px' }}>
+              <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: '10px 11px' }}>
                 <div style={{ fontWeight: 700, fontSize: 12.5, marginBottom: 2 }}>Attachments</div>
                 <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>Ticked on every certificate in this run, and remembered as this project's default.</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -230,9 +230,9 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
           )}
         </div>
         {/* right: live PDF preview */}
-        <div style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 10, background: 'var(--paper, #FAF8F2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', minHeight: 420 }}>
+        <div style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', background: 'var(--paper, #FAF8F2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', minHeight: 420 }}>
           {previewUrl
-            ? <iframe title="Certificate preview" src={previewUrl} style={{ width: '100%', height: 520, border: 'none', background: '#fff' }} />
+            ? <iframe title="Certificate preview" src={previewUrl} style={{ width: '100%', height: 520, border: 'none', background: 'var(--surface-1)' }} />
             : <div style={{ color: 'var(--text-3)', fontSize: 12.5 }}>{ctx ? 'Point at a certificate on the left to preview its PDF.' : 'Loading project data…'}</div>}
           {previewBusy && <div style={{ position: 'absolute', top: 10, right: 12 }}><Spinner size={16} /></div>}
         </div>

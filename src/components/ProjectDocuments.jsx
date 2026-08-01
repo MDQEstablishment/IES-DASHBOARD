@@ -21,17 +21,17 @@ export const MULTI_KINDS = new Set(['mir', 'wir'])
 
 // Client-court status vocabulary: [label, color, bg, tooltip].
 export const DOC_STATUS = {
-  draft:                  ['Draft', '#8A8577', '#F0EDE4', 'Prepared by the contractor, not yet submitted to the client.'],
-  submitted:              ['Submitted', '#A0762B', '#F5EEDF', 'Submitted to the client (Tarshid) — logged with the submission date.'],
-  under_review:           ['With Client', '#6D5A8E', '#F3E8FF', 'With the client (Tarshid) for review — awaiting their response.'],
-  approved:               ['Approved', '#217A54', '#E9F3EE', 'Approved by Client — ready for project closeout.'],
-  approved_with_comments: ['Approved w/ Comments', '#B45309', '#F5E9CE', 'Approved by Client with comments — a cover-comments version was uploaded.'],
-  rejected:               ['Rejected', '#B3362B', '#F9ECEA', 'Returned by Client — must be revised and resubmitted (see notes).'],
-  resubmitted:            ['Resubmitted', '#A0762B', '#F5EEDF', 'Revised and resubmitted to the client after a return.'],
+  draft:                  ['Draft', 'var(--text-3)', 'var(--line-soft)', 'Prepared by the contractor, not yet submitted to the client.'],
+  submitted:              ['Submitted', 'var(--accent)', 'var(--accent-tint)', 'Submitted to the client (Tarshid) — logged with the submission date.'],
+  under_review:           ['With Client', 'var(--esm2)', 'var(--esm2-bg)', 'With the client (Tarshid) for review — awaiting their response.'],
+  approved:               ['Approved', 'var(--ok)', 'var(--ok-bg)', 'Approved by Client — ready for project closeout.'],
+  approved_with_comments: ['Approved w/ Comments', 'var(--warn)', 'var(--warn-bg)', 'Approved by Client with comments — a cover-comments version was uploaded.'],
+  rejected:               ['Rejected', 'var(--bad)', 'var(--bad-bg)', 'Returned by Client — must be revised and resubmitted (see notes).'],
+  resubmitted:            ['Resubmitted', 'var(--accent)', 'var(--accent-tint)', 'Revised and resubmitted to the client after a return.'],
   // 9H(5) — outcome E of the MIR/WIR decision row. The client keeps it on file;
   // it is neither an approval nor a rejection, and had no home before.
   retained_for_information: ['Retained for Info', '#3A4A63', '#EEF1F6', 'Retained by the client for information — no action required, not an approval.'],
-  superseded:             ['Superseded', '#8A8577', '#F0EDE4', 'Replaced by a newer revision.'],
+  superseded:             ['Superseded', 'var(--text-3)', 'var(--line-soft)', 'Replaced by a newer revision.'],
 }
 export const docStatusMeta = (s) => DOC_STATUS[s] || DOC_STATUS.submitted
 
@@ -50,10 +50,10 @@ export function AttachmentChip({ docs = [], onOpen }) {
       {open && (
         <>
           <div onClick={(e) => { e.stopPropagation(); setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', zIndex: 31, top: '100%', left: 0, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 6, boxShadow: '0 8px 24px rgba(16,26,36,.14)', padding: 6, minWidth: 190 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', zIndex: 31, top: '100%', left: 0, marginTop: 4, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 8px 24px rgba(16,26,36,.14)', padding: 6, minWidth: 190 }}>
             {withFiles.map((d) => (
               <button key={d.id} className="ies-hover" onClick={() => { setOpen(false); onOpen?.(d) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 600, borderRadius: 6 }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 600, borderRadius: 'var(--radius-s)' }}>
                 <Paperclip size={11} />{d.reference_no || d.name || 'Document'}{d.revision ? ` (Rev ${d.revision})` : ''}
               </button>
             ))}
@@ -123,7 +123,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{headerExtra}{canWrite && <Btn icon="upload" style={{ padding: '7px 11px', fontSize: 12 }} onClick={() => { setPrefill(null); setUp(true) }}>Upload document</Btn>}</div>
@@ -153,11 +153,11 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
                       {bldgCodeById[d.building_id] && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>· {bldgCodeById[d.building_id]}</span>}
                       <button title="View submission history" onClick={() => setHistoryDoc(d)} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>⌚</button>
                     </td>
-                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{d.reference_no || '—'}{d.rev_no > 0 && <span title={`Revision ${d.rev_no}`} style={{ marginLeft: 5, fontSize: 9.5, color: '#fff', background: 'var(--accent)', padding: '1px 5px', borderRadius: 5 }}>R{d.rev_no}</span>}</td>
+                    <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap' }}>{d.reference_no || '—'}{d.rev_no > 0 && <span title={`Revision ${d.rev_no}`} style={{ marginLeft: 5, fontSize: 9.5, color: 'var(--surface-1)', background: 'var(--accent)', padding: '1px 5px', borderRadius: 'var(--radius-s)' }}>R{d.rev_no}</span>}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>{esmCodeById[d.esm_id] || '—'}</td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{typeLabel}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', fontWeight: 700 }}>{d.revision || 'A'}</td>
-                    <td style={{ padding: '9px 8px' }}><span title={tip} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, cursor: 'help' }}>{lbl}</span></td>
+                    <td style={{ padding: '9px 8px' }}><span title={tip} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-s)', color: col, background: bg, cursor: 'help' }}>{lbl}</span></td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{fmtIso(d.submitted_at)}{nameById[d.submitted_by] && <div style={{ fontFamily: 'var(--font)', fontSize: 10 }}>by {nameById[d.submitted_by]}</div>}</td>
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)' }}>{d.client_reviewer_name || '—'}</td>
                     <td style={{ padding: '9px 8px', fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{fmtIso(d.client_response_date)}</td>
@@ -165,8 +165,8 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
                     <td style={{ padding: '9px 8px', color: 'var(--text-3)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.response_notes || ''}>{d.response_notes || '—'}</td>
                     {(canWrite || canReview) && (
                       <td style={{ padding: '9px 8px', whiteSpace: 'nowrap' }}>
-                        {canWrite && <button onClick={() => setReplaceDoc(d)} className="ies-hover" title="Re-submit a new revision keeping this reference number" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--line)', borderRadius: 7, padding: '4px 9px', background: '#fff', cursor: 'pointer', marginRight: 8 }}>Replace</button>}
-                        {canReview && <button onClick={() => setStatusDoc(d)} className="ies-hover" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 7, padding: '4px 9px', background: '#fff', cursor: 'pointer' }}>Update Status</button>}
+                        {canWrite && <button onClick={() => setReplaceDoc(d)} className="ies-hover" title="Re-submit a new revision keeping this reference number" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '4px 9px', background: 'var(--surface-1)', cursor: 'pointer', marginRight: 8 }}>Replace</button>}
+                        {canReview && <button onClick={() => setStatusDoc(d)} className="ies-hover" style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '4px 9px', background: 'var(--surface-1)', cursor: 'pointer' }}>Update Status</button>}
                       </td>
                     )}
                   </tr>
@@ -263,7 +263,7 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
       <Field label="Client reviewer name (required to approve)"><input lang="en" style={inputStyle} value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="e.g. Eng. Khalid Al-Mutairi" /></Field>
       <Field label="Notes / client comments (required to reject or approve-with-comments)"><textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Client comments / rejection reason" /></Field>
       <FileDropZone label="Approved / cover-comments version file (required for an approval)" accept=".pdf,image/*" maxSizeMb={25} onFiles={(f) => setFile(f)} helperText="PDF or image · 25 MB cap" />
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>WORKFLOW</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>WORKFLOW</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {doc.status === 'draft' && btn('Mark Submitted', () => decide('submitted'))}
         {(doc.status === 'submitted') && btn('Mark With Client', () => decide('under_review'))}
@@ -277,7 +277,7 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
           <input lang="en" type="date" style={inputStyle} value={resubBy || ''} onChange={(e) => setResubBy(e.target.value)} />
         </Field>
       </div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '14px 0 8px' }}>RESUBMISSION</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '14px 0 8px' }}>RESUBMISSION</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {btn(`Create Revision ${nextRev(doc.revision)}`, createRevision)}
         <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Clones this as a draft (new file awaited); client review restarts.</span>
@@ -296,9 +296,9 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
 
 // ── Doc submission history timeline drawer (5C) ─────────────────────────────
 const ACTION_META = {
-  submitted: ['Submitted to client', '#A0762B'], client_received: ['Received by client', '#6D5A8E'],
-  approved: ['Approved', '#217A54'], approved_with_comments: ['Approved with comments', '#B45309'],
-  rejected: ['Rejected', '#B3362B'], resubmitted: ['Resubmitted', '#A0762B'],
+  submitted: ['Submitted to client', 'var(--accent)'], client_received: ['Received by client', 'var(--esm2)'],
+  approved: ['Approved', 'var(--ok)'], approved_with_comments: ['Approved with comments', 'var(--warn)'],
+  rejected: ['Rejected', 'var(--bad)'], resubmitted: ['Resubmitted', 'var(--accent)'],
 }
 export function DocHistoryDrawer({ doc, onClose }) {
   const { rows: events } = useLiveQuery('doc_submission_history', (q) => q.select('*').eq('doc_id', doc.id).order('action_date', { ascending: true }), [doc.id])
@@ -310,7 +310,7 @@ export function DocHistoryDrawer({ doc, onClose }) {
       {events.length === 0 ? <Empty icon="doc">No history yet.</Empty> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {events.map((ev, i) => {
-            const [lbl, c] = ACTION_META[ev.action] || [ev.action, '#8A8577']
+            const [lbl, c] = ACTION_META[ev.action] || [ev.action, 'var(--text-3)']
             return (
               <div key={ev.id} style={{ display: 'flex', gap: 10 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

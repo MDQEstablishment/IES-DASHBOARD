@@ -12,13 +12,13 @@ import CocDetailDrawer from './CocDetailDrawer'
 // 8S screen 1 — the single "COCs" home: a plain sentence about what this
 // project needs, three numbers, and a pipeline grouped by whose move it is.
 const STATUS_META = {
-  draft: ['Draft', '#8A8577', '#F0EDE4'],
-  generated: ['PDF ready', '#A0762B', '#F5EEDF'],
-  sent: ['Sent to TARSHID', '#6D5A8E', '#F3E8FF'],
-  approved: ['Approved', '#217A54', '#E9F3EE'],
-  accepted_with_comments: ['Accepted w/ comments', '#B45309', '#F5E9CE'],
-  rejected: ['Rejected', '#B3362B', '#F9ECEA'],
-  superseded: ['Superseded', '#8A8577', '#F0EDE4'],
+  draft: ['Draft', 'var(--text-3)', 'var(--line-soft)'],
+  generated: ['PDF ready', 'var(--accent)', 'var(--accent-tint)'],
+  sent: ['Sent to TARSHID', 'var(--esm2)', 'var(--esm2-bg)'],
+  approved: ['Approved', 'var(--ok)', 'var(--ok-bg)'],
+  accepted_with_comments: ['Accepted w/ comments', 'var(--warn)', 'var(--warn-bg)'],
+  rejected: ['Rejected', 'var(--bad)', 'var(--bad-bg)'],
+  superseded: ['Superseded', 'var(--text-3)', 'var(--line-soft)'],
 }
 
 export default function CocHome({ projectId, project, buildings, projectEsms, canManage }) {
@@ -147,14 +147,14 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
     const bCodes = (coveredByCoc[c.id] || []).map((id) => buildings.find((b) => b.id === id)?.code).filter(Boolean)
     const age = c.status === 'sent' ? daysSince(c.sent_at) : null
     return (
-      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px', background: '#fff' }}>
+      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: '10px 12px', background: 'var(--surface-1)' }}>
         <button onClick={() => setDetailCoc(c)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{c.code}{c.revision > 1 ? ` · Rev ${c.revision}` : ''}</span>
           <span style={{ fontSize: 12.5, fontWeight: 600 }}>{kindLabel(c.esm_codes, esmName)} <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>({(c.esm_codes || []).join(' + ')})</span></span>
           <span className="ies-ellipsis" style={{ fontSize: 11.5, color: 'var(--text-3)', maxWidth: 220 }} title={bCodes.join(', ')}>
             {bCodes.length === buildings.length && buildings.length > 1 ? `all ${buildings.length} buildings` : bCodes.join(', ') || '—'}
           </span>
-          <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: col, background: bg, whiteSpace: 'nowrap' }}>
+          <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-s)', color: col, background: bg, whiteSpace: 'nowrap' }}>
             {lbl}{age != null ? ` · ${age}d` : ''}
           </span>
         </button>
@@ -168,7 +168,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
 
   const stage = (title, list, hint) => list.length > 0 && (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>{title} · {list.length}{hint ? ` — ${hint}` : ''}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>{title} · {list.length}{hint ? ` — ${hint}` : ''}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{list.map(row)}</div>
     </div>
   )
@@ -176,18 +176,18 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
   if (plan === null && cocs.length === 0) return <Loading label="Loading certificates…" />
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Completion certificates</div>
           {canManage ? (
             <div style={{ marginTop: 8 }}>
-              <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', overflow: 'hidden' }}>
                 {[['concatenated', 'All buildings together'], ['scattered', 'Each building separately']].map(([v, label], i) => {
                   const on = (settings?.layout_mode || 'concatenated') === v
                   return (
                     <button key={v} onClick={() => saveLayout(v)}
-                      style={{ padding: '6px 13px', fontSize: 11.5, fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : 'var(--text-3)', background: on ? '#F5EEDF' : '#fff', border: 'none', borderLeft: i > 0 ? '1px solid var(--line)' : 'none', cursor: on ? 'default' : 'pointer' }}>{label}</button>
+                      style={{ padding: '6px 13px', fontSize: 11.5, fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : 'var(--text-3)', background: on ? 'var(--accent-tint)' : 'var(--surface-1)', border: 'none', borderLeft: i > 0 ? '1px solid var(--line)' : 'none', cursor: on ? 'default' : 'pointer' }}>{label}</button>
                   )
                 })}
               </div>
@@ -210,7 +210,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
       {/* three numbers */}
       <div style={{ display: 'flex', gap: 10, margin: '14px 0 18px', flexWrap: 'wrap' }}>
         {[[plan?.length ?? '—', 'planned'], [waiting.length, 'with TARSHID'], [done.length, 'approved']].map(([n, l]) => (
-          <div key={l} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 16px', minWidth: 110, textAlign: 'center' }}>
+          <div key={l} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: '10px 16px', minWidth: 110, textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700 }}>{n}</div>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{l}</div>
           </div>
