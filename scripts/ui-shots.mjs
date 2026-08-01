@@ -28,8 +28,14 @@ const PHASE = process.argv[2] === 'after' ? 'after' : 'before'
 const BASE = process.env.IES_SHOT_BASE || 'http://localhost:5173'
 const OUT = path.join(ROOT, 'docs', 'ui-9J', PHASE)
 
+// 9J(10a) — three viewports, not two. 1280x800 was added because it is the
+// narrowest COMMON laptop width, and the 1.7fr/1fr Dashboard split and the
+// dense tables behave differently there than at 1366: it is the width where a
+// card is narrow enough to matter but the mobile media query (max-width:767px)
+// has not yet collapsed the grids, so nothing rescues a bad layout.
 const VIEWPORTS = [
   { name: '1366x768', width: 1366, height: 768 },
+  { name: '1280x800', width: 1280, height: 800 },
   { name: '390x844', width: 390, height: 844 },
 ]
 
@@ -68,11 +74,32 @@ async function shoot(page, vp, slug) {
 // The preinstalled Chromium is a different build number than this Playwright
 // pins, so point at it explicitly rather than downloading a second copy.
 const EXE = process.env.IES_SHOT_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
-// chromium-1194 dropped the old headless mode this Playwright asks for, so run
-// the new one explicitly.
+
+// 9J(10a) — Chromium has to go through the egress proxy or it never reaches
+// Supabase, and without Supabase there is no session and no authenticated
+// screen to shoot. Three things are all required, and each was found by a
+// distinct failure:
+//
+//  · --proxy-server: without it the Supabase host dies at ERR_CONNECTION_RESET.
+//    The page renders, the login form submits, nothing happens, and the rig
+//    reports "not signed in" as though the credential were wrong.
+//  · --proxy-bypass-list: the preview server is on loopback. Left proxied, the
+//    proxy answers the plain-HTTP request with 405 Method Not Allowed and the
+//    app bundle itself never loads — a blank page and a selector timeout.
+//    Playwright's own `proxy.bypass` option did NOT take effect here; the raw
+//    Chromium flag did.
+//  · --ssl-version-max=tls1.2: the proxy re-terminates TLS, and Chromium's
+//    TLS 1.3 negotiation against it is what the cap avoids. The proxy CA is
+//    already in the browser NSS store, so verification stays ON — nothing here
+//    disables certificate checking, and nothing should.
+const PROXY = process.env.HTTPS_PROXY || process.env.https_proxy || ''
 const browser = await chromium.launch({
   ...(fs.existsSync(EXE) ? { executablePath: EXE } : {}),
-  args: ['--headless=new'],
+  args: [
+    '--headless=new',
+    '--ssl-version-max=tls1.2',
+    ...(PROXY ? [`--proxy-server=${PROXY}`, '--proxy-bypass-list=127.0.0.1;localhost;[::1]'] : []),
+  ],
 })
 const overflows = []
 let authed = false
@@ -87,16 +114,35 @@ for (const vp of VIEWPORTS) {
 
   if (creds.password) {
     try {
-      await page.fill('input[type="email"], input[lang="en"]', creds.email)
+      // 9J(10a) — the old selector was 'input[type="email"], input[lang="en"]'.
+      // Login renders <input lang="en"> for the email and <input lang="en"
+      // type="password"> for the password: there is no input[type="email"] at
+      // all, and BOTH inputs carry lang="en". So that selector list resolved to
+      // two elements and Playwright's strict mode threw — every run, at every
+      // viewport, on the very first fill.
+      //
+      // The throw landed in a bare `catch { authed = false }`, which reported
+      // the identical "not signed in — set VITE_DEMO_PASSWORD" message that a
+      // MISSING CREDENTIAL produces. So a code defect wore the costume of a
+      // configuration problem, and the screenshot gate was recorded as "blocked
+      // on egress / pending credential" across nine commits while the credential
+      // was fine. The catch now reports what actually failed.
+      await page.fill('input[lang="en"]:not([type="password"])', creds.email)
       await page.fill('input[type="password"]', creds.password)
-      await page.click('button:has-text("Sign in"), button[type="submit"]')
-      await page.waitForTimeout(2500)
+      await page.click('button[type="submit"], button:has-text("Sign in")')
+      await page.waitForTimeout(3000)
       authed = !(await page.locator('input[type="password"]').count())
-    } catch { authed = false }
+      if (!authed) console.log('  (sign-in submitted but the password field is still present — credential rejected?)')
+    } catch (e) {
+      authed = false
+      console.log(`  [sign-in FAILED] ${e.message.split('\n')[0]}`)
+    }
+  } else {
+    console.log('  (no credential supplied — set VITE_DEMO_PASSWORD in .env.local or IES_SHOT_PASSWORD)')
   }
 
   if (!authed) {
-    console.log(`  (not signed in — set VITE_DEMO_PASSWORD in .env.local or IES_SHOT_PASSWORD)`)
+    console.log(`  → login screen only at ${vp.name}; authenticated screens NOT captured`)
     await ctx.close()
     continue
   }

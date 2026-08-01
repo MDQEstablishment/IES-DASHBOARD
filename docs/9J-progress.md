@@ -21,23 +21,63 @@ Enforced mechanically, per commit:
 | generators untouched | sha256 manifest of all 18 `src/lib` modules, inside the census |
 | generator behaviour | the 9H (6 files) + 9F harnesses re-run green |
 | deploy | green before the next commit starts |
-| screenshots + overflow | **DEFERRED — pending credential** (see below) |
+| screenshots + overflow | **CLOSED in 9J(10a/c)** — 24 shots, 3 viewports, 0 overflows (see below) |
 
-## Deferred gate: screenshots
+## The screenshot gate — CLOSED, and the diagnosis above was wrong
 
-The rig (`scripts/ui-shots.mjs`) is built, committed and working — it drives the
-preinstalled Chromium, captures full-page PNGs at 1366×768 and 390×844, and
-asserts `scrollWidth ≤ innerWidth` per page so a wide table can never push the
-page body.
+The gate is closed: **24 screenshots, 8 screens × 3 viewports, 0 horizontal
+overflows, authenticated.** `docs/ui-9J/after/{1366x768,1280x800,390x844}/`.
 
-It cannot sign in. `VITE_DEMO_PASSWORD` is deliberately never committed, so
-without a credential the rig reaches the login screen and nothing beyond it.
-Creating an auth user was considered and **rejected**: it writes to a live
-production database during a sprint whose whole premise is changing nothing.
+**The earlier diagnosis on this page was wrong, and the way it was wrong is the
+lesson.** Everything above this line said the rig "cannot sign in" because
+`VITE_DEMO_PASSWORD` is not committed. The credential was never the problem.
+`scripts/ui-shots.mjs` filled the email with
 
-**This gate is deferred, not waived.** The pre-restyle tree is tagged
-**`9j-before`**, so the complete before/after set is reproducible retroactively:
-check out the tag, run `ui-shots.mjs before`, check out the tip, run it `after`.
+```js
+await page.fill('input[type="email"], input[lang="en"]', creds.email)
+```
+
+`Login` renders `<input lang="en">` for the email and `<input lang="en"
+type="password">` for the password. There is **no** `input[type="email"]` in the
+app at all, and **both** inputs carry `lang="en"` — so that selector list
+resolved to two elements and Playwright's strict mode threw on the first fill,
+at every viewport, on every run. The throw landed in
+
+```js
+} catch { authed = false }
+```
+
+a bare catch that then printed the *same* "not signed in — set
+VITE_DEMO_PASSWORD" line a genuinely missing credential produces. A code defect
+wore the costume of a configuration problem, and it was recorded on this page as
+an environment blocker for nine commits. The catch now reports the actual error.
+
+Egress was a real, separate blocker and is also resolved: Chromium is launched
+through the egress proxy (`--proxy-server`), with loopback excluded
+(`--proxy-bypass-list`, because the preview server is local and the proxy
+answers plain HTTP with 405), and a TLS 1.2 cap. Certificate verification stays
+**on** — the proxy CA is in the browser's NSS store.
+
+A third viewport, **1280×800**, was added. It is the narrowest common laptop
+width, and it sits above the `max-width:767px` breakpoint — wide enough that the
+mobile collapse does not rescue a bad layout, narrow enough that the Dashboard's
+1.7fr/1fr split is genuinely tight.
+
+The gate found a real defect on its first authenticated run: the 390×844
+Dashboard overflowed at `scrollWidth 566` against `innerWidth 390`. Fixed in
+9J(10b); the 24 shots here are from the tree with that fix in.
+
+### The `before` set stays as it is
+
+`docs/ui-9J/before/` still holds only the two login shots it always held. The
+pre-restyle tree is tagged **`9j-before`** and the before set is reproducible
+retroactively — check out the tag and run `ui-shots.mjs before` — but that is
+not done here, because those shots would be **honest about layout and dishonest
+about type**: the Inter webfont has never loaded in any production build (see
+9J(10b)), so every screenshot in this repository predating that fix, `before`
+and `after` alike, shows a system-ui fallback face rather than the shipped one.
+The 24 new `after` shots are the first images of this application in its actual
+typeface.
 Every commit below records `shots pending credential` until that happens.
 
 | viewport | before | after |
@@ -276,14 +316,84 @@ the two inline modal/drawer scrims are now `--scrim`.
 Gates for this commit: build clean; **census diff empty** — no control, query,
 route or `src/lib` hash moved; harnesses green at 209 assertions.
 
+## 9J(10a/c) — the gate closes, and what the shots actually show
+
+| item | state |
+| --- | --- |
+| `playwright` back as a devDependency | ☑ |
+| two-element login selector fixed; the silent `catch {}` now reports | ☑ |
+| Chromium through the egress proxy, loopback bypassed, TLS 1.2 cap, verification ON | ☑ |
+| third viewport 1280×800 added | ☑ |
+| **24 screenshots — 8 screens × 3 viewports, authenticated** | ☑ |
+| **0 horizontal overflows**, asserted per page per viewport | ☑ |
+| the one overflow the gate found (390×844 Dashboard, 566 vs 390) fixed | ☑ — 9J(10b) |
+
+Captured: `00-login`, `dashboard`, `projects`, `materials`, `tasks`,
+`escalations`, `reports`, `settings`, at 1366×768, 1280×800 and 390×844.
+
+### The Projects page is empty, and that is correct
+
+The `projects` screenshot shows an empty state at all three viewports. This is
+**not** a broken query, a failed fetch, or an RLS problem, and it should not be
+filed as one. Every project in the database is soft-deleted, and the deletions
+are spread one at a time across five weeks:
+
+| project | soft-deleted |
+| --- | --- |
+| PROJECT-A-EAST | 2026-06-26 22:37:43 |
+| PROJECT-A-EAST-V2 | 2026-06-26 22:37:54 |
+| PROJECT-A-DIP-50 | 2026-06-28 00:06:12 |
+| PROJECT-A-DIP-FULL | 2026-06-28 00:06:23 |
+| PROJECT-A | 2026-07-16 20:32:13 |
+| PROJECT-A-DIP-709 | 2026-07-24 23:39:36 |
+| PROJECT-B | 2026-07-25 15:20:26 |
+| MHRSD-K | 2026-08-01 12:24:15 |
+
+Eight projects, six distinct days, 26 June to 1 August. **That shape is the
+evidence.** An incident — a bad migration, a runaway script, a mistaken bulk
+action — deletes rows in one burst sharing a timestamp. This is the opposite:
+deliberate, spaced, and paired where it should be (the two 11-second gaps each
+remove an obvious duplicate — `PROJECT-A-DIP-50` and `PROJECT-A-DIP-FULL` even
+carry the same display name). It is the owner clearing test data as he finished
+with each import. Nothing is lost: `deleted_at` is a soft delete and every row
+is still there.
+
+### project-detail and building-detail are uncapturable, and that follows
+
+The rig resolves its drill-in targets at run time — it opens `/projects`, takes
+the first project link, then that project's first building link. With no
+undeleted project there is no link, so those two screens cannot be reached and
+are not in the 24.
+
+**This is a consequence of the dataset, not a hole in the coverage.** The rig
+was not skipped, did not fail, and was not weakened to make the count work; it
+looked for a project, correctly found none, and stopped. The moment one live
+project exists, the same command captures both screens with no change. Recording
+it as a coverage gap would be recording the wrong fact — the gap is in the data
+the owner deliberately emptied, and it closes when he loads the next programme.
+
 ## Still open
 
-1. **Screenshots + overflow assertions** — the whole authenticated set, both
-   viewports. Blocked by the environment's egress policy, not by the repository;
-   see the gate section above. The 390×844 pass over the field tools is the most
-   valuable item in it, and 9K(3) is the evidence: three visual defects shipped
-   through nine census-clean commits.
-2. `npm run dev` is broken independently of 9J — harfbuzzjs uses top-level await,
+1. `npm run dev` is broken independently of 9J — harfbuzzjs uses top-level await,
    which the dev optimizer's browser target rejects. `vite build` is unaffected.
    Nobody can run the app locally without the `vite preview` workaround. Not 9J
    scope (config, not skin); flagged for 9K.
+2. `ROLE_AVATAR_CONTRAST` — role-coloured avatar initials at 4.10:1 (PMO) and
+   3.68:1 (Program Manager) against AA's 4.5:1. Measured, logged in
+   `docs/Backlog.md`, deliberately not changed: the palette is inherited from
+   v1.5 and 9J never touched it.
+
+## Sprint 9J is CLOSED
+
+Every gate in the iron-rule table is green, including the screenshot gate that
+was open through ten commits. The sprint's own premise — *skin only* — held: the
+census diff is empty in every commit after 9J(1)'s five whitelisted chrome
+additions, all 18 `src/lib` modules are unchanged by sha256, and the generator
+harnesses are green.
+
+The closing note is the one worth carrying forward. **Three of the four defects
+this sprint actually shipped were invisible to the census and visible in a
+screenshot** — the two 9K(3) skin defects, the dark-on-dark login text, and the
+390 px Dashboard overflow. A census proves the wiring did not move. It cannot
+tell you the page is unreadable. The gate that was deferred longest was the one
+that found the most.
