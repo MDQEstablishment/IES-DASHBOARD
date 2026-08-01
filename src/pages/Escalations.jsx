@@ -1,50 +1,84 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Avatar, Chip, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
-import { useAuth, Can } from '../rbac'
+import { useAuth } from '../rbac'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
-import { MANAGERS, roleColor } from '../lib/constants'
+import { roleColor } from '../lib/constants'
 import { ago } from '../lib/format'
 
-// Hierarchy chain shown on every escalation card (Engineer -> CEO).
-const CHAIN = ['Engineer', 'PM', 'Programme', 'PMO', 'CEO']
+const TABS = [
+  { k: 'mine', l: 'Raised by me' },
+  { k: 'tome', l: 'Raised to me' },
+  { k: 'all', l: 'All I can see' },
+]
 
 export default function Escalations() {
   const { user, profile } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [showNew, setShowNew] = useState(false)
-  const [tab, setTab] = useState('open')
+  const [prefill, setPrefill] = useState(null)
+  const [tab, setTab] = useState('mine')
+  const [resolving, setResolving] = useState(null)
 
   const { rows, loading } = useLiveQuery('escalations', (q) =>
     q.select('*,raised_by:profiles!escalations_raised_by_id_fkey(full_name,role),raised_to:profiles!escalations_raised_to_id_fkey(full_name,role),building:buildings(code,name)')
-      .order('created_at', { ascending: false }).limit(100))
+      .order('created_at', { ascending: false }).limit(200))
 
-  const open = rows.filter((e) => e.status !== 'resolved' && e.status !== 'closed')
-  const resolved = rows.filter((e) => e.status === 'resolved' || e.status === 'closed')
-  const list = tab === 'open' ? open : resolved
+  const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name,role,manager_id'))
+
+  // A task can hand us a prefilled escalation (the blocked-task bridge on Tasks).
+  useEffect(() => {
+    const t = location.state?.fromTask
+    if (!t) return
+    setPrefill(t)
+    setShowNew(true)
+    navigate(location.pathname, { replace: true, state: null }) // don't reopen on back
+  }, [location.state]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Does anyone actually report to me? That — not a role list — is what decides
+  // whether "Raised to me" is a real tab or an empty box.
+  const isRecipient = useMemo(
+    () => !!user?.id && people.some((p) => p.manager_id === user.id), [people, user?.id])
   const noManager = profile && !profile.manager_id // CEO / Admin sit at the top of the chain
 
-  const resolve = (e) =>
-    bgUpdate('escalations', e.id, {
-      status: 'resolved', resolved_by_id: user.id, resolved_at: new Date().toISOString(),
-      resolution_note: 'Resolved via console',
-    }, { okMsg: 'Escalation resolved' })
+  const tabs = TABS.filter((t) => t.k !== 'tome' || isRecipient)
+  const activeTab = tabs.some((t) => t.k === tab) ? tab : 'mine'
 
-  // Forward / re-escalate one level up — a new row (trigger derives raised_to = my manager). No reopen.
-  const forward = (e) =>
+  const list = rows.filter((e) => (
+    activeTab === 'mine' ? e.raised_by_id === user?.id
+      : activeTab === 'tome' ? e.raised_to_id === user?.id
+        : true))
+
+  const counts = {
+    mine: rows.filter((e) => e.raised_by_id === user?.id).length,
+    tome: rows.filter((e) => e.raised_to_id === user?.id).length,
+    all: rows.length,
+  }
+
+  const acknowledge = (e) =>
+    bgUpdate('escalations', e.id, { status: 'acknowledged' }, { okMsg: 'Acknowledged — they can see you have it' })
+  const close = (e) =>
+    bgUpdate('escalations', e.id, { status: 'closed' }, { okMsg: 'Escalation closed' })
+
+  // Re-escalate: a NEW row whose parent is this one. The trigger routes it one
+  // level above the last recipient and rejects it unless the parent has been
+  // answered — so this button only appears on a resolved/closed row I raised.
+  const escalateHigher = (e) =>
     bgInsert('escalations', {
-      title: 'Re-escalation: ' + e.title,
+      title: e.title.startsWith('Escalated: ') ? e.title : 'Escalated: ' + e.title,
       description: e.description,
       raised_by_id: user.id,
-      level: (e.level || 1) + 1,
       parent_escalation_id: e.id,
       project_id: e.project_id, building_id: e.building_id, related_task_id: e.related_task_id,
       severity: e.severity, status: 'open',
-    }, { okMsg: 'Forwarded one level up' })
+    }, { okMsg: 'Escalated one level higher' })
 
   return (
     <>
-      <PageTitle kicker="HIERARCHY CHAIN" title="My Escalations"
-        right={<Btn variant="primary" icon="plus" onClick={() => setShowNew(true)}>Raise escalation</Btn>} />
+      <PageTitle kicker="HIERARCHY CHAIN" title="Escalations"
+        right={!noManager && <Btn variant="primary" icon="plus" onClick={() => { setPrefill(null); setShowNew(true) }}>Raise escalation</Btn>} />
 
       {noManager && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F5EEDF', border: '1px solid #E7D9B8', color: '#8A6524', borderRadius: 8, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
@@ -52,104 +86,189 @@ export default function Escalations() {
         </div>
       )}
 
-      {/* Open / Resolved tabs (dc escTabs) */}
       <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 8, padding: 3, background: '#fff', marginBottom: 16, width: 'fit-content' }}>
-        {[['open', `Open (${open.length})`], ['resolved', `Resolved (${resolved.length})`]].map(([k, l]) => {
-          const active = tab === k
+        {tabs.map((t) => {
+          const active = activeTab === t.k
           return (
-            <button key={k} onClick={() => setTab(k)} style={{
+            <button key={t.k} onClick={() => setTab(t.k)} style={{
               padding: '6px 16px', fontSize: 12.5, fontWeight: 600, borderRadius: 7,
               color: active ? 'var(--accent)' : 'var(--text-3)', background: active ? 'rgba(160,118,43,.10)' : 'transparent', cursor: 'pointer',
-            }}>{l}</button>
+            }}>{t.l} ({counts[t.k]})</button>
           )
         })}
       </div>
 
-      {loading ? <Loading /> : list.length === 0 ? <Empty icon="escalation">{tab === 'open' ? 'No open escalations — all clear.' : 'No resolved escalations yet.'}</Empty> : (
+      {loading ? <Loading /> : list.length === 0 ? (
+        <Empty icon="escalation">
+          {activeTab === 'mine' ? "You haven't raised any escalations."
+            : activeTab === 'tome' ? 'Nothing has been escalated to you.'
+              : 'No escalations.'}
+        </Empty>
+      ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {list.map((e) => {
-            const done = e.status === 'resolved' || e.status === 'closed'
-            const cur = Math.min(e.level || 1, CHAIN.length - 1)
-            return (
-              <div key={e.id} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
-                {/* head: severity + status pills, ago, resolve action */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Chip status={e.severity} />
-                    <Chip status={e.status} />
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{ago(e.created_at)}</span>
-                  </div>
-                  {!done && (
-                    <Can allow={MANAGERS}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#FAF3E3', color: '#B45309', border: '1px solid #EBDCB2' }}>Forward ↑</button>
-                        <button onClick={() => resolve(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#E9F3EE', color: '#1D6A49', border: '1px solid #BFDFCF' }}>Resolve</button>
-                      </div>
-                    </Can>
-                  )}
-                  {done && e.status === 'resolved' && (
-                    <Can allow={MANAGERS}>
-                      <button onClick={() => forward(e)} style={{ fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7, background: '#F9ECEA', color: '#96271E', border: '1px solid #EBCFC9' }}>Re-escalate ↑</button>
-                    </Can>
-                  )}
-                </div>
-
-                {/* title + description */}
-                <div style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</div>
-                {e.description && <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 3 }}>{e.description}</div>}
-
-                {/* meta: building + raised_by -> raised_to */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '12px 0', fontSize: 12.5 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: 'var(--text-3)', background: '#F0EDE4' }}>{e.building?.code || '—'}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <Avatar name={e.raised_by?.full_name} color={roleColor(e.raised_by?.role)} size={22} />
-                    <span style={{ whiteSpace: 'nowrap' }}>{e.raised_by?.full_name || '—'}</span>
-                  </span>
-                  <Icon name="chevronr" size={13} style={{ color: 'var(--text-3)' }} />
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <Avatar name={e.raised_to?.full_name} color={roleColor(e.raised_to?.role)} size={22} />
-                    <span style={{ whiteSpace: 'nowrap' }}>{e.raised_to?.full_name || '—'}</span>
-                  </span>
-                </div>
-
-                {/* escalation chain: Engineer -> PM -> Programme -> PMO -> CEO */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
-                  {CHAIN.map((c, i) => {
-                    const isDone = done || i < cur
-                    const isCur = !done && i === cur
-                    const bg = isDone ? '#217A54' : isCur ? '#B3362B' : '#fff'
-                    const border = isDone ? '#217A54' : isCur ? '#B3362B' : 'var(--line)'
-                    const labelCol = isDone ? '#1D6A49' : isCur ? '#B3362B' : 'var(--text-3)'
-                    return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: bg, border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flex: 'none' }}>
-                            {isDone && <Icon name="check" size={12} style={{ color: '#fff' }} />}
-                          </span>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, color: labelCol, whiteSpace: 'nowrap' }}>{c}</span>
-                        </div>
-                        {i < CHAIN.length - 1 && <span style={{ width: 26, height: 2, background: i < cur || done ? '#BFDFCF' : 'var(--line)', margin: '0 8px' }} />}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+          {list.map((e) => (
+            <Card key={e.id} e={e} me={user?.id} people={people}
+              onAck={acknowledge} onResolve={setResolving} onClose={close} onHigher={escalateHigher} />
+          ))}
         </div>
       )}
 
-      {showNew && <NewEscalation onClose={() => setShowNew(false)} user={user} />}
+      {showNew && <NewEscalation onClose={() => { setShowNew(false); setPrefill(null) }} user={user} prefill={prefill} />}
+      {resolving && <ResolveModal e={resolving} onClose={() => setResolving(null)} />}
     </>
   )
 }
 
-function NewEscalation({ onClose, user }) {
+function Card({ e, me, people, onAck, onResolve, onClose, onHigher }) {
+  const isRaiser = e.raised_by_id === me
+  const isRecipient = e.raised_to_id === me
+
+  // Exactly the moves migration 0103 will accept from this person, in this state.
+  const canAck = isRecipient && e.status === 'open'
+  const canResolve = isRecipient && e.status === 'acknowledged'
+  const canClose = isRaiser && e.status === 'resolved'
+  const canHigher = isRaiser && (e.status === 'resolved' || e.status === 'closed')
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Chip status={e.severity} />
+          <Chip status={e.status} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{ago(e.created_at)}</span>
+          {e.level > 1 && (
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: '#96271E', background: '#F9ECEA' }}>
+              LEVEL {e.level}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {canAck && <Action onClick={() => onAck(e)} bg="#FAF3E3" fg="#B45309" bd="#EBDCB2">Acknowledge</Action>}
+          {canResolve && <Action onClick={() => onResolve(e)} bg="#E9F3EE" fg="#1D6A49" bd="#BFDFCF">Resolve…</Action>}
+          {canClose && <Action onClick={() => onClose(e)} bg="#EEF1F6" fg="#3A4A63" bd="#D2DAE6">Close</Action>}
+          {canHigher && <Action onClick={() => onHigher(e)} bg="#F9ECEA" fg="#96271E" bd="#EBCFC9">Escalate higher ↑</Action>}
+        </div>
+      </div>
+
+      <div style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</div>
+      {e.description && <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 3 }}>{e.description}</div>}
+
+      {e.resolution_note && (
+        <div style={{ marginTop: 10, background: '#F6F8F7', border: '1px solid #DCE7E1', borderLeft: '3px solid #217A54', borderRadius: 7, padding: '9px 12px' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: '#1D6A49', marginBottom: 3 }}>RESOLUTION</div>
+          <div style={{ fontSize: 12.5, whiteSpace: 'pre-wrap' }}>{e.resolution_note}</div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '12px 0', fontSize: 12.5 }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: 'var(--text-3)', background: '#F0EDE4' }}>{e.building?.code || '—'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <Avatar name={e.raised_by?.full_name} color={roleColor(e.raised_by?.role)} size={22} />
+          <span style={{ whiteSpace: 'nowrap' }}>{e.raised_by?.full_name || '—'}</span>
+        </span>
+        <Icon name="chevronr" size={13} style={{ color: 'var(--text-3)' }} />
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <Avatar name={e.raised_to?.full_name} color={roleColor(e.raised_to?.role)} size={22} />
+          <span style={{ whiteSpace: 'nowrap' }}>{e.raised_to?.full_name || '—'}</span>
+        </span>
+      </div>
+
+      <RealChain e={e} people={people} />
+    </div>
+  )
+}
+
+// The chain drawn from the ACTUAL reporting line, walked upward from the person
+// who raised it. It used to be a hardcoded Engineer/PM/Programme/PMO/CEO strip
+// that matched nobody's real manager and showed the same five boxes to everyone.
+function RealChain({ e, people }) {
+  const chain = useMemo(() => {
+    const by = new Map(people.map((p) => [p.id, p]))
+    const out = []
+    let cur = by.get(e.raised_by_id)
+    const seen = new Set()
+    while (cur && !seen.has(cur.id) && out.length < 8) {
+      seen.add(cur.id); out.push(cur); cur = cur.manager_id ? by.get(cur.manager_id) : null
+    }
+    return out
+  }, [people, e.raised_by_id])
+
+  if (chain.length < 2) return null
+  const settled = e.status === 'resolved' || e.status === 'closed'
+  const at = Math.min(e.level || 1, chain.length - 1) // index of the current holder
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+      {chain.map((p, i) => {
+        const passed = i < at || (settled && i === at)
+        const isCur = !settled && i === at
+        const bg = passed ? '#217A54' : isCur ? '#B3362B' : '#fff'
+        const bd = passed ? '#217A54' : isCur ? '#B3362B' : 'var(--line)'
+        const fg = passed ? '#1D6A49' : isCur ? '#B3362B' : 'var(--text-3)'
+        return (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }} title={p.full_name}>
+              <span style={{ width: 22, height: 22, borderRadius: '50%', background: bg, border: `1px solid ${bd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flex: 'none' }}>
+                {passed && <Icon name="check" size={12} style={{ color: '#fff' }} />}
+              </span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, color: fg, whiteSpace: 'nowrap' }}>
+                {p.full_name?.split(' ')[0] || '—'}
+              </span>
+            </div>
+            {i < chain.length - 1 && <span style={{ width: 26, height: 2, background: i < at ? '#BFDFCF' : 'var(--line)', margin: '0 8px' }} />}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Action({ onClick, bg, fg, bd, children }) {
+  return (
+    <button onClick={onClick} style={{
+      fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7,
+      background: bg, color: fg, border: `1px solid ${bd}`, cursor: 'pointer',
+    }}>{children}</button>
+  )
+}
+
+// Resolving now costs a sentence. The old one-click wrote "Resolved via console"
+// into every row, which told whoever raised it precisely nothing.
+function ResolveModal({ e, onClose }) {
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const valid = note.trim().length >= 10
+
+  const save = async () => {
+    if (!valid) return
+    setBusy(true)
+    const { error } = await bgUpdate('escalations', e.id,
+      { status: 'resolved', resolution_note: note.trim() },
+      { okMsg: 'Escalation resolved' })
+    setBusy(false)
+    if (!error) onClose()
+  }
+
+  return (
+    <Modal open title="Resolve escalation" onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={save} disabled={busy || !valid}>{busy ? 'Saving…' : 'Resolve'}</Btn></>}>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>{e.title}</div>
+      <Field label="What was done? (min 10 chars — this is permanent and cannot be edited later)">
+        <textarea style={{ ...inputStyle, minHeight: 100, resize: 'vertical' }} value={note}
+          onChange={(ev) => setNote(ev.target.value)} placeholder="The action taken, and by whom." />
+      </Field>
+    </Modal>
+  )
+}
+
+function NewEscalation({ onClose, user, prefill }) {
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id').order('code'))
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [title, setTitle] = useState(prefill ? `Blocked: ${prefill.title}` : '')
+  const [description, setDescription] = useState(
+    prefill ? `The task "${prefill.title}" is blocked and needs help from above.\n\n` : '')
   const [severity, setSeverity] = useState('medium')
-  const [bid, setBid] = useState('')
+  const [bid, setBid] = useState(prefill?.building_id || '')
   const [busy, setBusy] = useState(false)
 
   const valid = title.trim().length > 0 && description.trim().length >= 10
@@ -157,10 +276,13 @@ function NewEscalation({ onClose, user }) {
     if (!valid) return
     setBusy(true)
     const b = buildings.find((x) => x.id === bid)
-    // raised_to + level are auto-derived by a DB trigger — do not set them.
+    // raised_to + level are derived by a DB trigger — do not set them.
     const { error } = await bgInsert('escalations', {
       title: title.trim(), description: description.trim(), severity,
-      raised_by_id: user.id, building_id: bid || null, project_id: b?.project_id || null, status: 'open',
+      raised_by_id: user.id, building_id: bid || null,
+      project_id: b?.project_id || prefill?.project_id || null,
+      related_task_id: prefill?.id || null,
+      status: 'open',
     }, { okMsg: 'Escalation raised' })
     setBusy(false)
     if (!error) onClose()
@@ -169,6 +291,11 @@ function NewEscalation({ onClose, user }) {
   return (
     <Modal open title="Raise an escalation" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !valid}>{busy ? 'Saving…' : 'Raise'}</Btn></>}>
+      {prefill && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9ECEA', border: '1px solid #EBCFC9', color: '#96271E', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
+          <Icon name="tasks" size={14} />Linked to the blocked task “{prefill.title}”.
+        </div>
+      )}
       <Field label="Title">
         <input lang="en" style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short summary" />
       </Field>
