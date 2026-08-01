@@ -31,11 +31,21 @@ export default function ProjectItems({ projectId, project }) {
   const { rows: installed, refetch: refI } = useLiveQuery('project_installed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
   const { rows: removed, refetch: refR } = useLiveQuery('project_removed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
   const { rows: pairs, refetch: refP } = useLiveQuery('project_item_pairs', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
+  // 9H(1) — consumables that replace nothing, so they are deliberately NOT
+  // pairs: the certificate prints them in their own «البنود الأخرى» table.
+  const { rows: others, refetch: refO } = useLiveQuery('project_other_installed_items', (q) => q.select('*').eq('project_id', projectId).order('created_at'), [projectId])
   const { rows: pEsms } = useLiveQuery('project_esms', (q) => q.select('custom_name,ordinal,esm:esms(code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
   const esms = pEsms.filter((pe) => pe.esm).map((pe) => ({ code: pe.esm.code, name: pe.custom_name || pe.esm.name }))
   const [open, setOpen] = useState({})
   const [importErrors, setImportErrors] = useState([])
   const refreshAll = () => { refI(); refR(); refP() }
+
+  const addOther = async (esm) => {
+    await bgInsert('project_other_installed_items', { project_id: projectId, esm_code: esm, qty: 1 })
+    refO()
+  }
+  const saveO = async (id, patch) => { const { error } = await bgUpdate('project_other_installed_items', id, patch); if (!error) refO() }
+  const delOther = async (id) => { await bgDelete('project_other_installed_items', id); refO() }
 
   const insById = Object.fromEntries(installed.map((r) => [r.id, r]))
   const remById = Object.fromEntries(removed.map((r) => [r.id, r]))
@@ -81,6 +91,7 @@ export default function ProjectItems({ projectId, project }) {
     const soR = removed.filter((r) => r.esm_code === esm && !pairedR.has(r.id)).map((r) => ({ key: 'r' + r.id, inst: null, rem: r }))
     return [...ps, ...soI, ...soR]
   }
+  const othersForEsm = (esm) => others.filter((o) => (o.esm_code || '') === esm)
 
   const exportCsv = () => {
     const out = []
@@ -249,6 +260,34 @@ export default function ProjectItems({ projectId, project }) {
                   )})}
                 </tbody>
               </table></div>
+
+              {/* 9H(1) — other installed items: consumables with no old counterpart.
+                  They print in the certificate's «البنود الأخرى» table, which until
+                  now always rendered empty because nothing fed it. */}
+              <div style={{ marginTop: 14, borderTop: '1px dashed var(--line)', paddingTop: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700 }}>Other installed items</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Cable, lamp holders, connecting switches — installed but replacing nothing, so they are not pairs.</span>
+                  {canEdit && <button onClick={() => addOther(e.code)} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add item</button>}
+                </div>
+                {othersForEsm(e.code).length === 0
+                  ? <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>None — the certificate prints this table blank.</div>
+                  : (
+                    <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
+                      <thead><tr style={{ textAlign: 'left' }}>{th('DESCRIPTION')}{th('QTY')}{th('NOTE')}{canEdit && th('')}</tr></thead>
+                      <tbody>
+                        {othersForEsm(e.code).map((o) => (
+                          <tr key={o.id} style={{ borderTop: '1px solid var(--line)' }}>
+                            <td style={{ padding: 2, minWidth: 200 }}><Cell value={o.item_description} onSave={(v) => saveO(o.id, { item_description: v || null })} placeholder="e.g. Cable 3x2.5mm" /></td>
+                            <td style={{ padding: 2, width: 70 }}><Cell value={o.qty} type="num" align="right" onSave={(v) => numGuard('total_quantity', v) && saveO(o.id, { qty: numOrNull(v) })} /></td>
+                            <td style={{ padding: 2, minWidth: 120 }}><Cell value={o.notes} onSave={(v) => saveO(o.id, { notes: v || null })} placeholder="—" /></td>
+                            {canEdit && <td style={{ padding: 2, width: 40, textAlign: 'center' }}><button title="Delete" onClick={() => delOther(o.id)} style={{ color: 'var(--bad)' }}>🗑</button></td>}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table></div>
+                  )}
+              </div>
             </>}
           </div>
         )

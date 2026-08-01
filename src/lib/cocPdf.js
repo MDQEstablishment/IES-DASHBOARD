@@ -44,13 +44,16 @@ export async function ensureCocSettings(projectId, esmOpts) {
 // generating in bulk reuse the same context across COCs.
 export async function fetchCocContext(projectId) {
   const { data: auth } = await supabase.auth.getUser()
-  const [proj, settings, buildings, pesms, installed, removed, me] = await Promise.all([
+  const [proj, settings, buildings, pesms, installed, removed, other, me] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).single(),
     supabase.from('coc_project_settings').select('*').eq('project_id', projectId).maybeSingle(),
     supabase.from('buildings').select('*').eq('project_id', projectId),
     supabase.from('project_esms').select('custom_name,archived,esm:esms(code,name)').eq('project_id', projectId).eq('archived', false),
     supabase.from('project_installed_items').select('*').eq('project_id', projectId),
     supabase.from('project_removed_items').select('*').eq('project_id', projectId),
+    // 9H(1) — consumables that are installed but replace nothing (cable, lamp
+    // holders, connecting switches). The COC has always printed their table.
+    supabase.from('project_other_installed_items').select('*').eq('project_id', projectId),
     // 8V Issue 2 — the ESCO column of the approval grid auto-fills with the
     // generating engineer's name; nothing else about the signer is read.
     auth?.user?.id
@@ -63,6 +66,7 @@ export async function fetchCocContext(projectId) {
     project: proj.data, settings: settings.data || null,
     buildings: buildings.data || [],
     esmName, installed: installed.data || [], removed: removed.data || [],
+    other: other.data || [],
     currentUserName: me.data?.full_name || '',
   }
 }
@@ -130,6 +134,7 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     (!it.building_id || coveredBuildingIds.includes(it.building_id))
   const ins = ctx.installed.filter(inScope)
   const rem = ctx.removed.filter(inScope)
+  const oth = (ctx.other || []).filter(inScope)
   const mapLight = (it) => ({
     description: [it.item_description, it.model_code].filter(Boolean).join(' '),
     qty: it.total_quantity,
@@ -169,7 +174,7 @@ export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
     kind,
     installed: (kind === 'ac' ? ins.map(mapAc) : ins.filter((it) => !isCtrl(it)).map(mapLight)),
     installedControls: kind === 'ac' ? [] : ins.filter(isCtrl).map((it) => ({ ...mapLight(it), ctrlRefNo: '', ctrlRefDesc: '', ctrlTotal: '' })),
-    installedOther: [],
+    installedOther: oth.map((it) => ({ description: it.item_description || '', qty: it.qty })),
     removed: (kind === 'ac' ? rem.map(mapAc) : rem.map(mapLight)),
     meterNo: single?.elec_meter_no || '',
     subscriptionNo: single?.elec_subscription_no || '',
