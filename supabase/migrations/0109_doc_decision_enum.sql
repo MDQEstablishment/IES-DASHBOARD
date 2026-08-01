@@ -1,0 +1,21 @@
+-- 9H(5) part 1 of 2 — the "Retained for Information" outcome.
+--
+-- The MIR/WIR decision row offers five outcomes: A) Accepted, B) Accepted with
+-- Comments, C) Resubmit, D) Rejected, E) Retained for Information. Four of the
+-- five already had a home in the platform's status machine:
+--   A -> approved            D -> rejected
+--   B -> approved_with_comments   C -> the resubmit-clone flow (draft + new rev)
+-- E had none. A document the client keeps for information — no action, not an
+-- approval — had to be recorded as something it was not.
+--
+-- SPLIT ACROSS TWO MIGRATIONS ON PURPOSE: Postgres will not let a new enum
+-- value be USED in the same transaction that adds it, and 0110 rewrites
+-- doc_status_to_action() to map it. Adding the label alone is this migration's
+-- entire job.
+--
+-- NO PARALLEL DECISION ENUM. The plan considered storing the paper form's A-E
+-- letter separately from the platform status; that would create two sources of
+-- truth for one fact and let them disagree silently. The existing status IS the
+-- decision, extended by one value.
+
+alter type public.doc_action add value if not exists 'retained_for_information';

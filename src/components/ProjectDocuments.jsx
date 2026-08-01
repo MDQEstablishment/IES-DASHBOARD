@@ -28,6 +28,9 @@ export const DOC_STATUS = {
   approved_with_comments: ['Approved w/ Comments', '#B45309', '#F5E9CE', 'Approved by Client with comments — a cover-comments version was uploaded.'],
   rejected:               ['Rejected', '#B3362B', '#F9ECEA', 'Returned by Client — must be revised and resubmitted (see notes).'],
   resubmitted:            ['Resubmitted', '#A0762B', '#F5EEDF', 'Revised and resubmitted to the client after a return.'],
+  // 9H(5) — outcome E of the MIR/WIR decision row. The client keeps it on file;
+  // it is neither an approval nor a rejection, and had no home before.
+  retained_for_information: ['Retained for Info', '#3A4A63', '#EEF1F6', 'Retained by the client for information — no action required, not an approval.'],
   superseded:             ['Superseded', '#8A8577', '#F0EDE4', 'Replaced by a newer revision.'],
 }
 export const docStatusMeta = (s) => DOC_STATUS[s] || DOC_STATUS.submitted
@@ -199,6 +202,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
 export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) {
   const { user } = useAuth()
   const [reviewer, setReviewer] = useState(doc.client_reviewer_name || '')
+  const [resubBy, setResubBy] = useState(doc.expected_resubmission_date || '')
   const [notes, setNotes] = useState(doc.response_notes || '')
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -236,7 +240,10 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
     setBusy(false)
     const patch = decision === 'submitted' ? { status: 'submitted', submitted_at: doc.submitted_at || now() }
       : decision === 'under_review' ? { status: 'under_review', client_reviewer_name: reviewer.trim() || null }
-      : { status: decision, client_reviewer_name: reviewer.trim() || null, client_response_date: now(), response_notes: notes.trim() || null, ...(storage_path ? { storage_path } : {}) }
+      : { status: decision, client_reviewer_name: reviewer.trim() || null, client_response_date: now(), response_notes: notes.trim() || null,
+          // Only meaningful when the client is asking for the document back.
+          expected_resubmission_date: (decision === 'rejected' && resubBy) ? resubBy : (doc.expected_resubmission_date || null),
+          ...(storage_path ? { storage_path } : {}) }
     return apply(patch)
   }
   const createRevision = async () => {
@@ -263,6 +270,12 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
         {btn('Approved by Client', () => decide('approved'), 'primary')}
         {btn('Approved w/ Comments', () => decide('approved_with_comments'))}
         {btn('Rejected', () => decide('rejected'), 'danger')}
+        {btn('Retained for Info', () => decide('retained_for_information'))}
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <Field label="Expected re-submission date (prints on the MIR/WIR when the client asks for it back)">
+          <input lang="en" type="date" style={inputStyle} value={resubBy || ''} onChange={(e) => setResubBy(e.target.value)} />
+        </Field>
       </div>
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '14px 0 8px' }}>RESUBMISSION</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
