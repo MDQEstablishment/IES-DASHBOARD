@@ -79,3 +79,47 @@ call sites, which H3 never touched.
 that nothing else keys off those literals. Option 3 is a comment. Neither is
 large. What is not cheap is doing it twice because the palette was changed
 without the owner.
+
+---
+
+## ESCALATION_AGE_VISIBILITY — an old escalation should get louder, not quieter
+
+**Status:** open · logged, not built · owner decision · raised by 9N
+
+**The problem.** An escalation that has been open a long time is the most
+important row on the Attention List and on the Escalations page, and today it is
+presented identically to one raised an hour ago. `Dashboard.jsx` colours the AGE
+cell by **severity** (`critical` red, `high` amber, everything else grey) and
+orders escalations by severity descending. Age is rendered as text and is
+otherwise inert: nothing sorts by it, nothing marks it, nothing escalates it.
+So a `medium` escalation open for six weeks sits below a `critical` raised this
+morning, in grey.
+
+**Why this is logged rather than built.** It came out of 9N as the *correct*
+answer to a problem whose *incorrect* answer — auto-closing escalations by age —
+was refused outright (`docs/9N-decisions.md` N4). Auto-closing by age deletes
+precisely the signal the escalation exists to raise. Making it more visible is
+the opposite move and the right one, but it is a presentation change with real
+design questions the schema sprint has no business answering:
+
+- **What threshold?** Flat (e.g. 7 days), or per severity — a `critical`
+  unanswered for 24 hours is arguably worse than a `low` unanswered for a month.
+- **Sort, badge, or both?** Sorting by age subordinates severity, which is the
+  current primary key of the list and was chosen deliberately. A badge preserves
+  the severity order and adds a second axis. Both is possible and busier.
+- **Which surfaces?** The Dashboard's Attention List, the Escalations page, or
+  both. The Escalations page is tabbed by status and has its own conventions.
+- **Does it feed notifications?** A threshold crossing is a natural notification
+  trigger (`escalation_ageing`), which would be a seventh notification type and
+  needs its own opinion about who is told and how often.
+
+**Not the same as the escalation chain.** `escalations_derive_chain` (0015) and
+`level` already model escalating *up the hierarchy*, which is a person's
+deliberate act. This item is about time passing while nobody acts, which is the
+thing nothing currently represents.
+
+**Cost of deciding.** Any variant is a small change confined to `Dashboard.jsx`
+and/or `Escalations.jsx` — the age is already computed and rendered at both
+sites, so it is a threshold constant plus a style branch, and a comparator if
+sorting changes. Deciding the threshold is the expensive part, and it is a
+judgement about how this programme is actually run, which is the owner's.
