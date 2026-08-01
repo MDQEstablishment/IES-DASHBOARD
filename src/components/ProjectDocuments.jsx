@@ -185,7 +185,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
         <InspectionFormModal kind={replaceDoc.doc_type} project={project}
           esm={replaceDoc.esm_id ? { id: replaceDoc.esm_id } : null}
           building={replaceDoc.building_id ? { id: replaceDoc.building_id } : null}
-          replaceOf={{ referenceNo: replaceDoc.reference_no, revNo: (replaceDoc.rev_no || 0) + 1, title: replaceDoc.name, storageLocation: replaceDoc.storage_location, installationAreas: replaceDoc.installation_areas, esm_id: replaceDoc.esm_id }}
+          replaceOf={{ referenceNo: replaceDoc.reference_no, revNo: (replaceDoc.rev_no || 0) + 1, title: replaceDoc.name, storageLocation: replaceDoc.storage_location, installationAreas: replaceDoc.installation_areas, esm_id: replaceDoc.esm_id, docPayload: replaceDoc.doc_payload }}
           onClose={() => setReplaceDoc(null)} onDone={afterChange} />
       )}
       {replaceDoc && !(['mir', 'wir'].includes(replaceDoc.doc_type) && project) && (

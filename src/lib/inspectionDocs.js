@@ -14,7 +14,7 @@ export function smartFilename({ projectCode, kind, referenceNo, title, revNo = 0
 }
 
 // Assemble the PDF data object from project defaults + the modal's items/photos.
-function inspectionPdfData({ kind, project, esm, building, items, photoFiles, photoItems, title, generatedBy, preparedByTitle, expectedResubmission, referenceNo, storage, installation }) {
+function inspectionPdfData({ kind, project, esm, building, items, photoFiles, photoItems, photoRoles, controlList, title, generatedBy, preparedByTitle, expectedResubmission, referenceNo, storage, installation }) {
   return {
     referenceNo, projectName: project?.name, projectCode: project?.code,
     clientName: project?.client || 'Tarshid', date: localToday(),
@@ -30,6 +30,7 @@ function inspectionPdfData({ kind, project, esm, building, items, photoFiles, ph
     installationLocation: installation || building?.name || project?.region || '',
     attachmentsChecked: (photoFiles && photoFiles.length) ? ['Pictures'] : [],
     photoFiles: photoFiles || [], photoItems: photoItems || [],
+    photoRoles: photoRoles || [], controlList: controlList || [],
   }
 }
 
@@ -40,12 +41,16 @@ export async function buildInspectionPdf(opts) {
 
 // Commit: persist the project_documents row (reference_no explicit so it matches
 // the previewed PDF), upload the bytes under a traceable path, link storage_path.
-export async function commitInspectionDoc({ kind, project, esm, building, userId, referenceNo, revNo = 0, title, storage, installation, bytes, status = 'submitted' }) {
+export async function commitInspectionDoc({ kind, project, esm, building, userId, referenceNo, revNo = 0, title, storage, installation, bytes, items, controlList, photoRoles, status = 'submitted' }) {
   const { data, error } = await bgInsert('project_documents', {
     project_id: project.id, building_id: building?.id || null, esm_id: esm?.id || null,
     doc_type: kind, name: title || referenceNo, reference_no: referenceNo || null, rev_no: revNo,
     storage_location: storage || null, installation_areas: installation || null,
     revision: 'A', version: 'A', status, submitted_by: userId, submitted_at: new Date().toISOString(),
+    // 9H(7) — the document's own content (lux readings, control list, photo
+    // roles). Snapshotted so re-opening this reference as a revision starts
+    // from what was signed, not from whatever the project looks like later.
+    doc_payload: { items: items || [], controlList: controlList || [], photoRoles: photoRoles || [] },
   })
   if (error || !data?.[0]) return { error: error || { message: 'insert failed' } }
   const docId = data[0].id

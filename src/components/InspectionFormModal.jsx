@@ -14,7 +14,9 @@ import { localToday } from '../lib/format'
 // Download commits to Doc Tracker + Project Documents; Cancel persists nothing.
 // 9H(6) — boqRef feeds the MIR's per-item evidence page (BOQ Reference /
 // Description / Picture on Site).
-const emptyRow = () => ({ description: '', brand: '', model: '', qty: '', unit: 'pcs', boqRef: '' })
+// 9H(7) — a lighting WIR row also carries what it replaces and the six lux
+// readings that justify the replacement.
+const emptyRow = () => ({ description: '', brand: '', model: '', qty: '', unit: 'pcs', boqRef: '', existingType: '', luxE: ['', '', ''], luxP: ['', '', ''] })
 
 export default function InspectionFormModal({ kind, project, esm = null, building = null, onClose, onDone, replaceOf = null }) {
   const { user, profile } = useAuth()
@@ -26,7 +28,10 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
   const heading = (replaceOf ? `Replace ${kind.toUpperCase()}` : (kind === 'mir' ? 'Generate MIR' : 'Generate WIR')) + (revNo > 0 ? ` · R${revNo}` : '')
 
   const [docTitle, setDocTitle] = useState(replaceOf?.title || '')
-  const [rows, setRows] = useState([emptyRow()])
+  const [rows, setRows] = useState(() => {
+    const prev = replaceOf?.docPayload?.items
+    return prev?.length ? prev.map((it) => ({ ...emptyRow(), ...it })) : [emptyRow()]
+  })
   const [esmId, setEsmId] = useState(replaceOf?.esm_id || esm?.id || '')
   const [storage, setStorage] = useState(replaceOf?.storageLocation || '')
   const [installation, setInstallation] = useState(replaceOf?.installationAreas || '')
@@ -41,6 +46,10 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     (q) => q.select('esm:esms(id,code,name),custom_name,ordinal').eq('project_id', project?.id).order('ordinal'), [project?.id])
   const esmOpts = pEsms.filter((pe) => pe.esm).map((pe) => ({ id: pe.esm.id, code: pe.esm.code, name: pe.custom_name || pe.esm.name }))
   const chosenEsm = esmOpts.find((e) => e.id === esmId) || esm || null
+  // 9H(7) — the control mapping entered once in Items & Replacements; printed
+  // here as well as on the certificate.
+  const { rows: ctrlLinks } = useLiveQuery('project_control_links',
+    (q) => q.select('*').eq('project_id', project?.id), [project?.id])
   const { rows: items } = useLiveQuery('project_installed_items',
     (q) => q.select('id,item_description,model_code,capacity_value,capacity_unit,total_quantity,esm_code').eq('project_id', project?.id), [project?.id])
 
@@ -58,10 +67,17 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
       .map((code) => ({ code, selected: code === sel, items: byEsm[code].slice().sort((x, y) => (x.item_description || '').localeCompare(y.item_description || '') || (x.model_code || '').localeCompare(y.model_code || '')) }))
   })()
   const validRows = rows.filter((r) => r.description.trim())
-  const itemsForPdf = validRows.map((r) => ({ description: r.description.trim(), brand: r.brand.trim(), model: r.model.trim(), qty: r.qty, unit: r.unit, boqRef: (r.boqRef || '').trim() }))
+  const isLightingWir = kind === 'wir' && chosenEsm && !/esm\s*3/i.test(chosenEsm.code || '')
+  const itemsForPdf = validRows.map((r) => ({ description: r.description.trim(), brand: r.brand.trim(), model: r.model.trim(), qty: r.qty, unit: r.unit, boqRef: (r.boqRef || '').trim(), existingType: (r.existingType || '').trim(), luxE: r.luxE || ['', '', ''], luxP: r.luxP || ['', '', ''] }))
+  const itemById = Object.fromEntries(items.map((x) => [x.id, x]))
+  const label = (x) => [x?.item_description, x?.model_code].filter(Boolean).join(' ')
+  const controlList = isLightingWir
+    ? ctrlLinks.map((l) => ({ control: label(itemById[l.control_item_id]), controlled: label(itemById[l.controlled_item_id]), qty: l.controlled_qty ?? itemById[l.controlled_item_id]?.total_quantity ?? '' }))
+    : []
   // Photo -> item index, resolved against the SAME filtered list the PDF gets,
   // so an empty row above a photo's item can never shift its assignment.
   const photoItems = photos.map((p) => (p.rowKey == null ? -1 : validRows.findIndex((r) => r === rows[p.rowKey])))
+  const photoRoles = photos.map((p) => p.role || null)
 
   // peek the reference number once; reused by every preview build + the commit.
   // When replacing, keep the original reference (a revision shares it).
@@ -80,7 +96,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
       try {
         const bytes = await buildInspectionPdf({
           kind, project, esm: chosenEsm, building, items: itemsForPdf,
-          photoFiles: photos.map((p) => p.preview), photoItems, title: docTitle.trim(),
+          photoFiles: photos.map((p) => p.preview), photoItems, photoRoles, controlList, title: docTitle.trim(),
           generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim(),
         })
         if (seq !== buildSeq.current) return // superseded by a newer edit
@@ -111,11 +127,12 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     const metas = await Promise.all(files.map(async (orig) => {
       let preview = orig
       try { preview = orig.type.startsWith('image/') ? await compressImage(orig, { maxBytes: 140000, maxDim: 900 }) : orig } catch { /* use orig */ }
-      return { orig, preview, url: URL.createObjectURL(orig), rowKey: null }
+      return { orig, preview, url: URL.createObjectURL(orig), rowKey: null, role: null }
     }))
     setPhotos((p) => [...p, ...metas])
   }
   const setPhotoRow = (i, rowKey) => setPhotos((p) => p.map((x, idx) => (idx === i ? { ...x, rowKey } : x)))
+  const setPhotoRole = (i, role) => setPhotos((p) => p.map((x, idx) => (idx === i ? { ...x, role } : x)))
   const removePhoto = (i) => setPhotos((p) => { const m = p[i]; if (m?.url) URL.revokeObjectURL(m.url); return p.filter((_, idx) => idx !== i) })
 
   const download = async () => {
@@ -125,15 +142,22 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     const finalFiles = await Promise.all(photos.map((p) => (p.orig.type.startsWith('image/') ? compressImage(p.orig, { maxBytes: 350000, maxDim: 1280 }).catch(() => p.orig) : p.orig)))
     let bytes
     try {
-      bytes = await buildInspectionPdf({ kind, project, esm: chosenEsm, building, items: itemsForPdf, photoFiles: finalFiles, photoItems, title: docTitle.trim(), generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim() })
+      bytes = await buildInspectionPdf({ kind, project, esm: chosenEsm, building, items: itemsForPdf, photoFiles: finalFiles, photoItems, photoRoles, controlList, title: docTitle.trim(), generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim() })
     } catch (e) { setBusy(false); toast('Could not build the PDF — ' + (e?.message || ''), 'err'); return }
-    const res = await commitInspectionDoc({ kind, project, esm: chosenEsm, building, userId: user.id, referenceNo: refNo, revNo, title: docTitle.trim() || (chosenEsm ? chosenEsm.code : kind.toUpperCase()), storage: storage.trim(), installation: installation.trim(), bytes })
+    const res = await commitInspectionDoc({ kind, project, esm: chosenEsm, building, userId: user.id, referenceNo: refNo, revNo, title: docTitle.trim() || (chosenEsm ? chosenEsm.code : kind.toUpperCase()), storage: storage.trim(), installation: installation.trim(), bytes, items: itemsForPdf, controlList, photoRoles })
     setBusy(false)
     if (res?.error) { toast(`${kind.toUpperCase()} save failed — ${res.error.message || ''}`, 'err'); return }
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }), res.filename)
     toast(`${res.referenceNo} generated — added to Doc Tracker`)
     onDone?.(); onClose?.()
   }
+
+  // Mirrors luxAverage() in docPdf.js: blanks are skipped, never counted as 0.
+  const avgOf = (arr) => {
+    const n = (arr || []).filter((x) => x !== '' && x != null).map(Number).filter((x) => Number.isFinite(x))
+    return n.length ? Math.round((n.reduce((a, b) => a + b, 0) / n.length) * 10) / 10 : null
+  }
+  const dimmer = (r) => { const e = avgOf(r.luxE), p = avgOf(r.luxP); return e != null && p != null && p < e }
 
   const readOnly = { ...inputStyle, background: '#FAF8F2', color: 'var(--text-3)' }
   const cell = { padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, width: '100%' }
@@ -199,6 +223,53 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
             </tbody>
           </table></div>
 
+          {isLightingWir && (
+            <div style={{ marginTop: 10, border: '1px solid var(--line)', borderRadius: 8, padding: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700 }}>Lux readings</span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Three readings each; averages are computed on the form.</span>
+              </div>
+              <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5, minWidth: 620 }}>
+                <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)' }}>
+                  <th style={{ padding: 4 }}>EXISTING TYPE</th><th style={{ padding: 4 }} colSpan={3}>EXISTING LUX</th>
+                  <th style={{ padding: 4 }}>AVG</th><th style={{ padding: 4 }}>PROPOSED (ITEM)</th>
+                  <th style={{ padding: 4 }} colSpan={3}>PROPOSED LUX</th><th style={{ padding: 4 }}>AVG</th>
+                </tr></thead>
+                <tbody>
+                  {rows.map((r, i) => r.description.trim() && (
+                    <tr key={i}>
+                      <td style={{ padding: 2, minWidth: 110 }}><input lang="en" style={cell} value={r.existingType} onChange={(e) => setRow(i, { existingType: e.target.value })} placeholder="e.g. 2x36W T8" /></td>
+                      {[0, 1, 2].map((k) => (
+                        <td key={k} style={{ padding: 2, width: 48 }}>
+                          <input lang="en" inputMode="numeric" style={cell} value={r.luxE?.[k] ?? ''}
+                            onChange={(e) => setRow(i, { luxE: Object.assign([...(r.luxE || ['', '', ''])], { [k]: e.target.value }) })} />
+                        </td>
+                      ))}
+                      <td style={{ padding: '2px 6px', fontWeight: 700, color: 'var(--text-3)' }}>{avgOf(r.luxE) ?? '—'}</td>
+                      <td style={{ padding: '2px 6px', color: 'var(--text-3)', minWidth: 100 }}>{r.description.trim().slice(0, 24)}</td>
+                      {[0, 1, 2].map((k) => (
+                        <td key={k} style={{ padding: 2, width: 48 }}>
+                          <input lang="en" inputMode="numeric" style={cell} value={r.luxP?.[k] ?? ''}
+                            onChange={(e) => setRow(i, { luxP: Object.assign([...(r.luxP || ['', '', ''])], { [k]: e.target.value }) })} />
+                        </td>
+                      ))}
+                      <td style={{ padding: '2px 6px', fontWeight: 700, color: dimmer(r) ? 'var(--bad)' : 'var(--text-3)' }}>{avgOf(r.luxP) ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+              {rows.some(dimmer) && (
+                <div style={{ marginTop: 6, fontSize: 11.5, color: '#96271E' }}>
+                  Some proposed averages are below the existing ones. That may be correct — the form flags them so the client is not surprised.
+                </div>
+              )}
+              {controlList.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)' }}>
+                  {controlList.length} control mapping(s) from Items &amp; Replacements will print on this form.
+                </div>
+              )}
+            </div>
+          )}
           <Field label={kind === 'mir'
             ? `Photos (${photos.length}) — assign each to an item to give it a "Picture on Site" page`
             : `Photos (${photos.length}) — 2 per page, large, on the last pages`}>
@@ -214,7 +285,15 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
                     <img src={f.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <button onClick={() => removePhoto(i)} title="Remove" style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, lineHeight: '16px' }}>×</button>
                   </div>
-                  {kind === 'mir' && (
+                  {isLightingWir && (
+                    <select value={f.role || 'proposed'} onChange={(e) => setPhotoRole(i, e.target.value)}
+                      title="Is this the unit being removed, or the one installed?"
+                      style={{ width: '100%', marginTop: 3, padding: '2px 3px', fontSize: 10, border: '1px solid var(--line)', borderRadius: 4 }}>
+                      <option value="proposed">Proposed unit</option>
+                      <option value="existing">Existing unit</option>
+                    </select>
+                  )}
+                  {(kind === 'mir' || isLightingWir) && (
                     <select value={f.rowKey ?? ''} onChange={(e) => setPhotoRow(i, e.target.value === '' ? null : Number(e.target.value))}
                       title="Which item is this a picture of?"
                       style={{ width: '100%', marginTop: 3, padding: '2px 3px', fontSize: 10, border: '1px solid var(--line)', borderRadius: 4 }}>

@@ -1,0 +1,32 @@
+-- 9H(7) — the generated document's own content, snapshotted.
+--
+-- The lighting work-inspection form carries lux readings: for every item, three
+-- measurements of the fixture being removed and three of the one installed,
+-- with the averages that justify the replacement. Those readings are taken on
+-- site during the inspection. They are not survey data and not scope data —
+-- they belong to THIS document, on THIS visit.
+--
+-- WHY JSONB AND NOT A TABLE — the argument, so it can be re-judged later:
+--   · The readings must snapshot with the document revision. Replacing a WIR
+--     means re-measuring; R1 must keep the numbers it was signed with while R2
+--     carries the new ones. A normalised table would need its own revision
+--     scoping to achieve what a snapshot gives for free.
+--   · Nothing queries them across documents today. There is no "average lux
+--     improvement by project" screen, and inventing the schema for a report
+--     nobody has asked for is how tables end up half-populated.
+--   · The same field carries the ESM2 control list and the photo pairing, all
+--     of which are likewise per-document.
+-- WHEN TO PROMOTE: the day the owner wants lux analytics ACROSS documents. The
+-- jsonb backfills a table mechanically at that point; going the other way —
+-- reconstructing a signed revision's readings from a live table — does not work.
+--
+-- Shape (documented here because jsonb has no schema of its own):
+--   { items: [{ description, boqRef, qty, unit,
+--               existingType, luxE: [n,n,n], luxP: [n,n,n] }],
+--     controlList: [{ control, controlled, qty }],
+--     photoRoles: ['existing'|'proposed'|null, ...] }
+-- Averages are NEVER stored — they are computed at render, so they cannot drift
+-- away from the readings they summarise.
+
+alter table public.project_documents
+  add column if not exists doc_payload jsonb;

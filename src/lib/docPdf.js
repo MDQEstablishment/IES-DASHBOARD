@@ -184,16 +184,96 @@ function drawItemTable(api) {
 
 // Content blocks. Each returns the normalized item list so the shell can total
 // quantities without re-deriving them.
+// 9H(7) — lux readings. The average is computed here and nowhere else, from
+// whatever readings are present, so it can never drift from the numbers it
+// summarises. Blank readings are skipped rather than counted as zero: two
+// readings averaged is honest, three readings one of which is silently 0 is not.
+export function luxAverage(readings) {
+  // Discard blanks BEFORE coercing: Number('') is 0, which would otherwise be
+  // averaged in as a real reading of zero and understate every average.
+  const nums = (readings || []).filter((r) => r !== '' && r != null).map(Number).filter((n) => Number.isFinite(n))
+  if (!nums.length) return null
+  return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10
+}
+
+function drawLuxTable(api) {
+  const { data, ensure, ltr, rect, st, W, fonts } = api
+  const items = data.items || []
+  const cols = [
+    { w: 18, h: '#' }, { w: 96, h: 'EXISTING TYPE' },
+    { w: 30, h: 'L1' }, { w: 30, h: 'L2' }, { w: 30, h: 'L3' }, { w: 40, h: 'AVG' },
+    { w: 0, h: 'PROPOSED TYPE' },
+    { w: 30, h: 'L1' }, { w: 30, h: 'L2' }, { w: 30, h: 'L3' }, { w: 40, h: 'AVG' },
+  ]
+  const fixed = cols.reduce((a, c) => a + c.w, 0)
+  cols.forEach((c) => { if (!c.w) c.w = W - fixed })
+  ensure(20)
+  let hx = M
+  cols.forEach((c) => { rect(hx, st.y - 16, c.w, 16, LINE, [0.93, 0.95, 0.98]); ltr(c.h, hx + 3, st.y - 11, { size: 6.2, f: fonts.helvB, color: GREY, maxW: c.w - 5 }); hx += c.w })
+  st.y -= 16
+  let regressions = 0
+  items.forEach((it, i) => {
+    ensure(15)
+    const ae = luxAverage(it.luxE), ap = luxAverage(it.luxP)
+    // A proposed fixture dimmer than the one it replaces is not necessarily
+    // wrong, but it is always worth a second look before the client signs.
+    const worse = ae != null && ap != null && ap < ae
+    if (worse) regressions++
+    const vals = [String(i + 1), it.existingType || '', ...(it.luxE || ['', '', '']).map((v) => (v === '' || v == null ? '' : String(v))),
+      ae == null ? '' : String(ae), it.description || '', ...(it.luxP || ['', '', '']).map((v) => (v === '' || v == null ? '' : String(v))),
+      ap == null ? '' : String(ap)]
+    let cx = M
+    cols.forEach((c, ci) => {
+      rect(cx, st.y - 14, c.w, 14, LINE, worse ? [0.99, 0.94, 0.92] : undefined)
+      ltr(vals[ci] ?? '', cx + 3, st.y - 10, { size: 7, maxW: c.w - 5, f: (ci === 5 || ci === 10) ? fonts.helvB : fonts.helv })
+      cx += c.w
+    })
+    st.y -= 14
+  })
+  if (!items.length) { ensure(14); ltr('(No lux readings recorded)', M + 4, st.y - 4, { size: 8, color: GREY }); st.y -= 14 }
+  if (regressions > 0) {
+    ensure(16)
+    ltr(`Note: ${regressions} item(s) show a proposed average below the existing average — highlighted above.`,
+      M + 4, st.y - 10, { size: 7.5, f: fonts.helvI, color: [0.70, 0.21, 0.17], maxW: W - 8 })
+    st.y -= 16
+  }
+  st.y -= 4
+  return items
+}
+
+function drawControlList(api) {
+  const { data, ensure, ltr, rect, st, W, fonts } = api
+  const list = data.controlList || []
+  if (!list.length) return
+  ensure(18)
+  ltr('LIGHTING CONTROL — ITEMS AND WHAT THEY CONTROL', M + 2, st.y - 4, { size: 8, f: fonts.helvB })
+  st.y -= 14
+  const cols = [{ w: 18, h: '#' }, { w: 0, h: 'CONTROL ITEM' }, { w: 0, h: 'CONTROLS' }, { w: 60, h: 'QTY' }]
+  const flex = (W - 78) / 2
+  cols[1].w = flex; cols[2].w = flex
+  ensure(16)
+  let hx = M
+  cols.forEach((c) => { rect(hx, st.y - 14, c.w, 14, LINE, [0.93, 0.95, 0.98]); ltr(c.h, hx + 3, st.y - 10, { size: 6.5, f: fonts.helvB, color: GREY }); hx += c.w })
+  st.y -= 14
+  list.forEach((l, i) => {
+    ensure(14)
+    let cx = M
+    const vals = [String(i + 1), l.control || '', l.controlled || '', l.qty == null ? '' : String(l.qty)]
+    cols.forEach((c, ci) => { rect(cx, st.y - 13, c.w, 13); ltr(vals[ci], cx + 3, st.y - 9, { size: 7, maxW: c.w - 5 }); cx += c.w })
+    st.y -= 13
+  })
+  st.y -= 6
+}
+
 const CONTENT = {
   // ESM3 / AC work inspection — FROZEN by the owner: the platform's current
   // output is the correct format. Do not add to this block.
   wirAc: (api) => drawItemTable(api),
   // Material & equipment inspection.
   mir: (api) => drawItemTable(api),
-  // ESM1 / ESM2 lighting work inspection. 9H(7) replaces this with the lux
-  // table and the control list; until then it renders what it renders today,
-  // so nothing regresses in the meantime.
-  wirLighting: (api) => drawItemTable(api),
+  // ESM1 / ESM2 lighting work inspection — the lux table is the heart of it,
+  // followed by the control mapping when the ESM has one.
+  wirLighting: (api) => { const items = drawLuxTable(api); drawControlList(api); return items },
 }
 
 // 9H(6) — per-item evidence pages, drawn after the signature grid because they
@@ -244,6 +324,52 @@ function photosByItem(data) {
 }
 
 const APPENDIX = {
+  // Lighting WIR — one page per item showing the unit being removed beside the
+  // one installed, which is the comparison the lux numbers assert in figures.
+  wirLighting: async (api) => {
+    const { data, bar, ltr, rect, st, W, fonts, pdf, P } = api
+    const items = data.items || []
+    const roles = data.photoRoles || []
+    const { byItem } = photosByItem(data)
+    let used = 0, dropped = 0
+
+    for (let i = 0; i < items.length; i++) {
+      const mine = (byItem.get(i) || [])
+      if (!mine.length) continue
+      const idxOf = (p) => (data.photos || []).indexOf(p)
+      const existing = mine.filter((p) => roles[idxOf(p)] === 'existing')
+      const proposed = mine.filter((p) => roles[idxOf(p)] !== 'existing')
+      P.newPage()
+      bar(`ITEM ${i + 1} — ${(items[i].existingType || 'EXISTING').toUpperCase()} vs ${(items[i].description || 'PROPOSED').toUpperCase()}`)
+      const colW = (W - 12) / 2
+      const cellH = 210
+      const pairs = Math.max(existing.length, proposed.length)
+      for (let k = 0; k < pairs; k++) {
+        if (used >= MAX_INSPECTION_PHOTOS) { dropped += (existing.length - k) + (proposed.length - k); break }
+        api.ensure(cellH + 26)
+        const top = st.y
+        for (const [col, list, label] of [[0, existing, 'Existing unit'], [1, proposed, 'Proposed unit']]) {
+          const x = M + col * (colW + 12)
+          rect(x, top - cellH, colW, cellH)
+          ltr(label, x + colW / 2, top - cellH + 5, { size: 7.5, f: fonts.helvB, color: GREY, align: 'center' })
+          const p = list[k]
+          if (!p) { ltr('(none)', x + colW / 2, top - cellH / 2, { size: 8, color: GREY, align: 'center' }); continue }
+          let img = null
+          try { img = (p.type || '').includes('png') ? await pdf.embedPng(p.bytes) : await pdf.embedJpg(p.bytes) } catch { continue }
+          const dim = img.scaleToFit(colW - 12, cellH - 26)
+          st.page.drawImage(img, { x: x + (colW - dim.width) / 2, y: top - cellH + 16 + ((cellH - 26 - dim.height) / 2), width: dim.width, height: dim.height })
+          used++
+        }
+        st.y = top - cellH - 10
+      }
+    }
+    if (dropped > 0) {
+      api.ensure(24)
+      ltr(`${dropped} photograph(s) exceeded the ${MAX_INSPECTION_PHOTOS}-photograph cap and are not in this document.`,
+        M + 4, st.y - 12, { size: 8, f: fonts.helvB, color: [0.70, 0.21, 0.17], maxW: W - 8 })
+      st.y -= 18
+    }
+  },
   // MIR — one page per item: BOQ Reference / Description / Picture on Site.
   mir: async (api) => {
     const { data, bar, ltr, rect, st, W, fonts, P } = api
