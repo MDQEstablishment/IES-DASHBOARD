@@ -33,7 +33,7 @@ that commit message.
 | `src/components/Icon.jsx` | 0 | 0 | — | ☐ |
 | `src/components/InspectionFormModal.jsx` | 22 | 5 | — | ☐ |
 | `src/components/LightingReplacements.jsx` | 5 | 2 | — | ☐ |
-| `src/components/Login.jsx` | 5 | 0 | — | ☐ |
+| `src/components/Login.jsx` | 5 | 0 | Sign in | ☐ |
 | `src/components/MainWarehouse.jsx` | 2 | 1 | — | ☐ |
 | `src/components/MaterialDeliveries.jsx` | 29 | 8 | — | ☐ |
 | `src/components/ProgressReportCard.jsx` | 6 | 14 | — | ☐ |
@@ -456,6 +456,7 @@ shared primitives: Btn×2, Field×8, Modal×1
 shared primitives: Empty×1
 
 ### `src/components/Login.jsx`
+screen label: **Sign in**
 
 | control → handler | count |
 | --- | --- |

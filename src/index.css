@@ -49,6 +49,13 @@
   /* The one place the old deep navy survives: the IES mark and the login
      brand panel. Everywhere else it was retired with the top bar. */
   --logo-navy:#10273B;
+  /* 9M — THE ONE NEW TOKEN THIS SPRINT ADDS. The approved sign-in design puts
+     a gradient on the left rail, which needs a second, lighter dark surface;
+     the platform had exactly one. Derived from --logo-navy (same hue, lifted)
+     rather than taken from the design package's #14324A, so the rail reads as
+     the dashboard's own dark family and not as a foreign navy. Also fills the
+     logo tile, which the package rendered in a third navy. */
+  --logo-navy-2:#1B3E5A;
   /* Text ON the navy brand panel. The neutral --text-* scale is dark ink,
      which disappears against it. */
   --on-navy:#F0EDE3;--on-navy-2:rgba(240,237,227,.62);
@@ -79,6 +86,18 @@ h1,h2,h3,p{margin:0}
 ::-webkit-scrollbar-thumb{background:rgba(28,28,28,.18);border-radius:6px}
 ::-webkit-scrollbar-track{background:transparent}
 @keyframes iesBlink{0%,100%{opacity:1}50%{opacity:.35}}
+/* ---- 9M: the approved sign-in motion ------------------------------------
+   Ported from the owner's design package, timings verbatim. The colour values
+   the package hard-coded are expressed here through the platform's own tokens
+   (color-mix supplies the alpha the package wrote as rgba), so Login.jsx can
+   stay entirely free of colour literals. */
+@keyframes iesUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes iesFade{from{opacity:0}to{opacity:1}}
+@keyframes iesDot{0%,100%{opacity:1;box-shadow:0 0 0 0 color-mix(in srgb,var(--brass-bright) 50%,transparent)}
+  50%{opacity:.55;box-shadow:0 0 0 7px color-mix(in srgb,var(--brass-bright) 0%,transparent)}}
+@keyframes iesFlow{to{stroke-dashoffset:-320}}
+@keyframes iesNode{0%,100%{r:3.4;opacity:1}50%{r:5.6;opacity:.6}}
+@keyframes iesShimmer{0%{transform:translateX(-130%)}60%,100%{transform:translateX(230%)}}
 @keyframes iesSlideR{from{transform:translateX(100%)}to{transform:translateX(0)}}
 @keyframes iesSpin{to{transform:rotate(360deg)}}
 @keyframes iesToast{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -115,6 +134,48 @@ h1,h2,h3,p{margin:0}
   .ies-login{grid-template-columns:1fr !important}
   .ies-loginleft{display:none !important}
 }
+/* ---- 9M: sign-in screen ---------------------------------------------------
+   Structure lives in Login.jsx; everything that needs a colour with alpha lives
+   here, so the component carries zero colour literals. */
+.ies-login-rail{background:linear-gradient(150deg,var(--logo-navy),var(--logo-navy-2))}
+/* Vignette so the headline stays readable over the circuit network. */
+.ies-login-vignette{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(900px 620px at 18% 72%,var(--logo-navy),transparent 72%)}
+.ies-up{animation:iesUp .7s ease-out both}
+.ies-up-2{animation:iesUp .7s .15s ease-out both}
+.ies-up-3{animation:iesUp .8s .28s ease-out both}
+.ies-up-4{animation:iesUp .8s .35s ease-out both}
+.ies-fade{animation:iesFade 1s .8s ease-out both}
+/* Three paths, three durations, negative delays — they must never march in
+   step, which is the whole idea of the treatment. */
+.ies-flow-1{animation:iesFlow 5s linear infinite}
+.ies-flow-2{animation:iesFlow 6.5s linear infinite;animation-delay:-2s}
+.ies-flow-3{animation:iesFlow 7.5s linear infinite;animation-delay:-4s}
+.ies-node{animation:iesNode 3s ease-in-out infinite}
+.ies-node-2{animation-delay:-1s}
+.ies-node-3{animation-delay:-1.8s}
+.ies-node-4{animation-delay:-2.4s}
+.ies-login-dot{animation:iesDot 2.6s ease-in-out infinite}
+.ies-login-btn{background:linear-gradient(90deg,var(--accent-hover),var(--brass-bright));transition:filter .2s}
+.ies-login-btn:hover:not(:disabled){filter:brightness(1.06)}
+.ies-login-shimmer{position:absolute;top:0;bottom:0;left:0;width:34%;pointer-events:none;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--surface-1) 42%,transparent),transparent);
+  animation:iesShimmer 3.2s ease-in-out infinite}
+
+/* NON-NEGOTIABLE, and deliberately global rather than scoped to the sign-in
+   screen: someone who has asked their operating system for reduced motion has
+   asked the whole product, not one page. Everything collapses to its end
+   frame — the circuit flow, the node pulse, the staggered reveal, the shimmer,
+   and the app's own spinners and slide-overs. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
 /* ---- 9L: the مُرشد dock -------------------------------------------------
    Anchored to the bottom-left of the CONTENT area, not the viewport: the
    sidebar owns the left edge for its full height, so a viewport-corner button
