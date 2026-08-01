@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import Icon from '../Icon'
 import { useAuth } from '../../rbac'
 import { bgInsert } from '../../lib/db'
+import { supabase } from '../../lib/supabase'
 import { helpForScreen, FIELD_GUIDES, FAQ } from './helpContent'
 
 // مُرشد — the assistant panel. Sprint 9L(1): static content only.
@@ -34,8 +36,45 @@ const card = {
 
 export default function MurshidPanel({ screen, onClose }) {
   const { user } = useAuth()
+  // The drill-in ids the allow-list needs to scope a project/building question.
+  // Read from the route rather than passed down, same principle as the screen.
+  const { id: projectId, bid: buildingId } = useParams()
   const [tab, setTab] = useState('ask')
   const [draft, setDraft] = useState('')
+  // 9L(3): session memory only — nothing is persisted. Stored questions and
+  // answers would be a new sensitive surface nobody asked for; adding retention
+  // is a decision with its own RLS, not a default. Closing the panel keeps the
+  // thread; a reload clears it.
+  const [thread, setThread] = useState([])
+  const [asking, setAsking] = useState(false)
+  const threadRef = useRef(null)
+
+  useEffect(() => {
+    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
+  }, [thread, asking])
+
+  const ask = async (text) => {
+    const question = String(text ?? draft).trim()
+    if (!question || asking) return
+    setDraft('')
+    setThread((t) => [...t, { role: 'user', text: question }])
+    setAsking(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('murshid-chat', {
+        body: {
+          screen,
+          question,
+          params: { project_id: projectId || '', building_id: buildingId || '' },
+        },
+      })
+      const answer = error
+        ? 'تعذّر الوصول إلى المساعد الآن. حاول مرة أخرى بعد قليل.'
+        : (data?.answer || 'لم تصل إجابة.')
+      setThread((t) => [...t, { role: 'murshid', text: answer, refused: !!data?.refused }])
+    } catch {
+      setThread((t) => [...t, { role: 'murshid', text: 'تعذّر الوصول إلى المساعد الآن.', refused: false }])
+    } finally { setAsking(false) }
+  }
   const [openGuide, setOpenGuide] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
   const [fbCat, setFbCat] = useState(CATEGORIES[0])
@@ -98,25 +137,38 @@ export default function MurshidPanel({ screen, onClose }) {
           <>
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
               <input
-                value={draft} onChange={(e) => setDraft(e.target.value)} disabled
+                value={draft} onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') ask() }}
+                disabled={asking} maxLength={1000}
                 placeholder="اكتب سؤالك…"
                 style={{
                   flex: 1, minWidth: 0, padding: '9px 11px', borderRadius: 'var(--radius-s)',
-                  border: '1px solid var(--line-ctrl)', background: 'var(--raised)',
+                  border: '1px solid var(--line-ctrl)', background: 'var(--surface-1)',
                   color: 'var(--text)', fontSize: 13,
                 }} />
-              <button disabled style={{
+              <button onClick={() => ask()} disabled={asking || !draft.trim()} style={{
                 padding: '9px 14px', borderRadius: 'var(--radius-s)', fontWeight: 600, fontSize: 13,
-                background: 'var(--track)', color: 'var(--text-3)', cursor: 'not-allowed',
-              }}>إرسال</button>
+                background: draft.trim() && !asking ? 'var(--accent)' : 'var(--track)',
+                color: draft.trim() && !asking ? 'var(--surface-1)' : 'var(--text-3)',
+                cursor: draft.trim() && !asking ? 'pointer' : 'not-allowed',
+              }}>{asking ? '…' : 'إرسال'}</button>
             </div>
 
-            <div style={{
-              padding: '9px 12px', borderRadius: 'var(--radius-s)', background: 'var(--info-bg)',
-              color: 'var(--info)', fontSize: 12.5, marginBottom: 16,
-            }}>
-              المحادثة الذكية قادمة قريباً. حتى ذلك الحين، الأقسام المجاورة تغطي أغلب الأسئلة.
-            </div>
+            {thread.length > 0 && (
+              <div ref={threadRef} style={{ maxHeight: 260, overflowY: 'auto', marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {thread.map((m, i) => (
+                  <div key={i} style={{
+                    alignSelf: m.role === 'user' ? 'flex-start' : 'stretch',
+                    maxWidth: m.role === 'user' ? '85%' : '100%',
+                    padding: '8px 11px', borderRadius: 'var(--radius-s)', fontSize: 12.5, lineHeight: 1.75,
+                    whiteSpace: 'pre-wrap',
+                    background: m.role === 'user' ? 'var(--accent-tint)' : m.refused ? 'var(--warn-bg)' : 'var(--raised)',
+                    color: m.refused ? 'var(--warn-deep)' : 'var(--text)',
+                  }}>{m.text}</div>
+                ))}
+                {asking && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>يفكّر مُرشد…</div>}
+              </div>
+            )}
 
             {help ? (
               <>
@@ -125,7 +177,7 @@ export default function MurshidPanel({ screen, onClose }) {
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 7 }}>أسئلة سريعة</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {help.actions.map((a) => (
-                    <button key={a} onClick={() => { setDraft(a); setTab('ask') }} className="ies-hover" style={{
+                    <button key={a} onClick={() => ask(a)} className="ies-hover" style={{
                       textAlign: 'right', padding: '8px 11px', borderRadius: 'var(--radius-s)',
                       border: '1px solid var(--line)', background: 'var(--surface-1)',
                       color: 'var(--text)', fontSize: 12.5, lineHeight: 1.6,

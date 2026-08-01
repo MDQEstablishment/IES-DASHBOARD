@@ -11,6 +11,7 @@ import EquipmentCatalogs from '../components/EquipmentCatalogs'
 import SavingSheetTemplate from '../components/SavingSheetTemplate'
 import AiUsageMeter from '../components/AiUsageMeter'
 import MurshidFeedback from '../components/murshid/MurshidFeedback'
+import MurshidSettings from '../components/murshid/MurshidSettings'
 import ReportTemplate from '../components/ReportTemplate'
 
 // Permission matrix reflects the REAL RBAC nav map (lib/nav roleNav), read-only.
@@ -39,7 +40,7 @@ const CATS = [
   { key: 'report', label: 'Report Template' },
   // 9L(1b) — what people wrote in مُرشد's feedback box. Visible to pmo/admin
   // (RLS enforces that too — this tab is convenience, not the control).
-  { key: 'feedback', label: 'Murshid Feedback' },
+  { key: 'feedback', label: 'Murshid' },
   { key: 'audit', label: 'Audit Log' },
 ]
 
@@ -234,7 +235,12 @@ export default function Settings() {
 
           {cat === 'report' && <ReportTemplate role={role} />}
 
-          {cat === 'feedback' && <MurshidFeedback />}
+          {cat === 'feedback' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <MurshidSettings role={role} />
+              <MurshidFeedback />
+            </div>
+          )}
 
           {cat === 'audit' && (
             <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
