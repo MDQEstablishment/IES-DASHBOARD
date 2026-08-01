@@ -6,10 +6,10 @@ import { statusMeta } from '../lib/constants'
 import { initials } from '../lib/format'
 
 // Solid-circle avatar (design uses role color + white mono initials)
-export function Avatar({ name, color = '#56534B', size = 28, title }) {
+export function Avatar({ name, color = 'var(--text-3)', size = 28, title }) {
   return (
     <span title={title || name} style={{
-      width: size, height: size, borderRadius: '50%', background: color, color: '#fff',
+      width: size, height: size, borderRadius: '50%', background: color, color: 'var(--surface-1)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
       fontFamily: 'var(--mono)', fontWeight: 700, fontSize: Math.round(size * 0.38),
     }}>{initials(name)}</span>
@@ -78,9 +78,9 @@ export function PageTitle({ kicker, title, right }) {
 export function Btn({ variant = 'secondary', icon, children, style, ...rest }) {
   const base = { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 'var(--radius-s)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
   const variants = {
-    primary: { background: 'var(--accent)', color: '#fff' },
+    primary: { background: 'var(--accent)', color: 'var(--surface-1)' },
     secondary: { background: 'var(--track)', color: 'var(--text)' },
-    danger: { background: 'var(--bad)', color: '#fff' },
+    danger: { background: 'var(--bad)', color: 'var(--surface-1)' },
     ghost: { background: 'transparent', color: 'var(--text-2)' },
   }
   // Disabled buttons must LOOK disabled — a blue-but-inert primary button reads as
@@ -156,7 +156,7 @@ export function Toaster() {
   return (
     <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 500, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
       {items.map((t) => (
-        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 500, boxShadow: 'var(--shadow-2)', background: t.type === 'err' ? 'var(--bad-deep)' : 'var(--text)', animation: 'iesToast .16s ease-out' }}>
+        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', borderRadius: 'var(--radius-m)', color: 'var(--surface-1)', fontSize: 13, fontWeight: 500, boxShadow: 'var(--shadow-2)', background: t.type === 'err' ? 'var(--bad-deep)' : 'var(--text)', animation: 'iesToast .16s ease-out' }}>
           <Icon name={t.type === 'err' ? 'alert' : 'check'} size={15} />{t.message}
         </div>
       ))}

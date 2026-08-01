@@ -219,12 +219,12 @@ export default function ProjectItems({ projectId, project }) {
         </div>}
       </div>
       {orphanCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid #EBCFC9', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
           <strong>{orphanCount}</strong> item(s) without a pair. Every new item must be paired with the old item it replaces — use <strong>↔ Pair</strong> on each flagged row, or delete it.
         </div>
       )}
       {importErrors.length > 0 && (
-        <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+        <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--bad-deep)', fontWeight: 700, marginBottom: 4 }}><span>{importErrors.length} import row(s) rejected</span><button onClick={() => setImportErrors([])} style={{ color: 'var(--bad-deep)', fontWeight: 700 }}>Dismiss</button></div>
           <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--bad-deep)' }}>{importErrors.slice(0, 12).map((m, i) => <li key={i}>{m}</li>)}{importErrors.length > 12 && <li>…and {importErrors.length - 12} more</li>}</ul>
         </div>
@@ -255,7 +255,7 @@ export default function ProjectItems({ projectId, project }) {
                   {rows.map((row) => {
                     const orphan = !(row.inst && row.rem)
                     return (
-                    <tr key={row.key} title={orphan ? 'Unpaired item — pair it with its replacement or delete it' : undefined} style={{ borderTop: '1px solid var(--line)', background: orphan ? 'var(--bad-bg)' : 'var(--surface-1)', boxShadow: orphan ? 'inset 3px 0 0 #B3362B' : 'none' }}>
+                    <tr key={row.key} title={orphan ? 'Unpaired item — pair it with its replacement or delete it' : undefined} style={{ borderTop: '1px solid var(--line)', background: orphan ? 'var(--bad-bg)' : 'var(--surface-1)', boxShadow: orphan ? 'inset 3px 0 0 var(--bad)' : 'none' }}>
                       {/* installed side */}
                       <td style={{ padding: 2, minWidth: 140 }}>{row.inst ? <Cell value={row.inst.item_description} onSave={(v) => saveI(row.inst.id, { item_description: v || null })} placeholder="Installed item" /> : <span style={{ color: 'var(--text-3)', fontSize: 11, paddingLeft: 6 }}>—</span>}</td>
                       <td style={{ padding: 2 }}>{row.inst && <Cell value={row.inst.model_code} onSave={(v) => saveI(row.inst.id, { model_code: v || null })} placeholder="Model" />}</td>

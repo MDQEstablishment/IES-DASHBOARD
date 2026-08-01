@@ -134,7 +134,7 @@ export default function TarshidImportModal({ kind, onClose, onDone }) {
         </div>
       </Field>
 
-      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 6 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 6 }}>{err}</div>}
 
       {plan && !result && plan.kind !== 'costs' && (
         <div style={{ marginTop: 10 }}>
@@ -163,12 +163,12 @@ export default function TarshidImportModal({ kind, onClose, onDone }) {
       ))}
 
       {result && result.kind !== 'costs' && (
-        <div style={{ background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 12.5, color: 'var(--ok-deep)', marginTop: 10 }} lang="en" dir="ltr">
+        <div style={{ background: 'var(--ok-bg)', border: '1px solid var(--ok-bg)', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 12.5, color: 'var(--ok-deep)', marginTop: 10 }} lang="en" dir="ltr">
           Done — <b>{num(result.inserted)}</b> new, <b>{num(result.updated)}</b> updated, {num(result.unchanged)} unchanged.
         </div>
       )}
       {result && result.kind === 'costs' && result.out.map((o) => (
-        <div key={o.table} style={{ background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 12.5, color: 'var(--ok-deep)', marginTop: 10 }} lang="en" dir="ltr">
+        <div key={o.table} style={{ background: 'var(--ok-bg)', border: '1px solid var(--ok-bg)', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 12.5, color: 'var(--ok-deep)', marginTop: 10 }} lang="en" dir="ltr">
           {o.table === 'ac_catalog' ? 'AC & Package' : 'Lighting'}: <b>{num(o.ok)}</b> updated{o.fail ? <>, <b style={{ color: 'var(--bad-deep)' }}>{num(o.fail)}</b> failed</> : ''}, {num(o.unchanged)} unchanged, {num(o.unmatched)} unmatched.
         </div>
       ))}

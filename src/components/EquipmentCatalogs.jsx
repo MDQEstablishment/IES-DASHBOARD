@@ -312,7 +312,7 @@ export default function EquipmentCatalogs({ role }) {
               border: '1px solid ' + (on ? 'var(--accent)' : 'var(--line)'), background: on ? 'var(--accent-tint)' : 'var(--surface-1)', color: on ? 'var(--accent)' : 'var(--text-3)',
             }}>
               {c.label}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: on ? '#EFE3C8' : 'var(--bg)', color: on ? 'var(--accent)' : 'var(--text-3)' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: on ? 'var(--warn-bg)' : 'var(--bg)', color: on ? 'var(--accent)' : 'var(--text-3)' }}>
                 {data[key].loading ? '·' : activeCount(key)}
               </span>
             </button>
@@ -425,7 +425,7 @@ function CatalogTab({ cfg, state, canWrite }) {
                       <button className="ies-hover" onClick={() => setEditing(r)} title="Edit"
                         style={{ padding: 5, borderRadius: 'var(--radius-s)', color: 'var(--text-3)' }}><Icon name="edit" size={14} /></button>
                       <button className="ies-hover" onClick={() => setRetiring(r)} title={rowActive(cfg, r) ? 'Retire' : 'Restore'}
-                        style={{ padding: '4px 8px', borderRadius: 'var(--radius-s)', fontSize: 11, fontWeight: 600, color: rowActive(cfg, r) ? 'var(--bad)' : 'var(--good, #1D6A49)' }}>
+                        style={{ padding: '4px 8px', borderRadius: 'var(--radius-s)', fontSize: 11, fontWeight: 600, color: rowActive(cfg, r) ? 'var(--bad)' : 'var(--good, var(--ok-deep))' }}>
                         {rowActive(cfg, r) ? 'Retire' : 'Restore'}</button>
                     </td>
                   )}

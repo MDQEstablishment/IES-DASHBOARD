@@ -267,7 +267,7 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
         )}
         {isAc && <div style={{ minWidth: 0, gridColumn: '1 / -1' }}><DerivedEquivalent matched={matched} btu={derivedBtu} loading={registry === null} linked={!!form.registry_id} /></div>}
         {needsPhoto && (
-          <div style={{ minWidth: 0, gridColumn: '1 / -1', marginBottom: 14, border: '1px solid #EBDCB2', background: 'var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '8px 11px', fontSize: 11.5, color: 'var(--warn-deep)' }}>
+          <div style={{ minWidth: 0, gridColumn: '1 / -1', marginBottom: 14, border: '1px solid var(--warn-bg)', background: 'var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '8px 11px', fontSize: 11.5, color: 'var(--warn-deep)' }}>
             <b>Nameplate photo required.</b> {isAc
               ? 'This unit is not matched to the registry, so the photo is the only record of what it is — the assistant reads these to identify the model later.'
               : 'There is no approved registry for existing fittings, so the photo plus the wattage is the record of what was there.'}
@@ -412,7 +412,7 @@ function DerivedEquivalent({ matched, btu, loading, linked }) {
     ['T1 EER', matched?.t1_eer],
   ]
   return (
-    <div style={{ marginBottom: 14, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '9px 11px', background: matched ? '#F7FAF8' : 'var(--bg)' }}>
+    <div style={{ marginBottom: 14, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '9px 11px', background: matched ? 'var(--ok-bg)' : 'var(--bg)' }}>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         {cells.map(([l, v]) => (
           <div key={l} style={{ minWidth: 84 }}>

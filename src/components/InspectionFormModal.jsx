@@ -169,7 +169,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
         {/* ── form pane ─────────────────────────────────────────────── */}
         <div style={{ flex: '1 1 0', minWidth: 0, maxHeight: 560, overflowY: 'auto', paddingRight: 4 }}>
           {missing.length > 0 && (
-            <div style={{ background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
+            <div style={{ background: 'var(--warn-bg)', border: '1px solid var(--warn-bg)', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
               Set <strong>Project Reference No / Contractor / Beneficiary</strong> in Project Settings (Edit project) so they appear on every MIR/WIR/COC. Missing: {missing.map((m) => m.replace(/_/g, ' ')).join(', ')}. You can still generate; those fields will be blank.
             </div>
           )}

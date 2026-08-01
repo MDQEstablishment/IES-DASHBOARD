@@ -30,7 +30,7 @@ export const DOC_STATUS = {
   resubmitted:            ['Resubmitted', 'var(--accent)', 'var(--accent-tint)', 'Revised and resubmitted to the client after a return.'],
   // 9H(5) — outcome E of the MIR/WIR decision row. The client keeps it on file;
   // it is neither an approval nor a rejection, and had no home before.
-  retained_for_information: ['Retained for Info', '#3A4A63', '#EEF1F6', 'Retained by the client for information — no action required, not an approval.'],
+  retained_for_information: ['Retained for Info', 'var(--info)', 'var(--info-bg)', 'Retained by the client for information — no action required, not an approval.'],
   superseded:             ['Superseded', 'var(--text-3)', 'var(--line-soft)', 'Replaced by a newer revision.'],
 }
 export const docStatusMeta = (s) => DOC_STATUS[s] || DOC_STATUS.submitted

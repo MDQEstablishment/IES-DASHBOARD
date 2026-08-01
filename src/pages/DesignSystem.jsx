@@ -4,13 +4,13 @@ import FileDropZone from '../components/FileDropZone'
 // Sprint 8M — live token gallery for the IES Control visual redesign. Pure
 // presentation: no queries, no state, no writes. Route: /design-system.
 const COLORS = [
-  ['Chrome Navy', '#10273B'], ['Navy Elevated', '#1B3A53'], ['Brass', '#A0762B'],
-  ['Brass Hover', '#8A6524'], ['Brass Bright', '#C29A4B'], ['Paper Canvas', '#F5F3ED'],
-  ['Paper Raised', '#FBFAF6'], ['Paper Hover', '#FAF8F2'], ['Ink', '#1A2530'],
-  ['Ink Display', '#16222D'], ['Text Muted', '#8A8577'], ['Text Faint', '#A39D8E'],
-  ['Border', '#E3DFD3'], ['Border Soft', '#F0EDE4'], ['Border Control', '#DCD6C7'],
-  ['Track', '#EDEAE0'], ['OK', '#217A54'], ['Warn', '#B45309'], ['Bad', '#B3362B'],
-  ['Info / ESM1 Steel', '#3E5C8A'], ['ESM2 Violet', '#6D5A8E'], ['ESM3 Teal', '#2A7A72'], ['Live', '#5FA987'],
+  ['Chrome Navy', 'var(--text)'], ['Navy Elevated', 'var(--text-2)'], ['Brass', 'var(--accent)'],
+  ['Brass Hover', 'var(--accent-hover)'], ['Brass Bright', 'var(--brass-bright)'], ['Paper Canvas', 'var(--bg)'],
+  ['Paper Raised', 'var(--raised)'], ['Paper Hover', 'var(--hover)'], ['Ink', 'var(--text)'],
+  ['Ink Display', 'var(--text)'], ['Text Muted', 'var(--text-3)'], ['Text Faint', 'var(--text-faint)'],
+  ['Border', 'var(--line)'], ['Border Soft', 'var(--line-soft)'], ['Border Control', 'var(--line-ctrl)'],
+  ['Track', 'var(--track)'], ['OK', 'var(--ok)'], ['Warn', 'var(--warn)'], ['Bad', 'var(--bad)'],
+  ['Info / ESM1 Steel', 'var(--esm1)'], ['ESM2 Violet', 'var(--esm2)'], ['ESM3 Teal', 'var(--esm3)'], ['Live', 'var(--live)'],
 ]
 const BADGES = [
   ['ACTIVE', 'var(--ok)', 'var(--ok-bg)'], ['UNDER REVIEW', 'var(--warn)', 'var(--warn-bg)'],
@@ -18,7 +18,7 @@ const BADGES = [
   ['ESM1', 'var(--esm1)', 'var(--esm1-bg)'], ['ESM2', 'var(--esm2)', 'var(--esm2-bg)'], ['ESM3', 'var(--esm3)', 'var(--esm3-bg)'],
 ]
 const Sect = ({ title, children }) => (
-  <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 18, marginBottom: 16 }}>
+  <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 18, marginBottom: 16 }}>
     <div className="ies-kicker" style={{ marginBottom: 12 }}>{title}</div>
     {children}
   </div>
@@ -33,7 +33,7 @@ export default function DesignSystem() {
       <Sect title="COLOR">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
           {COLORS.map(([name, hex]) => (
-            <div key={name} style={{ border: '1px solid var(--line-soft)', borderRadius: 6, overflow: 'hidden' }}>
+            <div key={name} style={{ border: '1px solid var(--line-soft)', borderRadius: 'var(--radius-s)', overflow: 'hidden' }}>
               <div style={{ height: 44, background: hex, borderBottom: '1px solid var(--line-soft)' }} />
               <div style={{ padding: '6px 9px' }}>
                 <div style={{ fontSize: 11.5, fontWeight: 600 }}>{name}</div>
@@ -71,7 +71,7 @@ export default function DesignSystem() {
           {BADGES.map(([label, c, bg]) => (
             <span key={label} style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 9px', borderRadius: 4, color: c, background: bg }}>{label}</span>
           ))}
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 11px', borderRadius: 20, color: 'var(--ok)', background: 'var(--ok-bg)' }}>ACTIVE · hero pill</span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 11px', borderRadius: 999, color: 'var(--ok)', background: 'var(--ok-bg)' }}>ACTIVE · hero pill</span>
         </div>
       </Sect>
 
@@ -109,8 +109,8 @@ export default function DesignSystem() {
 
       <Sect title="CHAT BUBBLES">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 380 }}>
-          <div style={{ alignSelf: 'flex-start', fontSize: 12.5, background: 'var(--hover)', border: '1px solid #EFECE2', borderRadius: 10, padding: '7px 10px' }}>Others — Paper Hover bubble</div>
-          <div style={{ alignSelf: 'flex-end', fontSize: 12.5, background: '#F5EEDF', border: '1px solid #E7D9B8', borderRadius: 10, padding: '7px 10px' }}>Own — brass-tint bubble</div>
+          <div style={{ alignSelf: 'flex-start', fontSize: 12.5, background: 'var(--hover)', border: '1px solid var(--track)', borderRadius: 'var(--radius-m)', padding: '7px 10px' }}>Others — Paper Hover bubble</div>
+          <div style={{ alignSelf: 'flex-end', fontSize: 12.5, background: 'var(--accent-tint)', border: '1px solid var(--warn-bg)', borderRadius: 'var(--radius-m)', padding: '7px 10px' }}>Own — brass-tint bubble</div>
         </div>
       </Sect>
     </div>

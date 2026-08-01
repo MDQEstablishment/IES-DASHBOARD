@@ -102,7 +102,7 @@ export default function Projects() {
       </div>
 
       {projectsReadOnly && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--warn-bg)', border: '1px solid var(--warn-bg)', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
           <Icon name="alert" size={15} />Read-only access — your role can view projects but not edit them.
         </div>
       )}

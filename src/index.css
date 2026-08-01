@@ -36,6 +36,12 @@
 
   /* ---- sidebar (replaces the deep-navy --nav-* set, which is retired) ---- */
   --side-bg:#FFFFFF;--side-active:rgba(28,28,28,.05);--side-text:rgba(28,28,28,.68);
+  /* The one place the old deep navy survives: the IES mark and the login
+     brand panel. Everywhere else it was retired with the top bar. */
+  --logo-navy:#10273B;
+  /* Text ON the navy brand panel. The neutral --text-* scale is dark ink,
+     which disappears against it. */
+  --on-navy:#F0EDE3;--on-navy-2:rgba(240,237,227,.62);
 
   /* ---- semantic colours keep their IES hues; only their containers soften -- */
   --ok:#217A54;--ok-bg:#E6F2EC;--ok-deep:#1D6A49;

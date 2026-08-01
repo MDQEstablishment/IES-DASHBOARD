@@ -55,7 +55,7 @@ export default function CocDetailDrawer({ coc, buildings, esmName, onClose }) {
           ))}
         </div>
         {c.feedback_comments && (
-          <div style={{ fontSize: 11.5, color: 'var(--text)', background: 'var(--paper, #FAF8F2)', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '6px 9px', marginTop: 6 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--text)', background: 'var(--paper, var(--hover))', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '6px 9px', marginTop: 6 }}>
             “{c.feedback_comments}”
           </div>
         )}

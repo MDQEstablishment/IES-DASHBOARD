@@ -332,7 +332,7 @@ export default function DailyProgress() {
               {/* Photos */}
               <input lang="en" ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
               <button onClick={() => fileRef.current?.click()} disabled={uploading}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 11, borderRadius: 'var(--radius-s)', border: '1px dashed #C9C3B4', color: photoPath ? 'var(--ok)' : 'var(--text-3)', fontSize: 12.5, background: 'var(--surface-1)', cursor: 'pointer' }}>
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 11, borderRadius: 'var(--radius-s)', border: '1px dashed var(--text-faint)', color: photoPath ? 'var(--ok)' : 'var(--text-3)', fontSize: 12.5, background: 'var(--surface-1)', cursor: 'pointer' }}>
                 <Icon name="camera" size={15} />
                 {uploading ? 'Uploading…' : photoPath ? '1 photo attached' : 'Add photos (auto-compressed · 500 KB)'}
               </button>

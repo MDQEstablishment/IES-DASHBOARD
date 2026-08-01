@@ -44,17 +44,17 @@ export default function ProjectWarehouse({ projectId }) {
   const tdR = { padding: '10px 8px', textAlign: 'right', fontFamily: 'var(--mono)' }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       {/* 8K-2b — discoverability hint: materials are global; this tab is per-project stock */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', background: '#FAF8F2', border: '1px solid var(--line)', borderRadius: 10, padding: '9px 12px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', background: 'var(--hover)', border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: '9px 12px', marginBottom: 12 }}>
         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Materials are added globally in the <Link to="/materials" style={{ color: 'var(--accent)', fontWeight: 600 }}>Materials page</Link>. Use this tab to track per-project stock.</div>
-        <Link to="/materials" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 6, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}>+ Add material</Link>
+        <Link to="/materials" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 'var(--radius-s)', background: 'var(--accent)', color: 'var(--surface-1)', fontWeight: 700, fontSize: 12.5, whiteSpace: 'nowrap' }}>+ Add material</Link>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Warehouse — stock on hand</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {['all', ...esmsPresent].map((k) => (
-            <button key={k} onClick={() => setEsm(k)} style={{ padding: '4px 11px', borderRadius: 20, fontSize: 11.5, fontWeight: 600, border: '1px solid ' + (esm === k ? 'var(--accent)' : 'var(--line)'), background: esm === k ? '#F5EEDF' : '#fff', color: esm === k ? 'var(--accent)' : 'var(--text-3)' }}>{k === 'all' ? 'All ESM' : k}</button>
+            <button key={k} onClick={() => setEsm(k)} style={{ padding: '4px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 600, border: '1px solid ' + (esm === k ? 'var(--accent)' : 'var(--line)'), background: esm === k ? 'var(--accent-tint)' : 'var(--surface-1)', color: esm === k ? 'var(--accent)' : 'var(--text-3)' }}>{k === 'all' ? 'All ESM' : k}</button>
           ))}
         </div>
       </div>
@@ -63,9 +63,9 @@ export default function ProjectWarehouse({ projectId }) {
           <div className="ies-table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 720 }}>
               <thead><tr style={{ color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-                <th style={th}>ESM</th><th style={th}>CATEGORY</th><th style={th}>MATERIAL</th>
-                <th style={{ ...th, textAlign: 'right' }}>RECEIVED</th><th style={{ ...th, textAlign: 'right' }}>CONSUMED</th>
-                <th style={{ ...th, textAlign: 'right' }}>ON-HAND</th><th style={th} />
+                <th style={th}>ESM</th><th style={th}>Category</th><th style={th}>Material</th>
+                <th style={{ ...th, textAlign: 'right' }}>Received</th><th style={{ ...th, textAlign: 'right' }}>Consumed</th>
+                <th style={{ ...th, textAlign: 'right' }}>On-hand</th><th style={th} />
               </tr></thead>
               <tbody>
                 {rows.map((r) => {
@@ -84,10 +84,10 @@ export default function ProjectWarehouse({ projectId }) {
                         <td style={tdR}>{r.received}</td>
                         <td style={{ ...tdR, color: 'var(--text-3)' }}>{r.consumed}</td>
                         <td style={{ ...tdR, fontWeight: 700, color: r.qty <= 0 ? 'var(--bad)' : 'var(--text)' }}>{r.qty}</td>
-                        <td style={{ padding: '10px 8px' }}>{short && <span title="On-hand is below the remaining planned quantity for this category" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, color: '#96271E', background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: '2px 7px' }}>⚠ LOW</span>}</td>
+                        <td style={{ padding: '10px 8px' }}>{short && <span title="On-hand is below the remaining planned quantity for this category" style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, color: 'var(--bad-deep)', background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: '2px 7px' }}>⚠ LOW</span>}</td>
                       </tr>
                       {multi && isOpen && r.brands.map((b) => (
-                        <tr key={r.key + b.code} style={{ background: '#FAF8F2' }}>
+                        <tr key={r.key + b.code} style={{ background: 'var(--hover)' }}>
                           <td /><td />
                           <td style={{ padding: '6px 8px', color: 'var(--text-3)' }}><span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{b.code}</span> · {b.brand}</td>
                           <td style={{ ...tdR, padding: '6px 8px' }}>{b.received}</td>

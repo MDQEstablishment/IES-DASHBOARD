@@ -94,7 +94,7 @@ export default function Dashboard() {
   const projectBars = projects.map((p) => {
     const d = per[p.id] || { planned: 0, installed: 0 }
     const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
-    const barColor = prog >= 67 ? '#217A54' : prog >= 34 ? '#A0762B' : '#B45309'
+    const barColor = prog >= 67 ? 'var(--ok)' : prog >= 34 ? 'var(--accent)' : 'var(--warn)'
     return { name: p.name, prog, progW: prog + '%', barColor }
   })
 
@@ -126,18 +126,18 @@ export default function Dashboard() {
 
   // Attention List — open escalations + blocked tasks
   const blocked = tasks.filter((t) => t.status === 'blocked')
-  const sevAgeColor = (s) => (s === 'critical' ? '#B3362B' : s === 'high' ? '#B45309' : 'var(--text-3)')
+  const sevAgeColor = (s) => (s === 'critical' ? 'var(--bad)' : s === 'high' ? 'var(--warn)' : 'var(--text-3)')
   const attentionList = [
     ...escs.map((e) => ({
-      type: 'ESC', tagBg: '#F9ECEA', tagColor: '#B3362B',
+      type: 'ESC', tagBg: 'var(--bad-bg)', tagColor: 'var(--bad)',
       item: e.title, project: e.building?.code || e.building?.name || '—',
       who: e.raised_to?.full_name || '—',
       age: ago(e.created_at), ageColor: sevAgeColor(e.severity),
     })),
     ...blocked.map((t) => ({
-      type: 'TASK', tagBg: '#FAF3E3', tagColor: '#B45309',
+      type: 'TASK', tagBg: 'var(--warn-bg)', tagColor: 'var(--warn)',
       item: t.title, project: '—', who: '—',
-      age: ago(t.created_at), ageColor: t.priority === 'critical' ? '#B3362B' : 'var(--text-3)',
+      age: ago(t.created_at), ageColor: t.priority === 'critical' ? 'var(--bad)' : 'var(--text-3)',
     })),
   ]
 
@@ -146,7 +146,7 @@ export default function Dashboard() {
     .map((m) => {
       const stock = m.received || 0, t = m.threshold || 0
       const ratio = t ? stock / t : 9
-      const color = stock < t ? '#B3362B' : stock < t * 1.5 ? '#B45309' : '#217A54'
+      const color = stock < t ? 'var(--bad)' : stock < t * 1.5 ? 'var(--warn)' : 'var(--ok)'
       const status = stock < t ? 'CRITICAL' : stock < t * 1.5 ? 'LOW' : 'OK'
       return { esm: m.esm?.code || '—', name: m.name, stock, threshold: t, color, status, ratio, w: Math.min(100, Math.round((stock / (t * 2 || 1)) * 100)) + '%' }
     })
@@ -157,11 +157,11 @@ export default function Dashboard() {
   // Recent Activity — real audit_log feed. dc 241-248
   const actDot = (a) => {
     const e = (a.entity_type || '').toLowerCase()
-    if (e.includes('install')) return '#A0762B'
-    if (e.includes('document') || e.includes('doc')) return '#217A54'
-    if (e.includes('material')) return '#B45309'
-    if (e.includes('escalation')) return '#B3362B'
-    return '#8A8577'
+    if (e.includes('install')) return 'var(--accent)'
+    if (e.includes('document') || e.includes('doc')) return 'var(--ok)'
+    if (e.includes('material')) return 'var(--warn)'
+    if (e.includes('escalation')) return 'var(--bad)'
+    return 'var(--text-3)'
   }
   const recentActivity = activity.map((a) => ({
     dot: actDot(a), actor: a.actor_name || 'System', what: a.summary || a.action,
@@ -199,8 +199,8 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="gauge" size={16} />Portfolio Progress</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
             <svg viewBox="0 0 64 64" style={{ width: 72, height: 72, flex: 'none' }}>
-              <circle cx="32" cy="32" r="26" fill="none" stroke="#EDEAE0" strokeWidth="8" />
-              <circle cx="32" cy="32" r="26" fill="none" stroke="#A0762B" strokeWidth="8" strokeLinecap="round" strokeDasharray={portRingDash} transform="rotate(-90 32 32)" />
+              <circle cx="32" cy="32" r="26" fill="none" stroke="var(--track)" strokeWidth="8" />
+              <circle cx="32" cy="32" r="26" fill="none" stroke="var(--accent)" strokeWidth="8" strokeLinecap="round" strokeDasharray={portRingDash} transform="rotate(-90 32 32)" />
             </svg>
             <div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{Math.round(overall)}<span style={{ fontSize: 15, color: 'var(--text-3)' }}>%</span></div>
@@ -214,13 +214,13 @@ export default function Dashboard() {
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}><span style={{ color: 'var(--text)' }}>━ actual</span> · <span>┄ planned</span></div>
           </div>
           <svg viewBox="0 0 260 92" preserveAspectRatio="none" style={{ width: '100%', height: 92, marginTop: 8, display: 'block' }}>
-            <line x1="0" y1="23" x2="260" y2="23" stroke="#EFECE2" strokeWidth="1" />
-            <line x1="0" y1="46" x2="260" y2="46" stroke="#EFECE2" strokeWidth="1" />
-            <line x1="0" y1="69" x2="260" y2="69" stroke="#EFECE2" strokeWidth="1" />
-            <line x1="130" y1="0" x2="130" y2="92" stroke="#DCD6C7" strokeWidth="1" strokeDasharray="2 3" />
-            <polyline points={planPoints} fill="none" stroke="#A39D8E" strokeWidth="1.6" strokeDasharray="1.5 4" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={actualPoints} fill="none" stroke="#A0762B" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
-            <circle cx={actualNowX} cy={actualNowY} r="3.2" fill="#A0762B" />
+            <line x1="0" y1="23" x2="260" y2="23" stroke="var(--track)" strokeWidth="1" />
+            <line x1="0" y1="46" x2="260" y2="46" stroke="var(--track)" strokeWidth="1" />
+            <line x1="0" y1="69" x2="260" y2="69" stroke="var(--track)" strokeWidth="1" />
+            <line x1="130" y1="0" x2="130" y2="92" stroke="var(--line-ctrl)" strokeWidth="1" strokeDasharray="2 3" />
+            <polyline points={planPoints} fill="none" stroke="var(--text-faint)" strokeWidth="1.6" strokeDasharray="1.5 4" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points={actualPoints} fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={actualNowX} cy={actualNowY} r="3.2" fill="var(--accent)" />
           </svg>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)', marginTop: 2 }}>
             <span>−12 WK</span><span>NOW</span><span>+12 WK</span>
@@ -230,8 +230,8 @@ export default function Dashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="doc" size={16} />COCs Signed</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
             <svg viewBox="0 0 64 64" style={{ width: 72, height: 72, flex: 'none' }}>
-              <circle cx="32" cy="32" r="26" fill="none" stroke="#EDEAE0" strokeWidth="8" />
-              <circle cx="32" cy="32" r="26" fill="none" stroke="#217A54" strokeWidth="8" strokeLinecap="round" strokeDasharray={cocRingDash} transform="rotate(-90 32 32)" />
+              <circle cx="32" cy="32" r="26" fill="none" stroke="var(--track)" strokeWidth="8" />
+              <circle cx="32" cy="32" r="26" fill="none" stroke="var(--ok)" strokeWidth="8" strokeLinecap="round" strokeDasharray={cocRingDash} transform="rotate(-90 32 32)" />
             </svg>
             <div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{cocX}<span style={{ fontSize: 15, color: 'var(--text-3)' }}> of {cocY}</span></div>
@@ -254,7 +254,7 @@ export default function Dashboard() {
                   <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, color: p.barColor, flex: 'none', marginLeft: 8 }}>{p.prog}%</span>
                 </div>
-                <div style={{ height: 9, borderRadius: 5, background: 'var(--track)', overflow: 'hidden' }}>
+                <div style={{ height: 9, borderRadius: 'var(--radius-s)', background: 'var(--track)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: p.progW, background: p.barColor }} />
                 </div>
               </div>
@@ -273,8 +273,8 @@ export default function Dashboard() {
                   <span style={{ fontSize: 12 }}><span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{e.no}</span> {e.name}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, flex: 'none', marginLeft: 8 }}>{e.prog}%</span>
                 </div>
-                <div style={{ height: 9, borderRadius: 5, background: 'var(--track)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: e.progW, background: 'linear-gradient(90deg,#A0762B,#C29A4B)' }} />
+                <div style={{ height: 9, borderRadius: 'var(--radius-s)', background: 'var(--track)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: e.progW, background: 'linear-gradient(90deg,var(--accent),var(--brass-bright))' }} />
                 </div>
               </div>
             ))}
@@ -304,7 +304,7 @@ export default function Dashboard() {
                   {attentionList.map((a, i) => (
                     <tr key={i} className="ies-trow" style={{ borderTop: '1px solid var(--line)' }}>
                       <td style={{ padding: '10px 8px' }}>
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 5, background: a.tagBg, color: a.tagColor }}>{a.type}</span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-s)', background: a.tagBg, color: a.tagColor }}>{a.type}</span>
                       </td>
                       <td style={{ padding: '10px 8px', fontWeight: 600 }}>{a.item}</td>
                       <td style={{ padding: '10px 8px', color: 'var(--text-3)' }}>{a.project}</td>

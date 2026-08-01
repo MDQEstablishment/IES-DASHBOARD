@@ -79,7 +79,7 @@ export default function SurveyDailyLog({ entries, buildings }) {
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 14px', background: d.day === todayKey() ? 'var(--accent-tint)' : 'var(--bg)', cursor: 'pointer', border: 'none' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                 <Icon name={open ? 'chevron' : 'chevronr'} size={14} />
-                <span style={{ fontWeight: 700, fontSize: 13.5 }}>{fmtDate(d.day)}{d.day === todayKey() && <span style={{ marginLeft: 7, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: '#EFE3C8' }}>TODAY</span>}</span>
+                <span style={{ fontWeight: 700, fontSize: 13.5 }}>{fmtDate(d.day)}{d.day === todayKey() && <span style={{ marginLeft: 7, fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: 'var(--warn-bg)' }}>TODAY</span>}</span>
               </span>
               <span style={{ display: 'flex', gap: 12, alignItems: 'center', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>
                 <span>{num(d.rows.length)} entries</span><span>{num(d.units)} units</span>

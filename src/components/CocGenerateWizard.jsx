@@ -173,9 +173,9 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
                 </div>
               ))}
               {notices.length > 0 && (
-                <div style={{ marginTop: 8, background: 'var(--warn-bg)', border: '1px solid #EBDCB2', borderRadius: 'var(--radius-s)', padding: '8px 11px' }}>
+                <div style={{ marginTop: 8, background: 'var(--warn-bg)', border: '1px solid var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '8px 11px' }}>
                   <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--warn-deep)', marginBottom: 4 }}>Worth checking before you send these</div>
-                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, color: '#7A5B12', lineHeight: 1.5 }}>
+                  <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, color: 'var(--warn-deep)', lineHeight: 1.5 }}>
                     {notices.map((n, i) => <li key={i}>{n}</li>)}
                   </ul>
                 </div>
@@ -191,7 +191,7 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
                     <input type="checkbox" checked={selected.has(r._i)} onChange={() => toggle(r._i)} style={{ marginTop: 2 }} />
                     <span>
                       <span style={{ fontWeight: 600 }}>{rowLabel(r)}</span>
-                      {r.mixed_beneficiary && <span style={{ display: 'block', fontSize: 11, color: 'var(--warn, #B45309)' }}>Buildings have different recipients — the certificate prints without one.</span>}
+                      {r.mixed_beneficiary && <span style={{ display: 'block', fontSize: 11, color: 'var(--warn, var(--warn))' }}>Buildings have different recipients — the certificate prints without one.</span>}
                       {r.beneficiary_name && !r.mixed_beneficiary && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)' }}>Recipient: {r.beneficiary_name}</span>}
                     </span>
                   </label>
@@ -230,7 +230,7 @@ export default function CocGenerateWizard({ projectId, project, esmName, plan, d
           )}
         </div>
         {/* right: live PDF preview */}
-        <div style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', background: 'var(--paper, #FAF8F2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', minHeight: 420 }}>
+        <div style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', background: 'var(--paper, var(--hover))', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', minHeight: 420 }}>
           {previewUrl
             ? <iframe title="Certificate preview" src={previewUrl} style={{ width: '100%', height: 520, border: 'none', background: 'var(--surface-1)' }} />
             : <div style={{ color: 'var(--text-3)', fontSize: 12.5 }}>{ctx ? 'Point at a certificate on the left to preview its PDF.' : 'Loading project data…'}</div>}

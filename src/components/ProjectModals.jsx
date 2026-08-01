@@ -165,7 +165,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         </div>
       )}
       {mode === 'add' && (
-        <div style={{ background: 'var(--accent-tint)', border: '1px solid #E7D9B8', borderRadius: 'var(--radius-s)', padding: '10px 12px', fontSize: 12, color: 'var(--accent-hover)', marginBottom: 16 }}>
+        <div style={{ background: 'var(--accent-tint)', border: '1px solid var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '10px 12px', fontSize: 12, color: 'var(--accent-hover)', marginBottom: 16 }}>
           After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later. Add a cover photo here once the project exists.
         </div>
       )}
@@ -371,7 +371,7 @@ export function StatusChangeModal({ project, onClose }) {
         <textarea style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is the status changing?" />
       </Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Recorded in the project status history with your name and the time.</div>
-      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }
@@ -406,7 +406,7 @@ export function DeleteProjectModal({ project, onClose }) {
       <div style={{ fontSize: 13, marginBottom: 6 }}>This will delete the project and hide its buildings, scopes, items, deliveries, and documents from every list. It is soft-deleted and recoverable for 30 days.</div>
       <div style={{ fontSize: 13, marginBottom: 12 }}>Type <strong style={{ fontFamily: 'var(--mono)' }}>{project.code}</strong> to confirm.</div>
       <input lang="en" style={inputStyle} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={project.code} />
-      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }
@@ -623,20 +623,20 @@ export function ProjectImportModal({ onClose }) {
         </div>
       </Field>
       {errors.length > 0 && (
-        <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12, color: 'var(--bad-deep)', marginTop: 8 }}>
+        <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12, color: 'var(--bad-deep)', marginTop: 8 }}>
           {errors.slice(0, 10).map((e, i) => <div key={i}>{e}</div>)}
           {errors.length > 10 && <div>+{errors.length - 10} more…</div>}
         </div>
       )}
       {parsed && !errors.length && (
-        <div style={{ background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 13, color: 'var(--ok-deep)', marginTop: 10 }}>
+        <div style={{ background: 'var(--ok-bg)', border: '1px solid var(--ok-bg)', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 13, color: 'var(--ok-deep)', marginTop: 10 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Ready to import — please confirm:</div>
           <div><strong>{counts.p}</strong> project (<span style={{ fontFamily: 'var(--mono)' }}>{s(parsed.project.code)}</span>), <strong>{counts.b}</strong> buildings, <strong>{counts.c}</strong> scopes, <strong>{counts.m}</strong> materials{counts.i > 0 && <>, <strong>{counts.i}</strong> item pairs</>} will be created.</div>
           <div style={{ fontSize: 11.5, marginTop: 4, color: 'var(--ok-deep)' }}>Everything is created in a single transaction — all or nothing.</div>
         </div>
       )}
       {importErr && (
-        <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>
+        <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>
           {importErr}
         </div>
       )}

@@ -64,7 +64,7 @@ function NotifBell() {
       <button className="ies-hover" onClick={() => setOpen((o) => !o)} title="Notifications"
         style={{ position: 'relative', width: 36, height: 36, borderRadius: 'var(--radius-s)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)' }}>
         <Icon name="bell" size={18} />
-        {unread > 0 && <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 15, height: 15, padding: '0 3px', borderRadius: 999, background: 'var(--accent)', color: '#fff', fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unread > 9 ? '9+' : unread}</span>}
+        {unread > 0 && <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 15, height: 15, padding: '0 3px', borderRadius: 999, background: 'var(--accent)', color: 'var(--surface-1)', fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unread > 9 ? '9+' : unread}</span>}
       </button>
       {/* 9J — the notifications + activity right panel. Same rows, same
           mark-read handler, same deep links as the old dropdown; only the
@@ -198,7 +198,7 @@ export default function Shell() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '16px 0' : '16px 14px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
           <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             {/* the navy survives only here, inside the mark */}
-            <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-s)', background: '#10273B', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: 12, flex: 'none' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-s)', background: 'var(--logo-navy)', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--surface-1)', fontSize: 12, flex: 'none' }}>
               IES<span style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: '50%', background: 'var(--brass-bright)' }} />
             </div>
             {!collapsed && <div style={{ lineHeight: 1.2, minWidth: 0 }}>

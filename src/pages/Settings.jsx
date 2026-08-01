@@ -206,7 +206,7 @@ export default function Settings() {
                             <span key={area} title={areaLabel(area)}
                               style={{ fontSize: 11, padding: '3px 9px', borderRadius: 'var(--radius-s)', fontWeight: 600,
                                 background: ok ? 'var(--accent-tint)' : 'var(--bg)', color: ok ? 'var(--accent)' : 'var(--text-faint)',
-                                border: '1px solid ' + (ok ? '#EFE3C8' : 'var(--line)'), display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                border: '1px solid ' + (ok ? 'var(--warn-bg)' : 'var(--line)'), display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               {ok && <Icon name="check" size={11} />}{areaLabel(area)}
                             </span>
                           )
@@ -390,9 +390,9 @@ function UserEditor({ u, myRole, people, nameById, onClose }) {
               Archive this person…
             </button>
           ) : (
-            <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 12 }}>
+            <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 12 }}>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--bad-deep)', marginBottom: 6 }}>Archive {u.full_name}?</div>
-              <div style={{ fontSize: 12, color: '#7A2A22', lineHeight: 1.5, marginBottom: 10 }}>
+              <div style={{ fontSize: 12, color: 'var(--bad-deep)', lineHeight: 1.5, marginBottom: 10 }}>
                 They lose access immediately, and the database hands their work over in the same
                 transaction: anyone reporting to them moves up to {nameById[u.manager_id] || 'nobody'},
                 their open tasks are reassigned there, and any escalation still waiting on them is

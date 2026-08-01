@@ -256,7 +256,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
     return (
       <div>
         <FileDropZone label="Delivery note — PDF or image (max 5 MB)" accept={ACCEPT} maxSizeMb={5} onFiles={(f) => { setFile(f); setErr('') }} helperText="PDF, JPG, PNG or WEBP" />
-        {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginBottom: 10 }}>{err}</div>}
+        {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginBottom: 10 }}>{err}</div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Btn onClick={onClose}>Cancel</Btn>
           <Btn variant="primary" onClick={extract} disabled={!file || busy} title={!file ? 'Choose a file first' : undefined}>{busy ? 'Reading delivery note… 5–15s' : 'Extract delivery'}</Btn>
@@ -290,7 +290,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
                 <tr key={i} style={{ borderTop: '1px solid var(--line)', verticalAlign: 'top' }}>
                   <td style={{ padding: '6px 7px', textAlign: 'center' }} title={matched ? 'Matched' : 'Not in catalog'}>{matched ? <span style={{ color: 'var(--ok)' }}>✓</span> : <span style={{ color: 'var(--warn)' }}>⚠</span>}</td>
                   <td style={{ padding: '6px 7px' }}>
-                    <select value={l.material_id} onChange={(e) => setLine(i, { material_id: e.target.value })} style={{ ...inp, width: '100%', borderColor: matched ? 'var(--line)' : '#FCA5A5' }}>
+                    <select value={l.material_id} onChange={(e) => setLine(i, { material_id: e.target.value })} style={{ ...inp, width: '100%', borderColor: matched ? 'var(--line)' : 'var(--bad-bg)' }}>
                       <option value="">{`⚠ Pick from catalog — "${(l.material_description || '').slice(0, 36)}"`}</option>
                       {materials.map((m) => <option key={m.id} value={m.id}>{m.code} · {m.name}</option>)}
                     </select>
@@ -326,7 +326,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
           </tbody>
         </table>
       </div>
-      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
         <span style={{ fontSize: 11.5, color: allMatched ? 'var(--ok-deep)' : 'var(--warn)' }}>{allMatched ? `Ready — ${lines.length} line(s) into the warehouse.` : 'Some lines are unmatched — resolve them to enable Save.'}</span>
         <div style={{ display: 'flex', gap: 8 }}>

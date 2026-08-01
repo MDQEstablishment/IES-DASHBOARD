@@ -213,7 +213,7 @@ export default function Tasks() {
                   return (
                     <tr key={t.id} style={{
                       borderTop: '1px solid var(--line)',
-                      background: t.id === focusId ? '#FBF6EA' : undefined,
+                      background: t.id === focusId ? 'var(--accent-tint)' : undefined,
                       boxShadow: t.id === focusId ? 'inset 3px 0 0 var(--accent)' : undefined,
                     }}>
                       <td style={{ padding: '12px 14px', maxWidth: 320 }}>
@@ -222,7 +222,7 @@ export default function Tasks() {
                         {t.status === 'blocked' && (
                           <button onClick={() => escalate(t)} style={{
                             marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
-                            padding: '4px 9px', borderRadius: 'var(--radius-s)', background: 'var(--bad-bg)', color: 'var(--bad-deep)', border: '1px solid #EBCFC9', cursor: 'pointer',
+                            padding: '4px 9px', borderRadius: 'var(--radius-s)', background: 'var(--bad-bg)', color: 'var(--bad-deep)', border: '1px solid var(--bad-bg)', cursor: 'pointer',
                           }}>
                             <Icon name="escalation" size={12} />Raise an escalation about this
                           </button>

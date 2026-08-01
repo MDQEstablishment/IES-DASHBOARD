@@ -149,13 +149,13 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
       </div>
 
       {unpriced.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12.5, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--warn-bg)', border: '1px solid var(--warn-bg)', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12.5, marginBottom: 10 }}>
           <Icon name="alert" size={14} /><span><b>{num(unpriced.length)}</b> row{unpriced.length === 1 ? '' : 's'} missing prices — payback cannot be computed until Unit Cost and labor Cost are filled.</span>
         </div>
       )}
 
       {askOpen && canManage && (
-        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: 12, marginBottom: 12, background: 'var(--bg-2, #FAF9F6)' }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: 12, marginBottom: 12, background: 'var(--bg-2, var(--raised))' }}>
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 7 }}>
             Say what matters for this project and the assistant will consolidate around it — “as few models as possible”, “prefer one make”, “keep the cheapest that still qualifies”. Leave it blank to just get the tightest shortlist. Whatever it proposes is re-checked against our own capacity and savings math before you see it.
           </div>
@@ -171,7 +171,7 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
       )}
 
       {proposal && (
-        <div style={{ border: '1px solid #BFDFCF', background: 'var(--ok-bg)', borderRadius: 'var(--radius-s)', padding: 12, marginBottom: 12 }}>
+        <div style={{ border: '1px solid var(--ok-bg)', background: 'var(--ok-bg)', borderRadius: 'var(--radius-s)', padding: 12, marginBottom: 12 }}>
           <div style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--ok-deep)', marginBottom: 6 }}>
             Proposed shortlist — {num(proposal.chosen.length)} model{proposal.chosen.length === 1 ? '' : 's'} cover every compliant surveyed unit
             {proposal.usedAi && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--esm2)', background: 'var(--esm2-bg)' }}>ASSISTANT · VERIFIED</span>}
@@ -186,7 +186,7 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
             </tr></thead>
             <tbody>
               {proposal.chosen.map((c, i) => (
-                <tr key={i} style={{ borderTop: '1px solid #BFDFCF' }}>
+                <tr key={i} style={{ borderTop: '1px solid var(--ok-bg)' }}>
                   <td style={{ padding: '6px', fontWeight: 600, maxWidth: 230, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.description}>{c.description}</td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(c.units)}</td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', color: c.unit_cost == null ? 'var(--warn)' : undefined }}>{c.unit_cost == null ? 'needs price' : num(c.unit_cost)}</td>

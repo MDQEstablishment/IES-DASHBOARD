@@ -69,7 +69,7 @@ export default function Reports() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Materials Consumption</div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 'var(--radius-s)', background: consBars.length === 0 ? '#E5E7EB' : 'var(--ok)', color: consBars.length === 0 ? 'var(--text-3)' : 'var(--surface-1)', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
+              <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 'var(--radius-s)', background: consBars.length === 0 ? 'var(--track)' : 'var(--ok)', color: consBars.length === 0 ? 'var(--text-3)' : 'var(--surface-1)', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 14 }}>Every material consumed across the programme to date, by quantity.</div>
@@ -79,7 +79,7 @@ export default function Reports() {
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)', width: 46 }}>{b.esm}</span>
                 <span style={{ fontSize: 12.5, width: 180, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
                 <div style={{ flex: 1, height: 18, borderRadius: 'var(--radius-s)', background: 'var(--track)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: Math.round((b.qty / maxCons) * 100) + '%', background: 'linear-gradient(90deg,#A0762B,#C29A4B)' }} />
+                  <div style={{ height: '100%', width: Math.round((b.qty / maxCons) * 100) + '%', background: 'linear-gradient(90deg,var(--accent),var(--brass-bright))' }} />
                 </div>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, width: 80, textAlign: 'right' }}>{b.qty} {b.unit}</span>
               </div>
@@ -128,7 +128,7 @@ export default function Reports() {
       )}
 
       {/* ESM Progress vs Plan (designer suggestion) */}
-      <div style={{ background: 'linear-gradient(180deg,#fff,#FCFBF7)', border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 16 }}>
+      <div style={{ background: 'linear-gradient(180deg,var(--surface-1),var(--raised))', border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 16 }}>
         <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700 }}>[ DESIGNER SUGGESTION ]</div>
         <div style={{ fontWeight: 700, fontSize: 15, margin: '8px 0 6px' }}>ESM Progress vs Plan</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-3)', maxWidth: 560 }}>Per-ESM planned vs actual installed quantities over time, with delay attribution by building. High-value for the Planning Engineer's delay analysis.</div>

@@ -84,7 +84,7 @@ export default function Escalations() {
         right={!noManager && <Btn variant="primary" icon="plus" onClick={() => { setPrefill(null); setShowNew(true) }}>Raise escalation</Btn>} />
 
       {noManager && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--accent-tint)', border: '1px solid #E7D9B8', color: 'var(--accent-hover)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--accent-tint)', border: '1px solid var(--warn-bg)', color: 'var(--accent-hover)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
           <Icon name="alert" size={15} />You sit at the top of the chain — escalations route up to you; you don't raise them.
         </div>
       )}
@@ -134,7 +134,7 @@ function Card({ e, me, people, focused, onAck, onResolve, onClose, onHigher }) {
 
   return (
     <div style={{
-      background: focused ? '#FBF6EA' : 'var(--surface-1)',
+      background: focused ? 'var(--accent-tint)' : 'var(--surface-1)',
       border: `1px solid ${focused ? 'var(--accent)' : 'var(--line)'}`,
       borderRadius: 'var(--radius-m)', padding: 16,
     }}>
@@ -152,7 +152,7 @@ function Card({ e, me, people, focused, onAck, onResolve, onClose, onHigher }) {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {canAck && <Action onClick={() => onAck(e)} bg="var(--warn-bg)" fg="var(--warn)" bd="var(--warn-bg)">Acknowledge</Action>}
           {canResolve && <Action onClick={() => onResolve(e)} bg="var(--ok-bg)" fg="var(--ok-deep)" bd="var(--ok-bg)">Resolve…</Action>}
-          {canClose && <Action onClick={() => onClose(e)} bg="#EEF1F6" fg="#3A4A63" bd="#D2DAE6">Close</Action>}
+          {canClose && <Action onClick={() => onClose(e)} bg="var(--info-bg)" fg="var(--info)" bd="var(--info-bg)">Close</Action>}
           {canHigher && <Action onClick={() => onHigher(e)} bg="var(--bad-bg)" fg="var(--bad-deep)" bd="var(--bad-bg)">Escalate higher ↑</Action>}
         </div>
       </div>
@@ -161,7 +161,7 @@ function Card({ e, me, people, focused, onAck, onResolve, onClose, onHigher }) {
       {e.description && <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 3 }}>{e.description}</div>}
 
       {e.resolution_note && (
-        <div style={{ marginTop: 10, background: '#F6F8F7', border: '1px solid #DCE7E1', borderLeft: '3px solid #217A54', borderRadius: 'var(--radius-s)', padding: '9px 12px' }}>
+        <div style={{ marginTop: 10, background: 'var(--ok-bg)', border: '1px solid var(--ok-bg)', borderLeft: '3px solid var(--ok)', borderRadius: 'var(--radius-s)', padding: '9px 12px' }}>
           <div style={{ fontSize: 12, color: 'var(--ok-deep)', marginBottom: 3 }}>Resolution</div>
           <div style={{ fontSize: 12.5, whiteSpace: 'pre-wrap' }}>{e.resolution_note}</div>
         </div>
@@ -299,7 +299,7 @@ function NewEscalation({ onClose, user, prefill }) {
     <Modal open title="Raise an escalation" onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy || !valid}>{busy ? 'Saving…' : 'Raise'}</Btn></>}>
       {prefill && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid #EBCFC9', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 12 }}>
           <Icon name="tasks" size={14} />Linked to the blocked task “{prefill.title}”.
         </div>
       )}

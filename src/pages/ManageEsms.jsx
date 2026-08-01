@@ -91,7 +91,7 @@ export default function ManageEsms() {
       <MainWarehouse />
 
       {lowCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid #EBCFC9', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>
           <Icon name="alert" size={15} /><span><strong>{lowCount}</strong> material(s) below threshold — reorder action required. Surfaced on the PMO dashboard.</span>
         </div>
       )}

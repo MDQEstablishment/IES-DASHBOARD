@@ -147,7 +147,7 @@ export default function ProgressReportCard() {
       </div>
 
       {!template && (
-        <div style={{ background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: 'var(--warn-bg)', border: '1px solid var(--warn-bg)', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12.5, marginBottom: 12 }}>
           No report template uploaded yet — generation is disabled. A PMO or admin can upload one in <b>Settings → Report Template</b>.
         </div>
       )}
@@ -201,7 +201,7 @@ export default function ProgressReportCard() {
       </Btn>
 
       {result && (
-        <div lang="en" dir="ltr" style={{ marginTop: 12, background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12, color: 'var(--ok-deep)' }}>
+        <div lang="en" dir="ltr" style={{ marginTop: 12, background: 'var(--ok-bg)', border: '1px solid var(--ok-bg)', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12, color: 'var(--ok-deep)' }}>
           <div><b>{result.name}</b></div>
           <div style={{ marginTop: 4 }}>
             {num(result.data.kpis.units_installed)} of {num(result.data.kpis.units_total)} units installed ({num(result.data.kpis.completion_pct)}%) ·

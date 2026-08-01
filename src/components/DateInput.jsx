@@ -53,7 +53,7 @@ export default function DateInput({ value = '', onChange, style, placeholder = '
   const cells = [...Array(firstDow).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
   const selected = isISO(text) ? text : null
 
-  const navBtn = { width: 24, height: 24, borderRadius: 6, border: '1px solid var(--line)', background: '#fff', cursor: 'pointer', fontSize: 13, lineHeight: 1, color: 'var(--text-3)' }
+  const navBtn = { width: 24, height: 24, borderRadius: 'var(--radius-s)', border: '1px solid var(--line)', background: 'var(--surface-1)', cursor: 'pointer', fontSize: 13, lineHeight: 1, color: 'var(--text-3)' }
 
   return (
     <span ref={wrapRef} style={{ position: 'relative', display: 'block' }}>
@@ -71,7 +71,7 @@ export default function DateInput({ value = '', onChange, style, placeholder = '
       <button type="button" tabIndex={-1} aria-label="Open calendar" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen((o) => !o)}
         style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14, lineHeight: 1, padding: 2 }}>📅</button>
       {open && (
-        <div onMouseDown={(e) => e.preventDefault()} style={{ position: 'absolute', zIndex: 400, top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid var(--line)', borderRadius: 10, boxShadow: '0 12px 30px rgba(16,26,36,.18)', padding: 10, width: 232 }}>
+        <div onMouseDown={(e) => e.preventDefault()} style={{ position: 'absolute', zIndex: 400, top: 'calc(100% + 4px)', left: 0, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 12px 30px rgba(16,26,36,.18)', padding: 10, width: 232 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <button type="button" style={navBtn} onClick={() => shift(-1)}>‹</button>
             <span style={{ fontWeight: 700, fontSize: 12.5 }}>{MONTHS[view.m]} {view.y}</span>
@@ -85,8 +85,8 @@ export default function DateInput({ value = '', onChange, style, placeholder = '
               const isSel = iso === selected
               return (
                 <button type="button" key={iso} onClick={() => pick(d)}
-                  style={{ textAlign: 'center', fontSize: 11.5, padding: '5px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
-                    background: isSel ? 'var(--accent)' : 'transparent', color: isSel ? '#fff' : 'var(--text)', fontWeight: isSel ? 700 : 500 }}>{d}</button>
+                  style={{ textAlign: 'center', fontSize: 11.5, padding: '5px 0', borderRadius: 'var(--radius-s)', border: 'none', cursor: 'pointer',
+                    background: isSel ? 'var(--accent)' : 'transparent', color: isSel ? 'var(--surface-1)' : 'var(--text)', fontWeight: isSel ? 700 : 500 }}>{d}</button>
               )
             })}
           </div>

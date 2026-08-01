@@ -48,7 +48,7 @@ export default function FileDropZone({ accept = '', maxSizeMb = 25, multi = fals
   const chips = !!files.length && (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
       {files.map((f, i) => (
-        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 7px 4px 9px', borderRadius: 6, background: '#F0EDE4', fontSize: 11.5, color: 'var(--text-2)' }}>
+        <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 7px 4px 9px', borderRadius: 'var(--radius-s)', background: 'var(--line-soft)', fontSize: 11.5, color: 'var(--text-2)' }}>
           <span title={f.name}>{compact ? trunc(f.name) : <span style={{ display: 'inline-block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}>{f.name}</span>}</span>
           <button type="button" title="Remove" onClick={(e) => { e.stopPropagation(); remove(i) }} style={{ border: 'none', background: 'none', color: 'var(--bad)', fontWeight: 700, cursor: 'pointer', lineHeight: 1, fontSize: 14 }}>×</button>
         </span>
@@ -63,7 +63,7 @@ export default function FileDropZone({ accept = '', maxSizeMb = 25, multi = fals
         {hiddenInput}
         <button type="button" {...dnd}
           onClick={() => ref.current?.click()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: over ? 'var(--accent)' : 'var(--text-2)', border: `1px solid ${over ? 'var(--accent)' : 'var(--line)'}`, background: over ? '#F5EEDF' : '#fff' }}>
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 12px', borderRadius: 'var(--radius-s)', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: over ? 'var(--accent)' : 'var(--text-2)', border: `1px solid ${over ? 'var(--accent)' : 'var(--line)'}`, background: over ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
           <CompactIcon size={15} /> {ctaLabel}
         </button>
         {chips}
@@ -81,9 +81,9 @@ export default function FileDropZone({ accept = '', maxSizeMb = 25, multi = fals
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ref.current?.click() } }}
         style={{
           display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', textAlign: 'center', flexDirection: 'column',
-          padding: '20px 16px', borderRadius: 10, cursor: 'pointer',
+          padding: '20px 16px', borderRadius: 'var(--radius-m)', cursor: 'pointer',
           border: `1.5px dashed ${over ? 'var(--accent)' : 'var(--line)'}`,
-          background: over ? '#F5EEDF' : '#FCFBF7', transition: 'background .12s, border-color .12s',
+          background: over ? 'var(--accent-tint)' : 'var(--raised)', transition: 'background .12s, border-color .12s',
         }}>
         <UploadCloud size={24} color={over ? 'var(--accent)' : 'var(--text-3)'} />
         <div>

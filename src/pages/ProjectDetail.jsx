@@ -219,7 +219,7 @@ export default function ProjectDetail() {
 
       {/* header card */}
       <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', marginBottom: 14, overflow: 'hidden', boxShadow: '0 1px 3px rgba(16,26,36,.06)' }}>
-        <div style={{ position: 'relative', background: 'linear-gradient(120deg,#10273B,#1B3A53)', padding: '20px 22px', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', background: 'linear-gradient(120deg,var(--text),var(--text-2))', padding: '20px 22px', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, opacity: .4, background: 'radial-gradient(420px 220px at 88% -20%,rgba(160,118,43,.45),transparent 60%)' }} />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0 }}>
@@ -385,7 +385,7 @@ export default function ProjectDetail() {
                         <td style={{ padding: '11px 8px' }} onClick={(e) => e.stopPropagation()}>
                           <span style={{ display: 'flex', gap: 6 }}>
                             <button title="Edit building" onClick={() => setEditBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 'var(--radius-s)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="edit" size={13} /></button>
-                            <button title="Archive building" onClick={() => setArchiveBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 'var(--radius-s)', border: '1px solid #EBCFC9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
+                            <button title="Archive building" onClick={() => setArchiveBldg(b)} className="ies-hover" style={{ width: 28, height: 28, borderRadius: 'var(--radius-s)', border: '1px solid var(--bad-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
                           </span>
                         </td>
                       )}

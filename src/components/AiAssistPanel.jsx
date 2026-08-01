@@ -144,13 +144,13 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
         The assistant only makes judgement calls (which registry model, which approved replacement) — every number is computed by the platform, not the model. Strings resolved once are remembered forever and never re-sent, so re-running costs nothing when there is no new data.
       </div>
       {unmatched > 0 && (
-        <div style={{ fontSize: 11.5, color: 'var(--warn-deep)', background: 'var(--warn-bg)', border: '1px solid #EBDCB2', borderRadius: 'var(--radius-s)', padding: '8px 11px', marginBottom: 10 }}>
+        <div style={{ fontSize: 11.5, color: 'var(--warn-deep)', background: 'var(--warn-bg)', border: '1px solid var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '8px 11px', marginBottom: 10 }}>
           {num(unmatched)} AC row{unmatched === 1 ? '' : 's'} {unmatched === 1 ? 'is' : 'are'} not matched to the old-model registry, so {unmatched === 1 ? 'its' : 'their'} baseline uses the assumed old-efficiency factor instead of the real nameplate. Identifying them is the single biggest correction available to the savings numbers.
         </div>
       )}
 
       {unavailable && (
-        <div style={{ background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12.5, marginBottom: 10 }}>
+        <div style={{ background: 'var(--warn-bg)', border: '1px solid var(--warn-bg)', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12.5, marginBottom: 10 }}>
           {unavailable} Everything else on this page still works — you can map replacements by hand in the survey.
         </div>
       )}
@@ -222,7 +222,7 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
           )}
 
           {unresolved.length > 0 && (
-            <div style={{ marginTop: 12, border: '1px solid #EBDCB2', background: 'var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '10px 12px' }}>
+            <div style={{ marginTop: 12, border: '1px solid var(--warn-bg)', background: 'var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '10px 12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 12.5, color: 'var(--warn-deep)', marginBottom: 5 }}>
                 <Icon name="camera" size={14} /> Needs a nameplate photo — {num(unresolved.length)} model{unresolved.length === 1 ? '' : 's'} could not be identified
               </div>
@@ -231,7 +231,7 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {unresolved.slice(0, 12).map((p, i) => (
-                  <span key={i} title={p.reason} style={{ fontSize: 11, background: 'var(--surface-1)', border: '1px solid #EBDCB2', borderRadius: 'var(--radius-s)', padding: '2px 8px' }}>{p.raw || '—'}</span>
+                  <span key={i} title={p.reason} style={{ fontSize: 11, background: 'var(--surface-1)', border: '1px solid var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '2px 8px' }}>{p.raw || '—'}</span>
                 ))}
                 {unresolved.length > 12 && <span style={{ fontSize: 11, color: 'var(--warn-deep)' }}>+{num(unresolved.length - 12)} more</span>}
               </div>

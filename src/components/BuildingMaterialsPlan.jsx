@@ -52,7 +52,7 @@ export default function BuildingMaterialsPlan({ buildingId, projectId }) {
                       <td style={tdR}>{num(r.planned_qty)}</td>
                       <td style={{ ...tdR, color: 'var(--ok)' }}>{num(r.used_qty)}</td>
                       <td style={{ ...tdR, fontWeight: 700 }}>{num(r.remaining_qty)}</td>
-                      <td style={{ ...tdR, color: short ? 'var(--bad)' : 'var(--text)' }}>{r.avail}{short && <span title="Warehouse stock is below this building's remaining need" style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: 'var(--bad-deep)', background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: '1px 5px' }}>LOW</span>}</td>
+                      <td style={{ ...tdR, color: short ? 'var(--bad)' : 'var(--text)' }}>{r.avail}{short && <span title="Warehouse stock is below this building's remaining need" style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, color: 'var(--bad-deep)', background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: '1px 5px' }}>LOW</span>}</td>
                     </tr>
                   </Fragment>
                 )

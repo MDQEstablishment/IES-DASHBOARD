@@ -192,7 +192,53 @@ Report *generation* is untouched — only the card chrome around it changed.
 | **user-administration guard unchanged** — `canAdminUsers = ['pmo','admin']`, and the 9G(4) rank rules behind it are untouched | ☑ |
 | screenshots | ⏳ pending credential |
 
-## Remaining commits
+### 9J(9) — Login, missed files, dead-token purge, close-out
 
-☐ ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
-assertion, and the full screenshot set once the credential lands).
+| item | state |
+| --- | --- |
+| `Login` restyled + 5 labels sentence-cased | ☑ |
+| `DesignSystem` updated to the new tokens | ☑ |
+| **5 files the group decomposition MISSED, now restyled** — `MainWarehouse`, `ProjectWarehouse`, `FileDropZone`, `DateInput`, `BuildingsMap` | ☑ |
+| dead `--nav-*` tokens purged — 0 references anywhere | ☑ |
+| **zero-hex assertion — 0 literals** across every `.jsx` outside the two rule-4 exclusions | ☑ |
+| build clean · census empty · manifest 18/18 · 179 assertions | ☑ |
+| screenshots + overflow | ⏳ pending credential |
+
+Two defects the close-out caught, both from the blanket colour map:
+
+1. **The logo navy was flattened.** `#10273B` mapped onto `var(--text)`, turning
+   the IES mark and the login brand panel neutral. The plan said the navy
+   survives in the mark; it is now `--logo-navy`, a token of its own, so the
+   zero-hex assertion still holds.
+2. **Dark-on-dark text on the login panel.** The navy panel's light text
+   (`#8DA0B1`, `#9FB0BD`) mapped onto the dark ink scale and became almost
+   invisible. Caught by the ONE screenshot the rig can currently take. Fixed
+   with `--on-navy` / `--on-navy-2`, and every other dark surface in the app was
+   then audited: there are exactly two (the login panel and the logo mark), plus
+   the Toaster, which was already white-on-dark and correct.
+
+The second one is worth dwelling on: it is precisely the class of defect the
+census cannot see. The wiring was perfect and the page was unreadable. It is the
+argument for finishing the screenshot gate.
+
+## Sprint totals
+
+| | |
+| --- | --- |
+| commits | 10 (9J(0) … 9J(9)) |
+| files restyled | 47 of 49 in the census |
+| deliberately untouched | `SavingSheetTab`, `SavingSheetTemplate` (rule 4) |
+| census drift | 5 whitelisted chrome additions in 9J(1); **empty in all eight later commits** |
+| `src/lib` modules changed | **0 of 18**, by sha256, every commit |
+| generator assertions | 179, green at every commit |
+| hex literals in the UI layer | 561 → **0** |
+
+## Still open
+
+1. **Screenshots + overflow assertions** — the whole authenticated set, both
+   viewports. Reproducible from tag `9j-before` the moment a credential exists.
+   The 390×844 pass over the field tools is the most valuable item in it.
+2. `npm run dev` is broken independently of 9J — harfbuzzjs uses top-level await,
+   which the dev optimizer's browser target rejects. `vite build` is unaffected.
+   Nobody can run the app locally without the `vite preview` workaround. Not 9J
+   scope (config, not skin); flagged for 9K.
