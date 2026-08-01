@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import MurshidPanel from './MurshidPanel'
+import MurshidAvatar from './MurshidAvatar'
 
 // مُرشد — the floating launcher, present on every page inside the shell.
 //
@@ -55,7 +56,7 @@ export default function MurshidLauncher({ collapsed }) {
           borderRadius: 999, background: 'var(--accent)', color: 'var(--surface-1)',
           boxShadow: 'var(--shadow-2)', fontWeight: 600, fontSize: 13.5,
         }}>
-        <span style={{ fontSize: 15, lineHeight: 1 }}>؟</span>
+        <MurshidAvatar size={24} />
         <span dir="rtl">مُرشد</span>
       </button>
     </div>

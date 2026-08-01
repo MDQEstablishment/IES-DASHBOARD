@@ -4,6 +4,7 @@ import Icon from '../Icon'
 import { useAuth } from '../../rbac'
 import { bgInsert } from '../../lib/db'
 import { supabase } from '../../lib/supabase'
+import MurshidAvatar from './MurshidAvatar'
 import { helpForScreen, FIELD_GUIDES, FAQ } from './helpContent'
 
 // مُرشد — the assistant panel. Sprint 9L(1): static content only.
@@ -104,6 +105,7 @@ export default function MurshidPanel({ screen, onClose }) {
       {/* greeting header */}
       <div style={{ background: 'var(--accent)', color: 'var(--surface-1)', padding: '14px 16px', flex: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <MurshidAvatar size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 15 }}>مرحباً، أنا مُرشد</div>
             <div style={{ opacity: 0.9, fontSize: 12.5, marginTop: 2 }}>كيف أقدر أساعدك؟</div>

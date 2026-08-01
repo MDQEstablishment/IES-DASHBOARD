@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 54 files · 548 interactive controls · 272 database touches.**
+**Totals: 55 files · 548 interactive controls · 272 database touches.**
 
 ## Per-file summary
 
@@ -48,6 +48,7 @@ that commit message.
 | `src/components/Shell.jsx` | 11 | 4 | — | ☐ |
 | `src/components/SurveyTab.jsx` | 3 | 1 | — | ☐ |
 | `src/components/TarshidImportModal.jsx` | 4 | 0 | — | ☐ |
+| `src/components/murshid/MurshidAvatar.jsx` | 0 | 0 | — | ☐ |
 | `src/components/murshid/MurshidFeedback.jsx` | 1 | 1 | — | ☐ |
 | `src/components/murshid/MurshidLauncher.jsx` | 1 | 0 | — | ☐ |
 | `src/components/murshid/MurshidPanel.jsx` | 11 | 1 | — | ☐ |
@@ -820,6 +821,12 @@ shared primitives: Btn×2, Empty×1, Loading×1
 | `onClick:onClose` | 1 |
 
 shared primitives: Btn×3, Field×1, Modal×1
+
+### `src/components/murshid/MurshidAvatar.jsx`
+
+| control → handler | count |
+| --- | --- |
+| _(no interactive controls)_ | 0 |
 
 ### `src/components/murshid/MurshidFeedback.jsx`
 
