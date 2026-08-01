@@ -39,7 +39,7 @@ export default function Reports() {
       name: p.full_name, role: roleTitle(p.role), handled: mine.length, ontime, avg,
       bn: mine.filter((t) => t.status === 'blocked').length,
       es: escs.filter((e) => e.raised_by_id === p.id).length,
-      otColor: ontime >= 90 ? '#217A54' : ontime >= 70 ? '#B45309' : '#B3362B',
+      otColor: ontime >= 90 ? 'var(--ok)' : ontime >= 70 ? 'var(--warn)' : 'var(--bad)',
     }
   }).filter((e) => e.handled > 0).sort((a, b) => b.handled - a.handled)
 
@@ -56,7 +56,7 @@ export default function Reports() {
   return (
     <div data-screen-label="Reports">
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '2px', color: 'var(--text-3)' }}>REPORT BUILDERS</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Report builders</div>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 0' }}>Reports</h1>
       </div>
 
@@ -65,11 +65,11 @@ export default function Reports() {
 
       <div style={{ marginBottom: 14 }}>
         {/* Materials Consumption */}
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Materials Consumption</div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 7, background: consBars.length === 0 ? '#E5E7EB' : '#217A54', color: consBars.length === 0 ? 'var(--text-3)' : '#fff', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
+              <button onClick={exportConsumption} disabled={consBars.length === 0} className="ies-hover" style={{ fontSize: 11, fontWeight: 700, padding: '6px 11px', borderRadius: 'var(--radius-s)', background: consBars.length === 0 ? '#E5E7EB' : 'var(--ok)', color: consBars.length === 0 ? 'var(--text-3)' : 'var(--surface-1)', cursor: consBars.length === 0 ? 'not-allowed' : 'pointer' }}>Export Excel</button>
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 14 }}>Every material consumed across the programme to date, by quantity.</div>
@@ -78,7 +78,7 @@ export default function Reports() {
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)', width: 46 }}>{b.esm}</span>
                 <span style={{ fontSize: 12.5, width: 180, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</span>
-                <div style={{ flex: 1, height: 18, borderRadius: 5, background: '#EDEAE0', overflow: 'hidden' }}>
+                <div style={{ flex: 1, height: 18, borderRadius: 'var(--radius-s)', background: 'var(--track)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: Math.round((b.qty / maxCons) * 100) + '%', background: 'linear-gradient(90deg,#A0762B,#C29A4B)' }} />
                 </div>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, width: 80, textAlign: 'right' }}>{b.qty} {b.unit}</span>
@@ -90,20 +90,20 @@ export default function Reports() {
 
       {/* Employee Performance (PMO + CEO only) */}
       {empAllowed && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 14 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>Employee Performance <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: '#6D5A8E', background: '#F0EDF6', padding: '2px 7px', borderRadius: 5, marginLeft: 6 }}>PMO + CEO ONLY</span></div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Employee Performance <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--esm2)', background: 'var(--esm2-bg)', padding: '2px 7px', borderRadius: 'var(--radius-s)', marginLeft: 6 }}>PMO + CEO ONLY</span></div>
           </div>
           <div className="ies-table-wrap">
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
               <thead>
                 <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)' }}>
-                  <th style={{ padding: '9px 8px', fontWeight: 600 }}>EMPLOYEE</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600 }}>Employee</th>
                   <th style={{ padding: '9px 8px', fontWeight: 600 }}>ROLE</th>
-                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>TASKS</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Tasks</th>
                   <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>ON-TIME %</th>
-                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>AVG DAYS</th>
-                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>BOTTLENECKS</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Avg days</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Bottlenecks</th>
                   <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>ESC. CAUSED</th>
                 </tr>
               </thead>
@@ -128,8 +128,8 @@ export default function Reports() {
       )}
 
       {/* ESM Progress vs Plan (designer suggestion) */}
-      <div style={{ background: 'linear-gradient(180deg,#fff,#FCFBF7)', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', fontWeight: 700 }}>[ DESIGNER SUGGESTION ]</div>
+      <div style={{ background: 'linear-gradient(180deg,#fff,#FCFBF7)', border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 16 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700 }}>[ DESIGNER SUGGESTION ]</div>
         <div style={{ fontWeight: 700, fontSize: 15, margin: '8px 0 6px' }}>ESM Progress vs Plan</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-3)', maxWidth: 560 }}>Per-ESM planned vs actual installed quantities over time, with delay attribution by building. High-value for the Planning Engineer's delay analysis.</div>
       </div>

@@ -43,14 +43,14 @@ export default function ReportTemplate({ role }) {
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, overflow: 'hidden' }}>
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Progress Report Template</div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         The branded Excel progress report sent to the client. Generation on the Reports page fills the <b>active</b> version's input cells and leaves every formula, chart, colour and image untouched, so the workbook recomputes in Excel exactly as designed. Upload a new version to change the design — no code change needed.{!canWrite && ' Uploading is limited to PMO and admins.'}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', border: '1px solid var(--line)', borderRadius: 8, padding: '9px 12px', marginBottom: 14, background: active ? '#E9F3EE' : '#FAF3E3' }}>
-        <span style={{ fontSize: 12.5, color: active ? '#175A3E' : '#854D0E' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '9px 12px', marginBottom: 14, background: active ? 'var(--ok-bg)' : 'var(--warn-bg)' }}>
+        <span style={{ fontSize: 12.5, color: active ? 'var(--ok-deep)' : 'var(--warn-deep)' }}>
           {active ? <>Active template: <b>v{num(active.version)}</b> · {active.file_name || 'report.xlsx'} · uploaded {fmtDateTime(active.uploaded_at)}</>
             : <>No template uploaded yet — report generation is disabled until one is.</>}
         </span>
@@ -68,24 +68,24 @@ export default function ReportTemplate({ role }) {
       {rows.length === 0 ? <Empty icon="doc">No template versions yet.</Empty> : (
         <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
           <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>VERSION</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>Version</th>
             <th style={{ padding: '8px 7px', fontWeight: 600 }}>FILE</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>UPLOADED</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>Uploaded</th>
             <th style={{ padding: '8px 7px', fontWeight: 600 }}>BY</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>ACTIONS</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
           </tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} style={{ borderTop: '1px solid var(--line)', opacity: r.active ? 1 : 0.65 }}>
                 <td lang="en" dir="ltr" style={{ padding: '8px 7px', fontFamily: 'var(--mono)', fontWeight: 700 }}>
-                  v{num(r.version)}{r.active && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#1D6A49', background: '#E9F3EE' }}>ACTIVE</span>}
+                  v{num(r.version)}{r.active && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>Active</span>}
                 </td>
                 <td style={{ padding: '8px 7px', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.file_name || ''}>{r.file_name || '—'}</td>
                 <td style={{ padding: '8px 7px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDateTime(r.uploaded_at)}</td>
                 <td style={{ padding: '8px 7px', whiteSpace: 'nowrap' }}>{r.uploader?.full_name || '—'}</td>
                 <td style={{ padding: '8px 7px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  <button className="ies-hover" onClick={() => openSigned(BUCKET, r.storage_path, 'template')} style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', padding: '4px 8px', borderRadius: 6 }}>Download</button>
-                  {canWrite && !r.active && <button className="ies-hover" onClick={() => activate(r)} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', padding: '4px 8px', borderRadius: 6 }}>Make active</button>}
+                  <button className="ies-hover" onClick={() => openSigned(BUCKET, r.storage_path, 'template')} style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', padding: '4px 8px', borderRadius: 'var(--radius-s)' }}>Download</button>
+                  {canWrite && !r.active && <button className="ies-hover" onClick={() => activate(r)} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', padding: '4px 8px', borderRadius: 'var(--radius-s)' }}>Make active</button>}
                 </td>
               </tr>
             ))}

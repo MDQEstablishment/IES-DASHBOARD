@@ -168,8 +168,20 @@ The 9G status controls are untouched: the select still offers exactly the moves
 migration 0102/0103 will accept from the signed-in person, and the census proves
 no handler moved.
 
+### 9J(7) — Reports
+`Reports` · `ReportTemplate`
+
+| item | state |
+| --- | --- |
+| 2 files restyled + 9 labels sentence-cased | ☑ |
+| build clean · census empty · manifest 18/18 · 179 assertions | ☑ |
+| diff audit — 22/22, zero non-styling lines | ☑ |
+| **`SavingSheetTab` / `SavingSheetTemplate` NOT individually restyled (sprint rule 4)** — zero diffs; they inherit the tokens through the shared primitives only, and the feature flag is untouched | ☑ |
+| screenshots | ⏳ pending credential |
+
+Report *generation* is untouched — only the card chrome around it changed.
+
 ## Remaining commits
 
-☐ 9J(7) Reports ·
 ☐ 9J(8) Settings · ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
 assertion, and the full screenshot set once the credential lands).
