@@ -20,6 +20,8 @@ const GREY = [0.45, 0.44, 0.41]
 
 // Cap and per-image budget. 40 photos at ~150 KB is a ~6 MB annex — large
 // enough to be useful, small enough to email.
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export const MAX_PHOTOS = 40
 const MAX_BYTES = 150 * 1024
 

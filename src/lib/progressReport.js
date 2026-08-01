@@ -16,6 +16,8 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 // timezone can shift a row into the wrong day.
 const inRange = (d, from, to) => !!d && (!from || d >= from) && (!to || d <= to)
 
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function dayName(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
   if (!m) return ''
@@ -23,6 +25,8 @@ export function dayName(iso) {
 }
 
 // every calendar day in [from,to] inclusive, as ISO strings
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function daysBetween(from, to, max = 400) {
   const out = []
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(from || ''))
@@ -58,6 +62,8 @@ const pctOf = (part, whole) => (whole > 0 ? Math.min(100, round1((part / whole) 
 // not by ESM code, so every ESM has to land in one of three buckets. Order
 // matters: "Lighting Control" is a SENSOR row, not a lighting row, so the
 // control/sensor test has to run before the lighting test.
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function esmCategory(esm) {
   const t = `${esm?.code || ''} ${esm?.name || ''}`.toLowerCase()
   if (/sensor|control|occupanc|daylight/.test(t)) return 'sensors'

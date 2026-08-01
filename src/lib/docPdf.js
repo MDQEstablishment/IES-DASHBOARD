@@ -458,6 +458,8 @@ export function contentKeyFor(kind, esmCode, esmName) {
   return /esm\s*3/i.test(String(esmCode || '')) || !esmCode ? 'wirAc' : 'wirLighting'
 }
 
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export async function renderInspection(kind, data, assets) {
   const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib')
   const pdf = await PDFDocument.create()

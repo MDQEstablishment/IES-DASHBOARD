@@ -122,6 +122,8 @@ export function formatBuildingCodes(codes) {
 }
 
 // Map a cocs row (+ covered building ids) onto the renderCoc data contract.
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function assembleCocPdfData(coc, coveredBuildingIds, ctx) {
   const { project: p, esmName } = ctx
   const covered = ctx.buildings.filter((b) => coveredBuildingIds.includes(b.id))

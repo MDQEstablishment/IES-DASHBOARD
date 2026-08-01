@@ -107,18 +107,18 @@ that commit message.
 
 | module | sha256 (16) |
 | --- | --- |
-| `cocPdf.js` | `20bddbc4f054bd4f` |
+| `cocPdf.js` | `6552ad6ce03c21d4` |
 | `constants.js` | `a3b54e7be5774f86` |
 | `db.js` | `1f41b6cbdb277f8b` |
-| `docPdf.js` | `7cd7e26696f9b63d` |
+| `docPdf.js` | `fd3e67257d14aa68` |
 | `format.js` | `c03144e8bd851ea0` |
 | `image.js` | `377425ac96352664` |
 | `inspectionDocs.js` | `f7edaacaf482e34c` |
-| `nav.js` | `6464a869ec8aaa79` |
-| `progressReport.js` | `5892ad1d9ad9b878` |
-| `progressReportGen.js` | `7e03efbab161a197` |
-| `reportPhotoAnnex.js` | `daa46c77a03128d6` |
-| `savingSheet.js` | `e741d4fcee078795` |
+| `nav.js` | `36299f48dc4a9eab` |
+| `progressReport.js` | `697d0d9e617ba836` |
+| `progressReportGen.js` | `5b18c2398b717a37` |
+| `reportPhotoAnnex.js` | `118486cb831caf0f` |
+| `savingSheet.js` | `f0f807e2c7ca42c3` |
 | `savingSheetGen.js` | `e25cfb6c04b83480` |
 | `supabase.js` | `33b838e12ee34aca` |
 | `surveyExport.js` | `5a8816358ca31772` |

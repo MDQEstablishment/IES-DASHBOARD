@@ -28,6 +28,8 @@ const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 // Excel stores a date as days since 1899-12-30 (anchor check: 2024-01-01 =
 // 45292). Written as a NUMBER so the template's own date format renders it and
 // digits stay Latin under any locale.
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function excelSerial(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
   if (!m) return null
@@ -274,6 +276,8 @@ function fillEvidence(zip, evidence, capacity) {
 // workbook. Clamping is reported loudly instead.
 export const CAPACITY = { daily: 65, buildings: 300, docs: 14, cocs: 8, evidence: 80 }
 
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function fillReportWorkbook(zip, data) {
   const dataSheet = findSheet(zip, 'Report Data', 'ReportData')
 

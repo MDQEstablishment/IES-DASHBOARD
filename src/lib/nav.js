@@ -1,9 +1,17 @@
 // RBAC-driven navigation + nested breadcrumb derivation.
-// Mirrors the .dc.html contract: the top-nav is built from `roleNav` (seed, dc
-// lines 1146-1156), NOT a flat hard-coded list. Building detail, its install-log
-// item view and Daily Progress are DRILL-INS reached by nesting, never top-nav.
+//
+// The navigation is built from `roleNav` below, NOT a flat hard-coded list, so
+// what a person can reach follows from their role in one place. Building detail,
+// its install-log item view and Daily Progress are DRILL-INS reached by nesting;
+// they are never navigation entries.
+//
+// 9K(5): this header used to say "the TOP-nav", and pointed at line numbers in
+// a .dc.html prototype that is not in this repository. Sprint 9J replaced the
+// top bar with the left sidebar, so the description named a component that no
+// longer exists — and the line references were unverifiable either way. The
+// contract itself is unchanged; only the description of it was wrong.
 
-// role -> ordered list of nav ids (verbatim from dc seed roleNav{})
+// role -> ordered list of nav ids
 export const ROLE_NAV = {
   ceo:   ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports'],
   pmo:   ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings'],

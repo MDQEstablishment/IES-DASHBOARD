@@ -32,6 +32,8 @@ const okNum = (v) => typeof v === 'number' && Number.isFinite(v)
 // instead of the assumed factor.
 export const modelKey = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
 
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function buildRegistryIndex(registry = []) {
   const byId = new Map(), byModel = new Map()
   ;(registry || []).forEach((r) => {
@@ -41,6 +43,8 @@ export function buildRegistryIndex(registry = []) {
   return { byId, byModel }
 }
 
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function registryHit(entry, index) {
   if (!index) return null
   if (entry?.registry_id && index.byId.has(entry.registry_id)) return index.byId.get(entry.registry_id)
@@ -51,6 +55,8 @@ export function registryHit(entry, index) {
 // Old-unit efficiency: prefer the registry's equivalent SEER for the surveyed
 // model; otherwise the assumed_old_eff factor (category_hours_factors, 9C).
 // Returns { seer, source }.
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function oldEfficiency(entry, index, assumedOldEff) {
   const hit = registryHit(entry, index)
   if (hit && okNum(n(hit.equivalent_seer))) return { seer: n(hit.equivalent_seer), source: 'registry' }
@@ -59,6 +65,8 @@ export function oldEfficiency(entry, index, assumedOldEff) {
 
 // Old capacity in BTU: TR x 12000 when the survey captured tonnage, else the
 // registry's T1 BTU for that model.
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function oldBtu(entry, index) {
   const tr = n(entry.tr)
   if (okNum(tr) && tr > 0) return tr * 12000
@@ -77,6 +85,8 @@ export function m2PerTon({ room_area, btu, qty }) {
 // The project's approved shortlist decides the replacement for a surveyed row
 // that has none of its own. Deterministic: best verified savings, then cheapest,
 // then a stable id tie-break — the same row always resolves to the same unit.
+// TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
+// generator harness can exercise it directly. Do not assume it is dead code.
 export function bestFromSelection(row, selCats, consts) {
   let best = null
   for (const cat of selCats) {
