@@ -12,7 +12,7 @@ import { num, toLatin } from '../lib/format'
 // one decision per distinct surveyed fitting, applied to every row that shares
 // it, rather than the same choice retyped in every room.
 const UNIT_WORDS = new Set(['w', 'watt', 'watts', 'lm', 'lumen', 'lumens', 'k'])
-const ctrl = { padding: '7px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12.5, width: '100%', boxSizing: 'border-box' }
+const ctrl = { padding: '7px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 'var(--radius-s)', background: 'var(--surface-1)', fontSize: 12.5, width: '100%', boxSizing: 'border-box' }
 
 const groupKey = (e) => [e.equipment_type, e.make, e.model, e.wattage].map((v) => String(v ?? '').trim().toLowerCase()).join('|')
 const groupLabel = (e) => [e.equipment_type, e.make, e.model, e.wattage != null ? `${num(e.wattage)} W` : null].filter(Boolean).join(' · ') || 'Unidentified fitting'
@@ -52,10 +52,10 @@ export default function LightingReplacements({ project, entries, onChanged }) {
   if (groups.length === 0) return null
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Lighting replacements</div>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, color: '#6D5A8E', background: '#F3E8FF' }}>PROJECT DECISION</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-s)', color: 'var(--esm2)', background: 'var(--esm2-bg)' }}>PROJECT DECISION</span>
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         One approved lamp per distinct surveyed fitting, applied to every row that shares it. The field survey records what is installed; choosing the replacement is commercial and belongs here.
@@ -129,7 +129,7 @@ function LampPicker({ catalog, refWatt, chosen, mixed, onPick, onClear, busy }) 
 
   if (chosen) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--line)', borderRadius: 8, padding: '5px 9px', background: '#E9F3EE' }} title={titleOf(chosen)}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '5px 9px', background: 'var(--ok-bg)' }} title={titleOf(chosen)}>
         <span lang="en" dir="ltr" style={{ fontSize: 12, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{labelOf(chosen)}</span>
         <button type="button" disabled={busy} onClick={onClear} style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--bad)', background: 'none', flex: 'none' }}>{busy ? '…' : 'Change'}</button>
       </div>
@@ -141,7 +141,7 @@ function LampPicker({ catalog, refWatt, chosen, mixed, onPick, onClear, busy }) 
         placeholder={mixed ? 'Mixed — pick one to apply to all rows' : 'Search type, brand or wattage — e.g. LED, Philips, 18…'}
         onChange={(e) => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
       {open && (matches.length > 0 || q.trim() !== '') && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: '#fff', border: '1px solid var(--line)', borderRadius: 8, boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
           {matches.length > 0 ? matches.map((r) => (
             <button key={r.id} type="button" title={titleOf(r)} onMouseDown={(e) => { e.preventDefault(); onPick(r.id); setOpen(false); setQ('') }}
               className="ies-row-hover" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, background: 'none', cursor: 'pointer' }}>

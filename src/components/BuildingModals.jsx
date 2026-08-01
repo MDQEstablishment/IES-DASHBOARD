@@ -56,7 +56,7 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
         <Field label="City / region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Abha" /></Field>
       </Row>
       <Field label="Building name (English)"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Police HQ — Abha" /></Field>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
       <Row>
         <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} placeholder="Al-Faisal HVAC" /></Field>
         <Field label="Contractor phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
@@ -67,12 +67,12 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
           {engineers.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
         </select>
       </Field>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
       <Row>
         <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} placeholder="18.2164" /></Field>
         <Field label="Longitude"><input lang="en" style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} placeholder="42.5053" /></Field>
       </Row>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>DETAILS (OPTIONAL)</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>DETAILS (OPTIONAL)</div>
       <Row>
         <Field label="Floors"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={f.floors || ''} onChange={(e) => set('floors', e.target.value)} /></Field>
         <Field label="Area (m²)"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="0" value={f.area_sqm || ''} onChange={(e) => set('area_sqm', e.target.value)} /></Field>

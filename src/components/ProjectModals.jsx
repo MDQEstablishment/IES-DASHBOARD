@@ -136,10 +136,10 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       </>}>
       {mode === 'edit' && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '0 0 8px' }}>PROJECT PHOTO</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 8px' }}>PROJECT PHOTO</div>
           {project.photo_url && curPhoto && !removePhoto && !replacing && !photoFile ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src={curPhoto} alt="" style={{ width: 104, height: 66, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+              <img src={curPhoto} alt="" style={{ width: 104, height: 66, objectFit: 'cover', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)' }} />
               <div style={{ display: 'flex', gap: 8 }}>
                 <Btn onClick={() => setReplacing(true)}>Replace</Btn>
                 <Btn variant="danger" onClick={() => { setRemovePhoto(true); setPhotoFile(null); setReplacing(false) }}>Remove</Btn>
@@ -165,7 +165,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         </div>
       )}
       {mode === 'add' && (
-        <div style={{ background: '#F5EEDF', border: '1px solid #E7D9B8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#8A6524', marginBottom: 16 }}>
+        <div style={{ background: 'var(--accent-tint)', border: '1px solid #E7D9B8', borderRadius: 'var(--radius-s)', padding: '10px 12px', fontSize: 12, color: 'var(--accent-hover)', marginBottom: 16 }}>
           After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later. Add a cover photo here once the project exists.
         </div>
       )}
@@ -178,7 +178,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Entity A" /></Field>
         <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
       </Row>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>DOCUMENT DEFAULTS (TARSHID FORMS)</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>DOCUMENT DEFAULTS (TARSHID FORMS)</div>
       <Row>
         <Field label="Project Reference No"><input lang="en" style={inputStyle} value={f.project_reference_no} onChange={(e) => set('project_reference_no', e.target.value)} placeholder="2022005" /></Field>
         <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Defaults to Client" /></Field>
@@ -187,7 +187,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       <Field label="COC Layout">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
-            <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 6, padding: '8px 10px', background: f.coc_layout === v ? '#F5EEDF' : '#fff' }}>
+            <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
               <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
               <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
             </label>
@@ -203,7 +203,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       {/* 8T/8U — contract + works-completion dates print in the COC project-info
           box. The COC signing date is NOT set here: signing happens later by
           TARSHID, on paper, and the approval date cell is left blank. */}
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 -4px' }}>CERTIFICATE DATES</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 -4px' }}>CERTIFICATE DATES</div>
       <Row>
         <Field label="Contract signature date"><DateInput style={inputStyle} value={f.contract_sign_date || ''} onChange={(e) => set('contract_sign_date', e.target.value)} /></Field>
         <Field label="Works completion date"><DateInput style={inputStyle} value={f.works_end_date || ''} onChange={(e) => set('works_end_date', e.target.value)} /></Field>
@@ -212,7 +212,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
         <Field label="Project engineer"><select style={inputStyle} value={f.engineer_id || ''} onChange={(e) => set('engineer_id', e.target.value)}><option value="">Unassigned</option>{people.filter((p) => p.role === 'proje').map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
       </Row>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
       <Row>
         <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} /></Field>
         <Field label="Phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
@@ -223,16 +223,16 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           owned by their existing fields (zero double work). */}
       <div style={{ margin: '6px 0 8px' }}>
         <button type="button" onClick={() => setShowTarshid((s) => !s)}
-          style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           TARSHID INFO (SAVING SHEET) {showTarshid ? '▲' : '▼'}
         </button>
       </div>
       {showTarshid && (
-        <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, marginBottom: 10, background: '#FAF8F2' }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12, marginBottom: 10, background: 'var(--hover)' }}>
           <Field label="Entity name (Arabic)">
             <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
           </Field>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>ENTITY POINT OF CONTACT</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>ENTITY POINT OF CONTACT</div>
           <Row>
             <Field label="Name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
             <Field label="Position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
@@ -241,7 +241,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
             <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
             <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
           </Row>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '1px', color: 'var(--text-3)', margin: '4px 0 8px' }}>TARSHID POINT OF CONTACT</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>TARSHID POINT OF CONTACT</div>
           <Row>
             <Field label="Name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
             <Field label="Position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
@@ -253,7 +253,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Coordinates come from the Location section below; buildings count and entity (EN) / region are derived from existing data.</div>
         </div>
       )}
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
       <Row>
         <Field label="Address"><input lang="en" style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
         <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} placeholder="18.2164" /></Field>
@@ -270,7 +270,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           {buildings.map((b, i) => {
             const upd = (k, v) => setBuildings((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
             return (
-              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#FAF8F2' }}>
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 10, marginBottom: 8, background: 'var(--hover)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>BUILDING {i + 1}</span>
                   <button onClick={() => setBuildings((arr) => arr.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
@@ -302,7 +302,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           {showItems && <>
             <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 6 }}>Fill once at creation — installed ↔ removed pairs are persisted with the project. You can refine later in the Items &amp; Replacements tab.</div>
             {items.map((it, i) => (
-              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, marginBottom: 8, background: '#FAF8F2' }}>
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 10, marginBottom: 8, background: 'var(--hover)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
                   <select style={{ ...inputStyle, width: 130, padding: '6px 8px' }} value={it.esm_code} onChange={(e) => setItem(i, 'esm_code', e.target.value)}>{allEsms.map((e) => <option key={e.code} value={e.code}>{e.code}</option>)}</select>
                   <button onClick={() => setItems((a) => a.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
@@ -371,7 +371,7 @@ export function StatusChangeModal({ project, onClose }) {
         <textarea style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is the status changing?" />
       </Field>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Recorded in the project status history with your name and the time.</div>
-      {err && <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }
@@ -406,7 +406,7 @@ export function DeleteProjectModal({ project, onClose }) {
       <div style={{ fontSize: 13, marginBottom: 6 }}>This will delete the project and hide its buildings, scopes, items, deliveries, and documents from every list. It is soft-deleted and recoverable for 30 days.</div>
       <div style={{ fontSize: 13, marginBottom: 12 }}>Type <strong style={{ fontFamily: 'var(--mono)' }}>{project.code}</strong> to confirm.</div>
       <input lang="en" style={inputStyle} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={project.code} />
-      {err && <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
     </Modal>
   )
 }
@@ -612,7 +612,7 @@ export function ProjectImportModal({ onClose }) {
       <Btn icon={dlState === 'done' ? 'check' : 'upload'} onClick={downloadTemplate} disabled={dlState === 'busy'} style={{ marginBottom: dlState === 'done' ? 6 : 14 }}>
         {dlState === 'busy' ? 'Downloading…' : dlState === 'done' ? 'Downloaded ✓' : 'Download template (.xlsx)'}
       </Btn>
-      {dlState === 'done' && <div style={{ fontSize: 12, color: '#1D6A49', marginBottom: 12 }}>Downloaded ✓ — fill it and upload below.</div>}
+      {dlState === 'done' && <div style={{ fontSize: 12, color: 'var(--ok-deep)', marginBottom: 12 }}>Downloaded ✓ — fill it and upload below.</div>}
       <Field label="Step 2 — upload the filled template">
         <input ref={fileRef} lang="en" type="file" accept=".xlsx,.xls" onChange={onFile} style={{ display: 'none' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -623,20 +623,20 @@ export function ProjectImportModal({ onClose }) {
         </div>
       </Field>
       {errors.length > 0 && (
-        <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12, color: '#96271E', marginTop: 8 }}>
+        <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12, color: 'var(--bad-deep)', marginTop: 8 }}>
           {errors.slice(0, 10).map((e, i) => <div key={i}>{e}</div>)}
           {errors.length > 10 && <div>+{errors.length - 10} more…</div>}
         </div>
       )}
       {parsed && !errors.length && (
-        <div style={{ background: '#E9F3EE', border: '1px solid #BFDFCF', borderRadius: 6, padding: 12, fontSize: 13, color: '#175A3E', marginTop: 10 }}>
+        <div style={{ background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 13, color: 'var(--ok-deep)', marginTop: 10 }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Ready to import — please confirm:</div>
           <div><strong>{counts.p}</strong> project (<span style={{ fontFamily: 'var(--mono)' }}>{s(parsed.project.code)}</span>), <strong>{counts.b}</strong> buildings, <strong>{counts.c}</strong> scopes, <strong>{counts.m}</strong> materials{counts.i > 0 && <>, <strong>{counts.i}</strong> item pairs</>} will be created.</div>
-          <div style={{ fontSize: 11.5, marginTop: 4, color: '#1D6A49' }}>Everything is created in a single transaction — all or nothing.</div>
+          <div style={{ fontSize: 11.5, marginTop: 4, color: 'var(--ok-deep)' }}>Everything is created in a single transaction — all or nothing.</div>
         </div>
       )}
       {importErr && (
-        <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 10 }}>
+        <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>
           {importErr}
         </div>
       )}
@@ -653,7 +653,7 @@ function EsmBundles({ projectId }) {
   const suggest = (pe) => pe.coc_bundle_key ?? (/light/i.test(pe.esm?.name || '') ? 'lighting' : '')
   return (
     <div style={{ marginTop: 4 }}>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', margin: '6px 0 6px' }}>ESM BUNDLES</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 6px' }}>ESM BUNDLES</div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8 }}>ESMs sharing a bundle key go on one COC (e.g. ESM1+ESM2 = “lighting”). Empty = standalone.</div>
       {rows.map((pe) => (
         <div key={pe.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>

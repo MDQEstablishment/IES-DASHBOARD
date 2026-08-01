@@ -10,8 +10,8 @@ const EDIT_ROLES = ['admin', 'pmo', 'projm', 'proje']
 const CAP_UNITS = ['kBTU', 'kW', 'W', 'lm']
 const EFF_UNITS = ['SEER', 'EER', 'COP', 'lm/W']
 const numOrNull = (v) => (v === '' || v == null ? null : Number(v))
-const cellInput = { width: '100%', padding: '5px 6px', border: '1px solid transparent', borderRadius: 5, fontSize: 11.5, background: 'transparent' }
-const cellFocus = { border: '1px solid var(--accent)', background: '#fff' }
+const cellInput = { width: '100%', padding: '5px 6px', border: '1px solid transparent', borderRadius: 'var(--radius-s)', fontSize: 11.5, background: 'transparent' }
+const cellFocus = { border: '1px solid var(--accent)', background: 'var(--surface-1)' }
 
 // Borderless cell that saves on blur (Sheets-like). select/toggle save on change.
 function Cell({ value, onSave, type = 'text', options, placeholder, align }) {
@@ -200,33 +200,33 @@ export default function ProjectItems({ projectId, project }) {
     writeFileXLSX(wb, 'items-replacements-template.xlsx')
   }
 
-  if (esms.length === 0) return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}><Empty icon="materials">Add ESMs to capture installed & removed items.</Empty></div>
+  if (esms.length === 0) return <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}><Empty icon="materials">Add ESMs to capture installed & removed items.</Empty></div>
 
   const th = (t) => <th style={{ padding: '6px 7px', fontWeight: 600, fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{t}</th>
   const layout = project?.coc_layout
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Items &amp; Replacements</div>
-          {layout && <span title={layout === 'scattered' ? 'Scattered: buildings far apart → per-building COCs' : 'Concatenated: one site → project-wide COCs'} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: 'var(--accent)', background: '#F5EEDF', cursor: 'help' }}>Layout: {layout === 'scattered' ? 'Scattered' : 'Concatenated'} ⓘ</span>}
+          {layout && <span title={layout === 'scattered' ? 'Scattered: buildings far apart → per-building COCs' : 'Concatenated: one site → project-wide COCs'} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: 'var(--accent-tint)', cursor: 'help' }}>Layout: {layout === 'scattered' ? 'Scattered' : 'Concatenated'} ⓘ</span>}
         </div>
         {canEdit && <div style={{ display: 'flex', gap: 8 }}>
           <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={downloadTemplate}>Download template</Btn>
           <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={exportCsv}>Export</Btn>
-          <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import<input type="file" accept=".csv,.xlsx" onChange={importCsv} style={{ display: 'none' }} /></label>
+          <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import<input type="file" accept=".csv,.xlsx" onChange={importCsv} style={{ display: 'none' }} /></label>
         </div>}
       </div>
       {orphanCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9ECEA', border: '1px solid #EBCFC9', color: '#96271E', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid #EBCFC9', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
           <strong>{orphanCount}</strong> item(s) without a pair. Every new item must be paired with the old item it replaces — use <strong>↔ Pair</strong> on each flagged row, or delete it.
         </div>
       )}
       {importErrors.length > 0 && (
-        <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#96271E', fontWeight: 700, marginBottom: 4 }}><span>{importErrors.length} import row(s) rejected</span><button onClick={() => setImportErrors([])} style={{ color: '#96271E', fontWeight: 700 }}>Dismiss</button></div>
-          <ul style={{ margin: 0, paddingLeft: 16, color: '#96271E' }}>{importErrors.slice(0, 12).map((m, i) => <li key={i}>{m}</li>)}{importErrors.length > 12 && <li>…and {importErrors.length - 12} more</li>}</ul>
+        <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12, marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--bad-deep)', fontWeight: 700, marginBottom: 4 }}><span>{importErrors.length} import row(s) rejected</span><button onClick={() => setImportErrors([])} style={{ color: 'var(--bad-deep)', fontWeight: 700 }}>Dismiss</button></div>
+          <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--bad-deep)' }}>{importErrors.slice(0, 12).map((m, i) => <li key={i}>{m}</li>)}{importErrors.length > 12 && <li>…and {importErrors.length - 12} more</li>}</ul>
         </div>
       )}
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>Each row is a replacement pair: installed (new) ↔ removed (old). Click any cell to edit — changes save automatically.</div>
@@ -234,7 +234,7 @@ export default function ProjectItems({ projectId, project }) {
         const rows = rowsForEsm(e.code)
         const isOpen = open[e.code] ?? (esms.length <= 2)
         return (
-          <div key={e.code} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 12, marginBottom: 10 }}>
+          <div key={e.code} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12, marginBottom: 10 }}>
             <button onClick={() => setOpen((o) => ({ ...o, [e.code]: !isOpen }))} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', cursor: 'pointer', marginBottom: isOpen ? 10 : 0 }}>
               <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{e.code}</span><span style={{ fontWeight: 600 }}>{e.name}</span>
               <span style={{ marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{rows.length} pairs/items · {isOpen ? '▲' : '▼'}</span>
@@ -255,7 +255,7 @@ export default function ProjectItems({ projectId, project }) {
                   {rows.map((row) => {
                     const orphan = !(row.inst && row.rem)
                     return (
-                    <tr key={row.key} title={orphan ? 'Unpaired item — pair it with its replacement or delete it' : undefined} style={{ borderTop: '1px solid var(--line)', background: orphan ? '#FBF1EF' : '#fff', boxShadow: orphan ? 'inset 3px 0 0 #B3362B' : 'none' }}>
+                    <tr key={row.key} title={orphan ? 'Unpaired item — pair it with its replacement or delete it' : undefined} style={{ borderTop: '1px solid var(--line)', background: orphan ? 'var(--bad-bg)' : 'var(--surface-1)', boxShadow: orphan ? 'inset 3px 0 0 #B3362B' : 'none' }}>
                       {/* installed side */}
                       <td style={{ padding: 2, minWidth: 140 }}>{row.inst ? <Cell value={row.inst.item_description} onSave={(v) => saveI(row.inst.id, { item_description: v || null })} placeholder="Installed item" /> : <span style={{ color: 'var(--text-3)', fontSize: 11, paddingLeft: 6 }}>—</span>}</td>
                       <td style={{ padding: 2 }}>{row.inst && <Cell value={row.inst.model_code} onSave={(v) => saveI(row.inst.id, { model_code: v || null })} placeholder="Model" />}</td>
@@ -346,13 +346,13 @@ export default function ProjectItems({ projectId, project }) {
                         {canEdit && (
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                             <select value={draft[e.code]?.control || ''} onChange={(ev) => setDraft((d) => ({ ...d, [e.code]: { ...d[e.code], control: ev.target.value } }))}
-                              style={{ padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 11.5 }}>
+                              style={{ padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', fontSize: 11.5 }}>
                               <option value="">Control item…</option>
                               {installed.filter((r) => r.esm_code === e.code).map((r) => <option key={r.id} value={r.id}>{itemLabel(r)}</option>)}
                             </select>
                             <span style={{ color: 'var(--text-3)' }}>→</span>
                             <select value={draft[e.code]?.controlled || ''} onChange={(ev) => setDraft((d) => ({ ...d, [e.code]: { ...d[e.code], controlled: ev.target.value } }))}
-                              style={{ padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 11.5 }}>
+                              style={{ padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', fontSize: 11.5 }}>
                               <option value="">Lighting item it controls…</option>
                               {lightingItems.map((r) => <option key={r.id} value={r.id}>{r.esm_code} · {itemLabel(r)}</option>)}
                             </select>

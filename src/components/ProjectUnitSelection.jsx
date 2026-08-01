@@ -12,7 +12,7 @@ import { proposeSelection, verifyAiSelection, selectionDescription, MAX_SELECTIO
 // so description strings here are the contract with AC_Savings column W.
 // Only B/C/D (+M/N) are ours; E and F:L are the workbook's formulas.
 const numFilter = (s) => toLatin(s).replace(/[^\d.]/g, '')
-const cell = { padding: '5px 7px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12, boxSizing: 'border-box' }
+const cell = { padding: '5px 7px', border: '1px solid var(--line-ctrl)', borderRadius: 'var(--radius-s)', background: 'var(--surface-1)', fontSize: 12, boxSizing: 'border-box' }
 
 function CostInput({ value, onSave, disabled }) {
   const [v, setV] = useState(value == null ? '' : String(value))
@@ -128,7 +128,7 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Project unit selection</div>
         <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)' }}>
@@ -149,13 +149,13 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
       </div>
 
       {unpriced.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FAF3E3', border: '1px solid #EBDCB2', color: '#854D0E', borderRadius: 8, padding: '8px 12px', fontSize: 12.5, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '8px 12px', fontSize: 12.5, marginBottom: 10 }}>
           <Icon name="alert" size={14} /><span><b>{num(unpriced.length)}</b> row{unpriced.length === 1 ? '' : 's'} missing prices — payback cannot be computed until Unit Cost and labor Cost are filled.</span>
         </div>
       )}
 
       {askOpen && canManage && (
-        <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 12, marginBottom: 12, background: 'var(--bg-2, #FAF9F6)' }}>
+        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: 12, marginBottom: 12, background: 'var(--bg-2, #FAF9F6)' }}>
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 7 }}>
             Say what matters for this project and the assistant will consolidate around it — “as few models as possible”, “prefer one make”, “keep the cheapest that still qualifies”. Leave it blank to just get the tightest shortlist. Whatever it proposes is re-checked against our own capacity and savings math before you see it.
           </div>
@@ -171,12 +171,12 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
       )}
 
       {proposal && (
-        <div style={{ border: '1px solid #BFDFCF', background: '#E9F3EE', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-          <div style={{ fontWeight: 700, fontSize: 12.5, color: '#175A3E', marginBottom: 6 }}>
+        <div style={{ border: '1px solid #BFDFCF', background: 'var(--ok-bg)', borderRadius: 'var(--radius-s)', padding: 12, marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--ok-deep)', marginBottom: 6 }}>
             Proposed shortlist — {num(proposal.chosen.length)} model{proposal.chosen.length === 1 ? '' : 's'} cover every compliant surveyed unit
-            {proposal.usedAi && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#6D5A8E', background: '#F3E8FF' }}>ASSISTANT · VERIFIED</span>}
+            {proposal.usedAi && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)', color: 'var(--esm2)', background: 'var(--esm2-bg)' }}>ASSISTANT · VERIFIED</span>}
           </div>
-          {proposal.note && <div style={{ fontSize: 11.5, color: '#175A3E', marginBottom: 6 }}>{proposal.note}</div>}
+          {proposal.note && <div style={{ fontSize: 11.5, color: 'var(--ok-deep)', marginBottom: 6 }}>{proposal.note}</div>}
           <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 620 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
               <th style={{ padding: '6px', fontWeight: 600 }}>MODEL</th>
@@ -189,26 +189,26 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
                 <tr key={i} style={{ borderTop: '1px solid #BFDFCF' }}>
                   <td style={{ padding: '6px', fontWeight: 600, maxWidth: 230, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.description}>{c.description}</td>
                   <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(c.units)}</td>
-                  <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', color: c.unit_cost == null ? '#B45309' : undefined }}>{c.unit_cost == null ? 'needs price' : num(c.unit_cost)}</td>
+                  <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', color: c.unit_cost == null ? 'var(--warn)' : undefined }}>{c.unit_cost == null ? 'needs price' : num(c.unit_cost)}</td>
                   <td style={{ padding: '6px', color: 'var(--text-3)', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.reason}>{c.reason}</td>
                 </tr>
               ))}
             </tbody>
           </table></div>
           {proposal.dropped?.length > 0 && (
-            <div style={{ fontSize: 11.5, color: '#854D0E', marginTop: 6 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--warn-deep)', marginTop: 6 }}>
               {proposal.dropped.map((d, i) => (
                 <div key={i}>{d.partial ? 'Narrowed' : 'Dropped'} — {d.description}: {d.why}. {d.partial ? '' : 'Replaced by our own best pick.'}</div>
               ))}
             </div>
           )}
           {proposal.impossible.length > 0 && (
-            <div style={{ fontSize: 11.5, color: '#96271E', marginTop: 6 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--bad-deep)', marginTop: 6 }}>
               {num(proposal.impossible.length)} surveyed line{proposal.impossible.length === 1 ? '' : 's'} have no compliant catalog unit at all — they stay unmapped and out of the savings total.
             </div>
           )}
           {proposal.overflow && (
-            <div style={{ fontSize: 11.5, color: '#96271E', marginTop: 6 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--bad-deep)', marginTop: 6 }}>
               More than {MAX_SELECTION_ROWS} models would be needed. The workbook VLOOKUP only covers rows 2–21, so {num(proposal.uncovered.length)} line{proposal.uncovered.length === 1 ? '' : 's'} remain uncovered — consolidate or split the project.
             </div>
           )}
@@ -269,14 +269,14 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
                       style={{ ...cell, width: '100%', minWidth: 90 }} />
                   </td>
                   <td style={{ padding: '6px' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5,
-                      color: s.source === 'human' ? '#1D6A49' : '#6D5A8E', background: s.source === 'human' ? '#E9F3EE' : '#F3E8FF' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-s)',
+                      color: s.source === 'human' ? 'var(--ok-deep)' : 'var(--esm2)', background: s.source === 'human' ? 'var(--ok-bg)' : 'var(--esm2-bg)' }}>
                       {s.source === 'human' ? 'ESCO' : 'AI'}
                     </span>
                   </td>
                   {canManage && (
                     <td style={{ padding: '6px', textAlign: 'right' }}>
-                      <button className="ies-hover" title="Remove" onClick={() => removeRow(s)} style={{ padding: 4, borderRadius: 6, color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
+                      <button className="ies-hover" title="Remove" onClick={() => removeRow(s)} style={{ padding: 4, borderRadius: 'var(--radius-s)', color: 'var(--bad)' }}><Icon name="x" size={13} /></button>
                     </td>
                   )}
                 </tr>

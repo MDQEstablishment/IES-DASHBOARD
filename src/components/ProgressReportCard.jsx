@@ -12,7 +12,7 @@ import { assembleReportData, estimatedCompletion } from '../lib/progressReport'
 // the estimated completion dates, generate. The workbook design lives in the
 // uploaded template (Settings -> Report Template); this only supplies numbers.
 const NONE = '00000000-0000-0000-0000-000000000000'
-const ctrl = { padding: '7px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 12.5, boxSizing: 'border-box' }
+const ctrl = { padding: '7px 10px', border: '1px solid var(--line-ctrl)', borderRadius: 'var(--radius-s)', background: 'var(--surface-1)', fontSize: 12.5, boxSizing: 'border-box' }
 
 export default function ProgressReportCard() {
   const [projectId, setProjectId] = useState('')
@@ -137,42 +137,42 @@ export default function ProgressReportCard() {
   if (loading) return <Loading />
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 14 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 15 }}>Client Progress Report</div>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, color: '#1D6A49', background: '#E9F3EE' }}>EXCEL</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>EXCEL</span>
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         The branded workbook sent to the client: completion by ESM, the daily installation log, per-building progress, documents and COCs. Installed quantities are what the project manager logged — there is no approval gate.
       </div>
 
       {!template && (
-        <div style={{ background: '#FAF3E3', border: '1px solid #EBDCB2', color: '#854D0E', borderRadius: 8, padding: '9px 12px', fontSize: 12.5, marginBottom: 12 }}>
+        <div style={{ background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12.5, marginBottom: 12 }}>
           No report template uploaded yet — generation is disabled. A PMO or admin can upload one in <b>Settings → Report Template</b>.
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 12 }}>
         <label style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 4 }}>PROJECT</span>
+          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>PROJECT</span>
           <select style={{ ...ctrl, width: '100%' }} value={projectId} onChange={(e) => { setProjectId(e.target.value); setFrom(''); setEstDates({}) }}>
             <option value="">Select a project…</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
           </select>
         </label>
         <label style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 4 }}>FROM</span>
+          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>FROM</span>
           <DateInput value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...ctrl, width: '100%' }} />
         </label>
         <label style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 4 }}>TO</span>
+          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>TO</span>
           <DateInput value={to} onChange={(e) => setTo(e.target.value)} style={{ ...ctrl, width: '100%' }} />
         </label>
       </div>
 
       {project && esmCodes.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
             ESTIMATED COMPLETION PER ESM
             <span style={{ textTransform: 'none', letterSpacing: 0, marginLeft: 8, color: 'var(--text-3)' }}>
               defaults to project start + {project.total_weeks != null ? `${num(project.total_weeks)} weeks` : 'total weeks'}{defaultEst ? ` = ${defaultEst}` : ' (not set on the project)'} — editable
@@ -201,7 +201,7 @@ export default function ProgressReportCard() {
       </Btn>
 
       {result && (
-        <div lang="en" dir="ltr" style={{ marginTop: 12, background: '#E9F3EE', border: '1px solid #BFDFCF', borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#175A3E' }}>
+        <div lang="en" dir="ltr" style={{ marginTop: 12, background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12, color: 'var(--ok-deep)' }}>
           <div><b>{result.name}</b></div>
           <div style={{ marginTop: 4 }}>
             {num(result.data.kpis.units_installed)} of {num(result.data.kpis.units_total)} units installed ({num(result.data.kpis.completion_pct)}%) ·
@@ -211,8 +211,8 @@ export default function ProgressReportCard() {
             {result.annex?.bytes && <> · annex {num(result.annex.pages)} pages, {num(result.annex.indexed)} photographs</>}
           </div>
           {[result.report.esm_table.error, result.report.daily_log.error, result.report.buildings.error, result.report.documents.error, result.report.evidence.error]
-            .filter(Boolean).map((e, i) => <div key={i} style={{ color: '#96271E', marginTop: 3 }}>Template: {e}</div>)}
-          {(result.data.warnings || []).map((w, i) => <div key={i} style={{ color: '#854D0E', marginTop: 3 }}>⚠ {w}</div>)}
+            .filter(Boolean).map((e, i) => <div key={i} style={{ color: 'var(--bad-deep)', marginTop: 3 }}>Template: {e}</div>)}
+          {(result.data.warnings || []).map((w, i) => <div key={i} style={{ color: 'var(--warn-deep)', marginTop: 3 }}>⚠ {w}</div>)}
         </div>
       )}
     </div>

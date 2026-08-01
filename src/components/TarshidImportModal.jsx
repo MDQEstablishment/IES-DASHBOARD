@@ -108,8 +108,8 @@ export default function TarshidImportModal({ kind, onClose, onDone }) {
   }
 
   const Stat = ({ n, l, warn }) => (
-    <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '8px 14px', minWidth: 92, textAlign: 'center' }}>
-      <div lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: warn ? '#B45309' : 'var(--text)' }}>{num(n)}</div>
+    <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '8px 14px', minWidth: 92, textAlign: 'center' }}>
+      <div lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 700, color: warn ? 'var(--warn)' : 'var(--text)' }}>{num(n)}</div>
       <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>{l}</div>
     </div>
   )
@@ -134,7 +134,7 @@ export default function TarshidImportModal({ kind, onClose, onDone }) {
         </div>
       </Field>
 
-      {err && <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 6 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 6 }}>{err}</div>}
 
       {plan && !result && plan.kind !== 'costs' && (
         <div style={{ marginTop: 10 }}>
@@ -155,7 +155,7 @@ export default function TarshidImportModal({ kind, onClose, onDone }) {
             <Stat n={t.unmatched.length} l="unmatched" warn={t.unmatched.length > 0} />
           </div>
           {t.unmatched.length > 0 && (
-            <div style={{ fontSize: 11, color: '#96271E', marginTop: 6, maxHeight: 90, overflowY: 'auto' }}>
+            <div style={{ fontSize: 11, color: 'var(--bad-deep)', marginTop: 6, maxHeight: 90, overflowY: 'auto' }}>
               Unmatched (no catalog item by model or description): {t.unmatched.slice(0, 8).map((u) => u.model_no || u.description).join(' · ')}{t.unmatched.length > 8 ? ` · +${num(t.unmatched.length - 8)} more` : ''}
             </div>
           )}
@@ -163,13 +163,13 @@ export default function TarshidImportModal({ kind, onClose, onDone }) {
       ))}
 
       {result && result.kind !== 'costs' && (
-        <div style={{ background: '#E9F3EE', border: '1px solid #BFDFCF', borderRadius: 8, padding: 12, fontSize: 12.5, color: '#175A3E', marginTop: 10 }} lang="en" dir="ltr">
+        <div style={{ background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 12.5, color: 'var(--ok-deep)', marginTop: 10 }} lang="en" dir="ltr">
           Done — <b>{num(result.inserted)}</b> new, <b>{num(result.updated)}</b> updated, {num(result.unchanged)} unchanged.
         </div>
       )}
       {result && result.kind === 'costs' && result.out.map((o) => (
-        <div key={o.table} style={{ background: '#E9F3EE', border: '1px solid #BFDFCF', borderRadius: 8, padding: 12, fontSize: 12.5, color: '#175A3E', marginTop: 10 }} lang="en" dir="ltr">
-          {o.table === 'ac_catalog' ? 'AC & Package' : 'Lighting'}: <b>{num(o.ok)}</b> updated{o.fail ? <>, <b style={{ color: '#96271E' }}>{num(o.fail)}</b> failed</> : ''}, {num(o.unchanged)} unchanged, {num(o.unmatched)} unmatched.
+        <div key={o.table} style={{ background: 'var(--ok-bg)', border: '1px solid #BFDFCF', borderRadius: 'var(--radius-s)', padding: 12, fontSize: 12.5, color: 'var(--ok-deep)', marginTop: 10 }} lang="en" dir="ltr">
+          {o.table === 'ac_catalog' ? 'AC & Package' : 'Lighting'}: <b>{num(o.ok)}</b> updated{o.fail ? <>, <b style={{ color: 'var(--bad-deep)' }}>{num(o.fail)}</b> failed</> : ''}, {num(o.unchanged)} unchanged, {num(o.unmatched)} unmatched.
         </div>
       ))}
     </Modal>

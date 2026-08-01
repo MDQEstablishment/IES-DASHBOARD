@@ -80,9 +80,29 @@ pre-9J `Shell.jsx` is still present at the same or higher count — the removed/
 decreased set is empty. Routes, the role→nav map, and the lib manifest are
 byte-identical. 48 of 49 files show no change in control or query counts at all.
 
+### 9J(2) — Projects group
+`Projects` · `ProjectDetail` · `ProjectModals` · `ProjectItems` ·
+`ProjectUnitSelection` · `ProgressReportCard` · `TarshidImportModal` ·
+`BuildingModals` · `LightingReplacements`
+
+| item | state |
+| --- | --- |
+| 9 files restyled via the shared token pass | ☑ |
+| build clean | ☑ |
+| census freeze — **empty diff, no whitelist needed** | ☑ |
+| lib manifest — 18/18 unchanged | ☑ |
+| harnesses green — 179 assertions | ☑ |
+| diff audit — 140 insertions / 140 deletions, zero non-styling lines | ☑ |
+| screenshots + overflow | ⏳ pending credential |
+
+Defect caught and fixed before this commit: the first pass mapped every radius
+above 12 onto the 16px card radius, which turned `borderRadius: 20` **pills**
+(status badges, ring buttons) into rounded rectangles. The rule now sends >= 20
+to a true pill and leaves 2-4px hairline notches alone.
+
 ## Remaining commits
 
-☐ 9J(2) Projects · ☐ 9J(3) Survey/field · ☐ 9J(4) Materials ·
+☐ 9J(3) Survey/field · ☐ 9J(4) Materials ·
 ☐ 9J(5) Docs/COCs · ☐ 9J(6) Tasks/Escalations · ☐ 9J(7) Reports ·
 ☐ 9J(8) Settings · ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
 assertion, and the full screenshot set once the credential lands).

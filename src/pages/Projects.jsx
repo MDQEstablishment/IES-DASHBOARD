@@ -95,14 +95,14 @@ export default function Projects() {
         <PageTitle kicker="RETROFIT PROGRAMME" title="Projects" />
         {canAdd && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setImportOpen(true)} className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 8, border: '1px solid var(--line)', background: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
-            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>{iconPlus}Add Project</button>
+            <button onClick={() => setImportOpen(true)} className="ies-hover" style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)', background: 'var(--surface-1)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{iconUpload}Import Excel</button>
+            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 'var(--radius-s)', background: 'var(--accent)', color: 'var(--surface-1)', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer' }}>{iconPlus}Add Project</button>
           </div>
         )}
       </div>
 
       {projectsReadOnly && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FAF3E3', border: '1px solid #EBDCB2', color: '#92400E', borderRadius: 8, padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 14 }}>
           <Icon name="alert" size={15} />Read-only access — your role can view projects but not edit them.
         </div>
       )}
@@ -111,11 +111,11 @@ export default function Projects() {
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           {FILTERS.map(([key, label]) => {
             const active = filter === key
-            const [col, bg] = key === 'all' ? ['#A0762B', '#F5EEDF'] : statusMeta(key)
+            const [col, bg] = key === 'all' ? ['var(--accent)', 'var(--accent-tint)'] : statusMeta(key)
             return (
               <button key={key} onClick={() => setFilter(key)}
-                style={{ padding: '6px 13px', borderRadius: 20, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-                  border: '1px solid ' + (active ? col : 'var(--line)'), background: active ? bg : '#fff' }}>
+                style={{ padding: '6px 13px', borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                  border: '1px solid ' + (active ? col : 'var(--line)'), background: active ? bg : 'var(--surface-1)' }}>
                 <span style={{ color: active ? col : 'var(--text-3)' }}>{label}</span>
               </button>
             )
@@ -123,7 +123,7 @@ export default function Projects() {
         </div>
         <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--text-3)' }}>
           Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12.5, background: '#fff', fontWeight: 600 }}>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', fontSize: 12.5, background: 'var(--surface-1)', fontWeight: 600 }}>
             {SORTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
@@ -154,11 +154,11 @@ export default function Projects() {
 // photo (beige fallback when absent) under a navy scrim, all data overlaid.
 // On-dark status pill palette (the light statusMeta colors would vanish on navy).
 const PILL = {
-  active:  ['#7BC9A3', 'rgba(33,122,84,0.30)', 'rgba(123,201,163,0.40)'],
-  draft:   ['#C7CED5', 'rgba(120,132,143,0.32)', 'rgba(199,206,213,0.35)'],
-  on_hold: ['#E8B662', 'rgba(180,83,9,0.32)', 'rgba(232,182,98,0.40)'],
-  closed:  ['#9FB0BD', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
-  deleted: ['#9FB0BD', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
+  active:  ['var(--live)', 'rgba(33,122,84,0.30)', 'rgba(123,201,163,0.40)'],
+  draft:   ['var(--line-ctrl)', 'rgba(120,132,143,0.32)', 'rgba(199,206,213,0.35)'],
+  on_hold: ['var(--brass-bright)', 'rgba(180,83,9,0.32)', 'rgba(232,182,98,0.40)'],
+  closed:  ['var(--text-3)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
+  deleted: ['var(--text-3)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
 }
 const SCRIM = 'linear-gradient(180deg, rgba(16,39,59,0.88) 0%, rgba(16,39,59,0.35) 22%, rgba(16,39,59,0) 45%, rgba(16,39,59,0.55) 68%, rgba(16,39,59,0.95) 100%)'
 
@@ -171,13 +171,13 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
   const stat = (val, label, color) => (
     <div style={{ flex: 1, textAlign: 'center', padding: '0 6px' }}>
       <div style={{ fontSize: 17, fontWeight: 700, color, lineHeight: 1.1 }}>{val}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, letterSpacing: '1px', color: '#8DA0B1', marginTop: 3 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--text-3)', marginTop: 3 }}>{label}</div>
     </div>
   )
   return (
     <div className="ies-panorama-card" role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
-      style={{ position: 'relative', height: 420, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 8px rgba(22,29,36,0.12)', background: '#E8E4D8' }}>
+      style={{ position: 'relative', height: 420, borderRadius: 'var(--radius-m)', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 8px rgba(22,29,36,0.12)', background: 'var(--track)' }}>
       {/* photo layer */}
       {photoUrl && <img src={photoUrl} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
@@ -188,12 +188,12 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
         {/* top row */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: '#8DA0B1' }}>{p.code}</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 20, color: pillC, background: pillBg, border: `1px solid ${pillBd}`, whiteSpace: 'nowrap' }}>{pillLabel}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{p.code}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 999, color: pillC, background: pillBg, border: `1px solid ${pillBd}`, whiteSpace: 'nowrap' }}>{pillLabel}</span>
           </div>
           {canEdit && (
             <button title="Edit project" onClick={(e) => { e.stopPropagation(); onEdit() }}
-              style={{ width: 28, height: 28, borderRadius: 6, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(16,39,59,0.4)', cursor: 'pointer' }}>
+              style={{ width: 28, height: 28, borderRadius: 'var(--radius-s)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--surface-1)', border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(16,39,59,0.4)', cursor: 'pointer' }}>
               <Icon name="edit" size={13} />
             </button>
           )}
@@ -203,28 +203,28 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
         <div>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px', color: '#F7F4EC', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-              <div style={{ fontSize: 12, color: '#B9C4CD', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta || '—'}</div>
+              <div style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px', color: 'var(--hover)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta || '—'}</div>
             </div>
             <div style={{ position: 'relative', width: 52, height: 52, flex: 'none' }}>
               <svg viewBox="0 0 52 52" style={{ width: 52, height: 52 }}>
                 <circle cx="26" cy="26" r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="6" />
-                <circle cx="26" cy="26" r={r} fill="none" stroke="#C29A4B" strokeWidth="6" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 26 26)" />
+                <circle cx="26" cy="26" r={r} fill="none" stroke="var(--brass-bright)" strokeWidth="6" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 26 26)" />
               </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: '#fff' }}>{pp}%</div>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--surface-1)' }}>{pp}%</div>
             </div>
           </div>
           {/* progress bar */}
           <div style={{ height: 5, borderRadius: 2, background: 'rgba(255,255,255,0.18)', overflow: 'hidden', margin: '13px 0 0' }}>
-            <div style={{ height: '100%', width: pp + '%', background: '#C29A4B' }} />
+            <div style={{ height: '100%', width: pp + '%', background: 'var(--brass-bright)' }} />
           </div>
           {/* stats strip */}
           <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.16)', marginTop: 13, paddingTop: 11 }}>
-            {stat(num(remaining), 'REMAINING', '#E8B662')}
+            {stat(num(remaining), 'REMAINING', 'var(--brass-bright)')}
             <div style={{ width: 1, background: 'rgba(255,255,255,0.16)' }} />
-            {stat(bldgs, 'BLDGS', '#F7F4EC')}
+            {stat(bldgs, 'BLDGS', 'var(--hover)')}
             <div style={{ width: 1, background: 'rgba(255,255,255,0.16)' }} />
-            {stat(esms, 'ESMS', '#F7F4EC')}
+            {stat(esms, 'ESMS', 'var(--hover)')}
           </div>
         </div>
       </div>
