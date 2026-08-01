@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Avatar, Chip, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import DateInput from '../components/DateInput'
@@ -7,120 +8,151 @@ import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { fmtDate, daysUntil, initials } from '../lib/format'
 import { roleColor, statusMeta, MANAGERS, CAN_RAISE_TASK } from '../lib/constants'
 
-const TABS = [
-  { key: 'mine', label: 'Mine' },
-  { key: 'delegated', label: 'Delegated' },
-  { key: 'team', label: 'Team' },
-]
+const PAGE_SIZE = 100
+const NOBODY = '00000000-0000-0000-0000-000000000000'
+
+// One place defines a tab: its label, the sentence under the page title, and
+// the server-side filter. Previously the page fetched every task it was allowed
+// to see and filtered in the browser, so the heading and the rows could disagree.
+const SCOPES = {
+  mine: {
+    label: 'Mine',
+    blurb: 'Tasks assigned to you',
+    apply: (q, { me }) => q.eq('assigned_to_id', me),
+  },
+  delegated: {
+    label: 'Delegated',
+    blurb: 'Tasks you raised and assigned to someone else',
+    apply: (q, { me }) => q.eq('created_by_id', me).neq('assigned_to_id', me),
+  },
+  team: {
+    label: 'Team',
+    blurb: 'Everyone who reports to you, directly or indirectly',
+    apply: (q, { ids }) => q.or(`assigned_to_id.in.(${ids}),created_by_id.in.(${ids})`),
+  },
+}
+
 const STATUS_FILTERS = [
   { v: 'active', l: 'Active' },
   { v: 'open', l: 'Open' },
   { v: 'in_progress', l: 'In Progress' },
   { v: 'blocked', l: 'Blocked' },
   { v: 'done', l: 'Done' },
+  { v: 'cancelled', l: 'Cancelled' },
   { v: 'all', l: 'All' },
 ]
-const STATUS_OPTS = [
-  ['open', 'Open'], ['in_progress', 'In Progress'], ['blocked', 'Blocked'], ['done', 'Done'],
-]
+
+// The legal status graph, mirrored from tasks_status_guard() in migration 0102.
+// The trigger is the fence — this only decides which moves are worth offering.
+const EDGES = {
+  open: ['in_progress', 'blocked', 'cancelled'],
+  in_progress: ['blocked', 'done'],
+  blocked: ['in_progress', 'cancelled'],
+  done: [],
+  cancelled: [],
+}
+
+// Who may make each move: done is the assignee's alone, cancel the creator's
+// alone (9G Risk 3 — a manager can no longer close someone else's work).
+function nextStates(t, me, canTouch) {
+  const isAssignee = t.assigned_to_id === me
+  const isCreator = t.created_by_id === me
+  return (EDGES[t.status] || []).filter((s) => (
+    s === 'done' ? isAssignee : s === 'cancelled' ? isCreator : canTouch
+  ))
+}
+
+const dayAge = (d) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 86400000)) : 0)
 
 export default function Tasks() {
   const { user, profile, role } = useAuth()
+  const navigate = useNavigate()
+  const isManager = can(role, MANAGERS)
   const [tab, setTab] = useState('mine')
   const [statusFilter, setStatusFilter] = useState('active')
+  const [page, setPage] = useState(0)
   const [showNew, setShowNew] = useState(false)
 
-  const { rows, loading } = useLiveQuery('tasks',
-    (q) => q.select('*,assignee:profiles!tasks_assigned_to_id_fkey(full_name,role),creator:profiles!tasks_created_by_id_fkey(full_name),building:buildings(code)')
-      .order('due_date', { ascending: true }).limit(200))
+  const { rows: people } = useLiveQuery('profiles', (q) =>
+    q.select('id,full_name,role,manager_id').eq('archived', false).order('full_name'))
 
-  const isManager = can(role, MANAGERS)
-  const userName = profile?.full_name || 'me'
+  // Everyone below me in the reporting chain. The DB walks the same chain in
+  // is_in_subtree(); this copy only shapes the UI (dropdown + Team fetch).
+  const subtree = useMemo(() => {
+    if (!user?.id) return []
+    const byManager = new Map()
+    people.forEach((p) => {
+      const k = p.manager_id || ''
+      if (!byManager.has(k)) byManager.set(k, [])
+      byManager.get(k).push(p)
+    })
+    const out = []
+    const seen = new Set([user.id])
+    const walk = (id) => (byManager.get(id) || []).forEach((p) => {
+      if (seen.has(p.id)) return
+      seen.add(p.id); out.push(p); walk(p.id)
+    })
+    walk(user.id)
+    return out
+  }, [people, user?.id])
 
-  // Tab scoping. Mine = assigned to me. Team = managers see all; others approximate
-  // to "all" (no manager subtree in client). All = everything.
-  const scoped = rows.filter((t) => {
-    if (tab === 'mine') return t.assigned_to_id === user?.id
-    if (tab === 'delegated') return t.created_by_id === user?.id && t.assigned_to_id !== user?.id
-    return true // team shows everything (down-only assignment scope)
-  })
+  const teamIds = useMemo(
+    () => (subtree.length ? [user.id, ...subtree.map((p) => p.id)].join(',') : NOBODY),
+    [subtree, user?.id])
 
-  const filtered = scoped.filter((t) => {
+  const scopeKey = tab === 'team' && !isManager ? 'mine' : tab
+  const scope = SCOPES[scopeKey]
+
+  const { rows, loading } = useLiveQuery('tasks', (q) => scope.apply(
+    q.select('*,assignee:profiles!tasks_assigned_to_id_fkey(full_name,role),creator:profiles!tasks_created_by_id_fkey(full_name)' +
+      ',building:buildings(code)').order('due_date', { ascending: true }).limit(500),
+    { me: user?.id || NOBODY, ids: teamIds },
+  ), [scopeKey, user?.id, teamIds])
+
+  const filtered = rows.filter((t) => {
     if (statusFilter === 'all') return true
     if (statusFilter === 'active') return t.status !== 'done' && t.status !== 'cancelled'
     return t.status === statusFilter
   })
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const pageSafe = Math.min(page, pageCount - 1)
+  const pageRows = filtered.slice(pageSafe * PAGE_SIZE, pageSafe * PAGE_SIZE + PAGE_SIZE)
 
-  // KPIs (always computed against full row set, from "my" perspective)
-  const mine = rows.filter((t) => t.assigned_to_id === user?.id)
-  const kAssigned = mine.filter((t) => t.status !== 'done' && t.status !== 'cancelled').length
-  const kOverdue = mine.filter((t) => {
-    const du = daysUntil(t.due_date)
-    return du != null && du < 0 && t.status !== 'done' && t.status !== 'cancelled'
-  }).length
-  const kTeam = rows.filter((t) => t.status !== 'done' && t.status !== 'cancelled').length
-  const kCompleted = rows.filter((t) => t.status === 'done').length
-
-  const scopeLabel = tab === 'mine' ? 'Tasks assigned to you'
-    : tab === 'delegated' ? 'Tasks you raised and assigned to others'
-      : (isManager ? 'All team tasks across the programme' : 'Team tasks (shared view)')
-
-  // Team Performance (dc teamPerf) — avg age of open, avg cycle of done, top-3 oldest
-  const dayAge = (d) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 86400000)) : 0)
-  const openTasks = rows.filter((t) => t.status !== 'done' && t.status !== 'cancelled')
-  const doneTasks = rows.filter((t) => t.status === 'done')
-  const avgAge = openTasks.length ? Math.round(openTasks.reduce((s, t) => s + dayAge(t.created_at), 0) / openTasks.length) : 0
-  const avgCycle = doneTasks.length ? Math.round(doneTasks.reduce((s, t) => s + Math.max(0, (new Date(t.updated_at) - new Date(t.created_at)) / 86400000), 0) / doneTasks.length) : 0
-  const topOldest = [...openTasks].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(0, 3)
+  const setTabAndReset = (k) => { setTab(k); setPage(0) }
+  const setFilterAndReset = (v) => { setStatusFilter(v); setPage(0) }
 
   const onStatusChange = (t, next) => {
     if (next === t.status) return
     bgUpdate('tasks', t.id, { status: next }, { okMsg: `Marked ${statusMeta(next)[2]}` })
   }
 
+  // "Raise an escalation about this task" — the blocked-task bridge.
+  const escalate = (t) => navigate('/escalations', {
+    state: { fromTask: { id: t.id, title: t.title, project_id: t.project_id, building_id: t.building_id } },
+  })
+
+  const tabs = ['mine', 'delegated', ...(isManager ? ['team'] : [])]
+
   return (
     <div data-screen-label="My Tasks">
-      <PageTitle kicker="MY QUEUE" title={`Tasks for ${userName}`}
+      <PageTitle kicker="MY QUEUE" title={`Tasks for ${profile?.full_name || 'me'}`}
         right={can(role, CAN_RAISE_TASK) && (
           <Btn variant="primary" icon="plus" onClick={() => setShowNew(true)}>New Task</Btn>
         )} />
-      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: -12, marginBottom: 16 }}>{scopeLabel}</div>
-
-      {/* Team Performance widget (dc showPerf 653-678) — managers only */}
-      {isManager && (
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>Team Performance</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>OPEN QUEUE HEALTH</div>
-          </div>
-          <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: '120px 120px 1fr', gap: 18, alignItems: 'start' }}>
-            <Perf label="AVG AGE" value={`${avgAge}d`} />
-            <Perf label="AVG CYCLE" value={`${avgCycle}d`} color="#217A54" />
-            <div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>TOP 3 OLDEST OPEN</div>
-              {topOldest.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>None open.</div> : topOldest.map((t) => (
-                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderTop: '1px solid var(--line)' }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#B45309', flex: 'none' }}>{dayAge(t.created_at)}d</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: -12, marginBottom: 16 }}>{scope.blurb}</div>
 
       {/* Tabs + status filter pills */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 4, border: '1px solid var(--line)', borderRadius: 8, padding: 3, background: '#fff' }}>
-          {TABS.map((t) => {
-            const active = tab === t.key
+          {tabs.map((k) => {
+            const active = scopeKey === k
             return (
-              <button key={t.key} onClick={() => setTab(t.key)} style={{
+              <button key={k} onClick={() => setTabAndReset(k)} style={{
                 padding: '6px 14px', fontSize: 12.5, fontWeight: 600, borderRadius: 7,
                 color: active ? 'var(--accent)' : 'var(--text-3)',
                 background: active ? 'rgba(160,118,43,.10)' : 'transparent',
                 cursor: 'pointer',
-              }}>{t.label}</button>
+              }}>{SCOPES[k].label}</button>
             )
           })}
         </div>
@@ -128,7 +160,7 @@ export default function Tasks() {
           {STATUS_FILTERS.map((s) => {
             const active = statusFilter === s.v
             return (
-              <button key={s.v} onClick={() => setStatusFilter(s.v)} style={{
+              <button key={s.v} onClick={() => setFilterAndReset(s.v)} style={{
                 padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 border: '1px solid ' + (active ? 'var(--accent)' : 'var(--line)'),
                 background: active ? '#F5EEDF' : '#fff', color: active ? 'var(--accent)' : 'var(--text-3)',
@@ -137,6 +169,9 @@ export default function Tasks() {
           })}
         </div>
       </div>
+
+      {/* Team Performance — Team tab only, computed from the team's own rows */}
+      {scopeKey === 'team' && <TeamPerformance rows={rows} />}
 
       {/* Task table */}
       <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
@@ -154,17 +189,26 @@ export default function Tasks() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t) => {
+                {pageRows.map((t) => {
                   const du = daysUntil(t.due_date)
                   const overdue = du != null && du < 0 && t.status !== 'done' && t.status !== 'cancelled'
-                  const isMine = t.assigned_to_id === user?.id
-                  const canEdit = isMine || can(role, MANAGERS)
+                  const canTouch = t.assigned_to_id === user?.id || t.created_by_id === user?.id
+                    || subtree.some((p) => p.id === t.assigned_to_id)
+                  const moves = nextStates(t, user?.id, canTouch)
                   const [sc, sb] = statusMeta(t.status)
                   return (
                     <tr key={t.id} style={{ borderTop: '1px solid var(--line)' }}>
                       <td style={{ padding: '12px 14px', maxWidth: 320 }}>
                         <div style={{ fontWeight: 600 }}>{t.title}</div>
                         {t.description && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{t.description}</div>}
+                        {t.status === 'blocked' && (
+                          <button onClick={() => escalate(t)} style={{
+                            marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
+                            padding: '4px 9px', borderRadius: 7, background: '#F9ECEA', color: '#96271E', border: '1px solid #EBCFC9', cursor: 'pointer',
+                          }}>
+                            <Icon name="escalation" size={12} />Raise an escalation about this
+                          </button>
+                        )}
                       </td>
                       <td style={{ padding: '12px 8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -179,13 +223,14 @@ export default function Tasks() {
                       </td>
                       <td style={{ padding: '12px 8px' }}><Chip status={t.priority} /></td>
                       <td style={{ padding: '12px 8px' }}>
-                        {canEdit ? (
+                        {moves.length ? (
                           <select value={t.status} onChange={(e) => onStatusChange(t, e.target.value)}
                             style={{
                               fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 20,
                               color: sc, background: sb, border: `1px solid ${sc}33`, cursor: 'pointer',
                             }}>
-                            {STATUS_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            <option value={t.status}>{statusMeta(t.status)[2]}</option>
+                            {moves.map((v) => <option key={v} value={v}>{statusMeta(v)[2]}</option>)}
                           </select>
                         ) : <Chip status={t.status} />}
                       </td>
@@ -202,7 +247,71 @@ export default function Tasks() {
         )}
       </div>
 
-      {showNew && <NewTask onClose={() => setShowNew(false)} user={user} />}
+      {filtered.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>
+            {filtered.length} task{filtered.length === 1 ? '' : 's'} · showing {pageSafe * PAGE_SIZE + 1}–{Math.min(filtered.length, (pageSafe + 1) * PAGE_SIZE)}
+          </span>
+          {pageCount > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Btn variant="ghost" disabled={pageSafe === 0} onClick={() => setPage(pageSafe - 1)}>Prev</Btn>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>{pageSafe + 1} / {pageCount}</span>
+              <Btn variant="ghost" disabled={pageSafe >= pageCount - 1} onClick={() => setPage(pageSafe + 1)}>Next</Btn>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showNew && <NewTask onClose={() => setShowNew(false)} user={user} assignable={[
+        ...(profile ? [{ id: user.id, full_name: `${profile.full_name} (me)` }] : []), ...subtree,
+      ]} />}
+    </div>
+  )
+}
+
+// Open-queue health for the actor's own team. Cycle time is the trailing 30 days
+// measured on done_at (added in 0102) — updated_at used to stand in for it and
+// drifted every time a closed task was touched again.
+function TeamPerformance({ rows }) {
+  const openTasks = rows.filter((t) => t.status !== 'done' && t.status !== 'cancelled')
+  const cutoff = Date.now() - 30 * 86400000
+  const recentlyDone = rows.filter((t) => t.status === 'done' && t.done_at && new Date(t.done_at).getTime() >= cutoff)
+  const avgAge = openTasks.length
+    ? Math.round(openTasks.reduce((s, t) => s + dayAge(t.created_at), 0) / openTasks.length) : 0
+  const avgCycle = recentlyDone.length
+    ? Math.round(recentlyDone.reduce((s, t) => s + Math.max(0, (new Date(t.done_at) - new Date(t.created_at)) / 86400000), 0) / recentlyDone.length)
+    : null
+  const topOldest = [...openTasks].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(0, 3)
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>Team Performance</div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>OPEN QUEUE HEALTH</div>
+      </div>
+      <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: '120px 150px 1fr', gap: 18, alignItems: 'start' }}>
+        <Perf label="AVG AGE" value={`${avgAge}d`} />
+        {avgCycle == null
+          ? (
+            <div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)' }}>AVG CYCLE · 30D</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.4 }}>No tasks closed in the last 30 days.</div>
+            </div>
+          )
+          : <Perf label="AVG CYCLE · 30D" value={`${avgCycle}d`} color="#217A54" />}
+        <div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '1px', color: 'var(--text-3)', marginBottom: 6 }}>TOP 3 OLDEST OPEN</div>
+          {topOldest.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>None open.</div> : topOldest.map((t) => (
+            <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderTop: '1px solid var(--line)' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {t.title}
+                <span style={{ color: 'var(--text-3)', fontWeight: 500 }}> · {t.assignee?.full_name || 'Unassigned'}</span>
+              </span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: '#B45309', flex: 'none' }}>{dayAge(t.created_at)}d</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -216,9 +325,8 @@ function Perf({ label, value, color }) {
   )
 }
 
-function NewTask({ onClose, user }) {
+function NewTask({ onClose, user, assignable }) {
   const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id').order('code'))
-  const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name,role').eq('archived', false).order('full_name'))
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [assignee, setAssignee] = useState('')
@@ -227,15 +335,19 @@ function NewTask({ onClose, user }) {
   const [due, setDue] = useState('')
   const [busy, setBusy] = useState(false)
 
+  // An unassigned task was never insertable — tasks_ins requires the assignee to
+  // be you or someone below you — so the old "Unassigned" option always failed.
+  const valid = title.trim().length > 0 && !!assignee
+
   const save = async () => {
-    if (!title.trim()) return
+    if (!valid) return
     setBusy(true)
     const b = buildings.find((x) => x.id === bid)
     const { error } = await bgInsert('tasks', {
       title: title.trim(),
       description: desc || null,
       created_by_id: user.id,
-      assigned_to_id: assignee || null,
+      assigned_to_id: assignee,
       building_id: bid || null,
       project_id: b?.project_id || null,
       priority,
@@ -250,7 +362,7 @@ function NewTask({ onClose, user }) {
     <Modal open title="Raise a task" onClose={onClose}
       footer={<>
         <Btn onClick={onClose}>Cancel</Btn>
-        <Btn variant="primary" onClick={save} disabled={busy || !title.trim()}>{busy ? 'Saving…' : 'Raise task'}</Btn>
+        <Btn variant="primary" onClick={save} disabled={busy || !valid}>{busy ? 'Saving…' : 'Raise task'}</Btn>
       </>}>
       <Field label="Title">
         <input lang="en" style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" />
@@ -260,10 +372,10 @@ function NewTask({ onClose, user }) {
       </Field>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <Field label="Assignee">
+          <Field label="Assignee (you or someone who reports to you)">
             <select style={inputStyle} value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-              <option value="">Unassigned</option>
-              {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              <option value="">Choose…</option>
+              {assignable.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
             </select>
           </Field>
         </div>
