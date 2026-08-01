@@ -17,8 +17,8 @@
    loads. Arabic is not in this subset and falls through to the system Arabic
    face, exactly as before. The PDF generators embed their own fonts (Amiri +
    Helvetica) and are untouched by any of this. */
-@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('./fonts/inter-400.woff2') format('woff2')}
-@font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url('./fonts/inter-600.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/inter-400.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/inter-600.woff2') format('woff2')}
 
 :root{
   /* ---- surfaces: SnowUI light gray page, white cards, no hard borders ---- */
@@ -191,10 +191,27 @@ h1,h2,h3,p{margin:0}
   .ies-murshid-dock,.ies-murshid-dock.collapsed{left:16px;bottom:16px}
 }
 
+/* 9J(10b) — a grid item's `min-width` defaults to `auto`, which on a grid item
+   resolves to its MIN-CONTENT width, not to zero. So a card holding a table
+   with `min-width:520px` reports a 552px minimum, the `1fr` track grows to
+   552px to satisfy it, the card is 552px wide inside a 390px viewport, and the
+   BODY scrolls sideways.
+   The critical part: `.ies-table-wrap` below is never narrower than its own
+   table in that state, so its `overflow-x:auto` has nothing to scroll and
+   silently does nothing. The scroll container was correct all along; it was
+   never given a constraint to scroll against. Measured on the Dashboard at
+   390x844: documentElement.scrollWidth 566 against innerWidth 390, with
+   .ies-table-wrap laid out at 520px instead of 358px.
+   `min-width:0` lets the item shrink to its track; the wrap then becomes
+   narrower than its table and the scroll engages. This affects only cards
+   whose content genuinely cannot fit — every other grid item is already wider
+   than its min-content and is unmoved. */
+.ies-kpis>*,.ies-cards>*,.ies-2col>*,.ies-3col>*,.ies-bdrail>*{min-width:0}
+
 /* Wide tables scroll INSIDE their card at every viewport width. The scrollbar
    is styled to stay VISIBLE — macOS overlay scrollbars are invisible until
    touched, which made a working scroll container read as a clipped table. */
-.ies-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;scrollbar-width:thin;scrollbar-color:rgba(28,28,28,.2) transparent}
+.ies-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;min-width:0;scrollbar-width:thin;scrollbar-color:rgba(28,28,28,.2) transparent}
 .ies-table-wrap::-webkit-scrollbar{height:8px}
 .ies-table-wrap::-webkit-scrollbar-track{background:transparent}
 .ies-table-wrap::-webkit-scrollbar-thumb{background:rgba(28,28,28,.2);border-radius:4px}
