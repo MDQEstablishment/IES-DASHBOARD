@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import Icon from '../components/Icon'
-import { Avatar, PageTitle, Loading, Empty } from '../components/ui'
+import { Avatar, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import { useAuth } from '../rbac'
-import { useLiveQuery, downloadBlob } from '../lib/db'
-import { ROLE_ORDER, ROSTER, roleTitle, roleColor, FEATURES } from '../lib/constants'
+import { useLiveQuery, downloadBlob, bgUpdate } from '../lib/db'
+import { ROLE_ORDER, ROSTER, roleTitle, roleColor, FEATURES, canManageRole } from '../lib/constants'
 import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
 import { fmtDateTime, num, localToday } from '../lib/format'
 import { toast } from '../lib/toast'
@@ -43,6 +43,8 @@ export default function Settings() {
   const { profile, role, user } = useAuth()
   const [cat, setCat] = useState('users')
   const [auditAction, setAuditAction] = useState('all')
+  const [editing, setEditing] = useState(null)
+  const canAdminUsers = ['pmo', 'admin'].includes(role)
 
   // Plain select — the self-referential manager embed returns empty under RLS, so
   // resolve the manager's name client-side from the same roster.
@@ -124,7 +126,9 @@ export default function Settings() {
                 <div style={{ fontWeight: 700, fontSize: 14 }}>Users</div>
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
-                Org-wide directory. Role edits, password resets and archiving are managed server-side and gated by RLS — peers and seniors are protected.
+                Org-wide directory. {canAdminUsers
+                  ? 'You can change the role and reporting line of anyone ranked below you, and archive them. Every rule below is enforced by the database, not just hidden here.'
+                  : 'Read-only — role and reporting-line changes are made by the PMO or an administrator.'}
               </div>
               {peopleLoading ? <Loading /> : people.length === 0 ? <Empty icon="settings">No profiles visible.</Empty> : (
                 <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
@@ -135,6 +139,7 @@ export default function Settings() {
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>REPORTS TO</th>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Projects this user is assigned to as Project Manager (PM) or Project Engineer (Eng)">ASSIGNED TO</th>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
+                    {canAdminUsers && <th style={{ padding: '9px 8px', fontWeight: 600 }} />}
                   </tr></thead>
                   <tbody>
                     {people.map((u) => (
@@ -160,6 +165,14 @@ export default function Settings() {
                             ? <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#A39D8E', background: '#F0EDE4' }}>archived</span>
                             : <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6, color: '#1D6A49', background: '#E9F3EE' }}>active</span>}
                         </td>
+                        {canAdminUsers && (
+                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                            {/* Mirrors profiles_guard(): you cannot edit yourself or anyone at or above your rank. */}
+                            {u.id !== profile?.id && canManageRole(role, u.role) && (
+                              <button onClick={() => setEditing(u)} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--accent)', cursor: 'pointer' }}>Edit</button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -279,7 +292,122 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {editing && (
+        <UserEditor u={editing} myRole={role} people={people} nameById={nameById}
+          onClose={() => setEditing(null)} />
+      )}
     </div>
+  )
+}
+
+// 9G(4) — the user administration editor. Every constraint here has a matching
+// exception in profiles_guard(); the UI only decides what is worth offering, and
+// the database refuses anything that slips through.
+function UserEditor({ u, myRole, people, nameById, onClose }) {
+  const [role, setRole] = useState(u.role)
+  const [managerId, setManagerId] = useState(u.manager_id || '')
+  const [busy, setBusy] = useState(false)
+  const [confirmArchive, setConfirmArchive] = useState(false)
+
+  // Only roles below mine. admin can grant anything.
+  const grantable = ROLE_ORDER.filter((r) => canManageRole(myRole, r))
+
+  // A manager cannot be this person, anyone reporting (directly or indirectly)
+  // to them, or an archived account — the same three cases the trigger rejects.
+  const descendants = (() => {
+    const kids = new Map()
+    people.forEach((p) => {
+      const k = p.manager_id || ''
+      if (!kids.has(k)) kids.set(k, [])
+      kids.get(k).push(p.id)
+    })
+    const out = new Set()
+    const walk = (id) => (kids.get(id) || []).forEach((c) => { if (!out.has(c)) { out.add(c); walk(c) } })
+    walk(u.id)
+    return out
+  })()
+  const managerOptions = people.filter((p) => p.id !== u.id && !p.archived && !descendants.has(p.id))
+
+  const dirty = role !== u.role || (managerId || null) !== (u.manager_id || null)
+
+  const save = async () => {
+    setBusy(true)
+    const { error } = await bgUpdate('profiles', u.id,
+      { role, manager_id: managerId || null }, { okMsg: `${u.full_name} updated` })
+    setBusy(false)
+    if (!error) onClose()
+  }
+
+  const archive = async () => {
+    setBusy(true)
+    const { error } = await bgUpdate('profiles', u.id, { archived: true },
+      { okMsg: `${u.full_name} archived — their open work was handed over` })
+    setBusy(false)
+    if (!error) onClose()
+  }
+
+  return (
+    <Modal open title={`Edit ${u.full_name}`} onClose={onClose}
+      footer={<>
+        <Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={save} disabled={busy || !dirty}>{busy ? 'Saving…' : 'Save changes'}</Btn>
+      </>}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <Avatar name={u.full_name} color={roleColor(u.role)} size={34} />
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{u.full_name}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>{u.email}</div>
+        </div>
+      </div>
+
+      <Field label="Role">
+        <select style={inputStyle} value={role} onChange={(e) => setRole(e.target.value)}>
+          {!grantable.includes(u.role) && <option value={u.role}>{roleTitle(u.role)} (current)</option>}
+          {grantable.map((r) => <option key={r} value={r}>{roleTitle(r)}</option>)}
+        </select>
+      </Field>
+
+      <Field label="Reports to">
+        <select style={inputStyle} value={managerId} onChange={(e) => setManagerId(e.target.value)}>
+          <option value="">Nobody — top of the chain</option>
+          {managerOptions.map((p) => (
+            <option key={p.id} value={p.id}>{p.full_name} · {roleTitle(p.role)}</option>
+          ))}
+        </select>
+      </Field>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: -6, marginBottom: 14 }}>
+        {descendants.size > 0
+          ? `${descendants.size} ${descendants.size === 1 ? 'person reports' : 'people report'} to ${u.full_name}, so they cannot be listed above — that would create a loop.`
+          : 'Nobody reports to this person yet.'}
+        {u.manager_id ? ` Currently: ${nameById[u.manager_id] || '—'}.` : ''}
+      </div>
+
+      {!u.archived && (
+        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14 }}>
+          {!confirmArchive ? (
+            <button onClick={() => setConfirmArchive(true)} style={{ fontSize: 12, fontWeight: 700, color: '#B3362B', cursor: 'pointer' }}>
+              Archive this person…
+            </button>
+          ) : (
+            <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 8, padding: 12 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#96271E', marginBottom: 6 }}>Archive {u.full_name}?</div>
+              <div style={{ fontSize: 12, color: '#7A2A22', lineHeight: 1.5, marginBottom: 10 }}>
+                They lose access immediately, and the database hands their work over in the same
+                transaction: anyone reporting to them moves up to {nameById[u.manager_id] || 'nobody'},
+                their open tasks are reassigned there, and any escalation still waiting on them is
+                re-routed there so it can still be answered. Nothing is deleted. This cannot be
+                undone from this screen.
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn onClick={() => setConfirmArchive(false)}>Keep active</Btn>
+                <Btn variant="primary" onClick={archive} disabled={busy}>{busy ? 'Archiving…' : 'Archive and hand over'}</Btn>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
   )
 }
 

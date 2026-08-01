@@ -47,6 +47,16 @@ export const roleTitle = (r) => ROLE_FULL[r] || r
 // switch-role menu order (design uses Object.keys(people) order)
 export const ROLE_ORDER = ['ceo', 'pmo', 'procm', 'proco', 'progm', 'projm', 'proje', 'plane', 'admin']
 
+// 9G(4) — authority ranking, mirrored from role_rank() in migration 0105.
+// Lower is more senior. admin sits OUTSIDE the operational chain at 0: it is the
+// break-glass account, not a super-CEO. The DB is the fence; this decides which
+// options the user administration editor is allowed to offer.
+export const ROLE_RANK = {
+  admin: 0, ceo: 1, pmo: 2, progm: 3, procm: 3, projm: 4, proco: 5, proje: 5, plane: 5,
+}
+export const canManageRole = (mine, target) =>
+  mine === 'admin' || ((ROLE_RANK[target] ?? 99) > (ROLE_RANK[mine] ?? 99))
+
 // login demo-role cards (design has 8 — admin excluded). [key, short, desc]
 export const ROLE_CARDS = [
   ['ceo', 'CEO', 'Portfolio-wide read access, no settings'],
