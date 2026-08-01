@@ -121,9 +121,24 @@ sizing at all: the pass rewrites colour, radius, shadow, border and font only.
 The measured proof is above — the full multiset of tap-target dimensions is
 unchanged, not merely "no smaller".
 
+### 9J(4) — Materials group
+`ManageEsms` · `EquipmentCatalogs` · `MaterialDeliveries` · `AiAssistPanel` ·
+`AiUsageMeter`
+
+| item | state |
+| --- | --- |
+| 5 files restyled | ☑ |
+| build clean · census empty · manifest 18/18 · 179 assertions | ☑ |
+| diff audit — 54/54, zero non-styling lines | ☑ |
+| **dense-table structure preserved** — every `ies-table-wrap` scroll container and every sticky header still present, same counts | ☑ |
+| screenshots + overflow at 1366×768 (the 593-row catalog) | ⏳ pending credential |
+
+`EquipmentCatalogs` carries the 593-row catalogue with 100-row pagination. The
+restyle changed only its chrome; the scroll container and sticky header that
+keep it usable are untouched, verified by count rather than by eye.
+
 ## Remaining commits
 
-☐ 9J(4) Materials ·
 ☐ 9J(5) Docs/COCs · ☐ 9J(6) Tasks/Escalations · ☐ 9J(7) Reports ·
 ☐ 9J(8) Settings · ☐ 9J(9) Login + close-out (dead-token purge, zero-hex
 assertion, and the full screenshot set once the credential lands).

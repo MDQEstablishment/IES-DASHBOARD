@@ -16,7 +16,7 @@ const norm = (s) => String(s ?? '').toLowerCase()
   .replace(/[^a-z0-9]+/g, ' ').trim()
 
 const conf = (c) => (c == null ? '—' : `${num(Math.round(c * 100))}%`)
-const confColor = (c) => (c >= 0.85 ? 'var(--ok)' : c >= 0.6 ? '#B45309' : 'var(--bad)')
+const confColor = (c) => (c >= 0.85 ? 'var(--ok)' : c >= 0.6 ? 'var(--warn)' : 'var(--bad)')
 
 export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey }) {
   const [busy, setBusy] = useState(null)          // 'match' | 'replace' | 'adjust'
@@ -126,10 +126,10 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
   const selectedCount = picked.size
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>AI assist</div>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, color: '#6D5A8E', background: '#F3E8FF' }}>PROPOSES · YOU DECIDE</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-s)', color: 'var(--esm2)', background: 'var(--esm2-bg)' }}>PROPOSES · YOU DECIDE</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn variant={unmatched > 0 ? 'primary' : undefined} disabled={!!busy || unmatched === 0} onClick={() => run('match')}>
             {busy === 'match' ? 'Identifying…' : `Identify ${num(unmatched)} unmatched old unit${unmatched === 1 ? '' : 's'}`}
@@ -144,13 +144,13 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
         The assistant only makes judgement calls (which registry model, which approved replacement) — every number is computed by the platform, not the model. Strings resolved once are remembered forever and never re-sent, so re-running costs nothing when there is no new data.
       </div>
       {unmatched > 0 && (
-        <div style={{ fontSize: 11.5, color: '#854D0E', background: '#FAF3E3', border: '1px solid #EBDCB2', borderRadius: 8, padding: '8px 11px', marginBottom: 10 }}>
+        <div style={{ fontSize: 11.5, color: 'var(--warn-deep)', background: 'var(--warn-bg)', border: '1px solid #EBDCB2', borderRadius: 'var(--radius-s)', padding: '8px 11px', marginBottom: 10 }}>
           {num(unmatched)} AC row{unmatched === 1 ? '' : 's'} {unmatched === 1 ? 'is' : 'are'} not matched to the old-model registry, so {unmatched === 1 ? 'its' : 'their'} baseline uses the assumed old-efficiency factor instead of the real nameplate. Identifying them is the single biggest correction available to the savings numbers.
         </div>
       )}
 
       {unavailable && (
-        <div style={{ background: '#FAF3E3', border: '1px solid #EBDCB2', color: '#854D0E', borderRadius: 8, padding: '9px 12px', fontSize: 12.5, marginBottom: 10 }}>
+        <div style={{ background: 'var(--warn-bg)', border: '1px solid #EBDCB2', color: 'var(--warn-deep)', borderRadius: 'var(--radius-s)', padding: '9px 12px', fontSize: 12.5, marginBottom: 10 }}>
           {unavailable} Everything else on this page still works — you can map replacements by hand in the survey.
         </div>
       )}
@@ -177,7 +177,7 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
               </tr></thead>
               <tbody>
                 {(result.cached || []).map((c) => (
-                  <tr key={'c' + c.entry_id} style={{ borderTop: '1px solid var(--line)', background: '#FCFBF7' }}>
+                  <tr key={'c' + c.entry_id} style={{ borderTop: '1px solid var(--line)', background: 'var(--raised)' }}>
                     <td style={{ padding: '6px' }}><input type="checkbox" checked={picked.has('c:' + c.entry_id)} onChange={() => toggle('c:' + c.entry_id)} /></td>
                     <td style={{ padding: '6px' }}>{c.raw || '—'}</td>
                     <td style={{ padding: '6px', color: 'var(--ok)', fontWeight: 600 }}>{c.source === 'exact' ? 'Exact model match' : 'From memory'}</td>
@@ -222,18 +222,18 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
           )}
 
           {unresolved.length > 0 && (
-            <div style={{ marginTop: 12, border: '1px solid #EBDCB2', background: '#FAF3E3', borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 12.5, color: '#854D0E', marginBottom: 5 }}>
+            <div style={{ marginTop: 12, border: '1px solid #EBDCB2', background: 'var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '10px 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 12.5, color: 'var(--warn-deep)', marginBottom: 5 }}>
                 <Icon name="camera" size={14} /> Needs a nameplate photo — {num(unresolved.length)} model{unresolved.length === 1 ? '' : 's'} could not be identified
               </div>
-              <div style={{ fontSize: 11.5, color: '#854D0E', marginBottom: 6 }}>
+              <div style={{ fontSize: 11.5, color: 'var(--warn-deep)', marginBottom: 6 }}>
                 The assistant returned no confident match rather than guessing. Photograph the nameplate and correct the make/model on those survey rows.
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {unresolved.slice(0, 12).map((p, i) => (
-                  <span key={i} title={p.reason} style={{ fontSize: 11, background: '#fff', border: '1px solid #EBDCB2', borderRadius: 6, padding: '2px 8px' }}>{p.raw || '—'}</span>
+                  <span key={i} title={p.reason} style={{ fontSize: 11, background: 'var(--surface-1)', border: '1px solid #EBDCB2', borderRadius: 'var(--radius-s)', padding: '2px 8px' }}>{p.raw || '—'}</span>
                 ))}
-                {unresolved.length > 12 && <span style={{ fontSize: 11, color: '#854D0E' }}>+{num(unresolved.length - 12)} more</span>}
+                {unresolved.length > 12 && <span style={{ fontSize: 11, color: 'var(--warn-deep)' }}>+{num(unresolved.length - 12)} more</span>}
               </div>
               {onGoSurvey && <button onClick={() => onGoSurvey('table')} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent)', background: 'none', padding: 0, marginTop: 6 }}>Open the survey rows →</button>}
             </div>
@@ -250,7 +250,7 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
           </div>
           <textarea lang="en" value={instruction} onChange={(e) => setInstruction(e.target.value)}
             placeholder="e.g. prefer Zamil over Basic where possible · re-suggest anything under 20% savings"
-            style={{ width: '100%', boxSizing: 'border-box', minHeight: 70, border: '1px solid var(--line)', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, resize: 'vertical' }} />
+            style={{ width: '100%', boxSizing: 'border-box', minHeight: 70, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '8px 10px', fontSize: 12.5, resize: 'vertical' }} />
         </Modal>
       )}
     </div>

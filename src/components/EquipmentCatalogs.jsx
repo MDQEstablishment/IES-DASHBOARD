@@ -266,8 +266,8 @@ function useBigTable(table) {
 // Form control that never exceeds its grid cell (border-box + full width).
 const fieldControl = { ...inputStyle, boxSizing: 'border-box', width: '100%', maxWidth: '100%' }
 
-const chipStyle = (on) => ({ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
-  color: on ? '#A0762B' : '#A39D8E', background: on ? '#F5EEDF' : '#F0EDE4' })
+const chipStyle = (on) => ({ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-s)',
+  color: on ? 'var(--accent)' : 'var(--text-faint)', background: on ? 'var(--accent-tint)' : 'var(--line-soft)' })
 
 // Latin/Western digits are mandatory in these catalogs (9A-fix). Number inputs
 // and toLocaleString() otherwise render Arabic-Indic numerals on ar-locale OS —
@@ -296,7 +296,7 @@ export default function EquipmentCatalogs({ role }) {
   return (
     // overflow:hidden — the card is the hard clip boundary; the table's own
     // .ies-table-wrap scrolls inside it (visible scrollbar via index.css).
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, overflow: 'hidden' }}>
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Approved Equipment</div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         TARSHID-approved equipment from the technical data sheet. These catalogs feed the saving sheet — retiring an item hides it from new selections without breaking past references.{!canWrite && ' Editing is limited to PMO and admins.'}
@@ -308,11 +308,11 @@ export default function EquipmentCatalogs({ role }) {
           const on = tab === key
           return (
             <button key={key} onClick={() => setTab(key)} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 8, fontSize: 12.5, fontWeight: 700,
-              border: '1px solid ' + (on ? 'var(--accent)' : 'var(--line)'), background: on ? '#F5EEDF' : '#fff', color: on ? 'var(--accent)' : 'var(--text-3)',
+              display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 13px', borderRadius: 'var(--radius-s)', fontSize: 12.5, fontWeight: 700,
+              border: '1px solid ' + (on ? 'var(--accent)' : 'var(--line)'), background: on ? 'var(--accent-tint)' : 'var(--surface-1)', color: on ? 'var(--accent)' : 'var(--text-3)',
             }}>
               {c.label}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: on ? '#EFE3C8' : 'var(--bg)', color: on ? '#A0762B' : 'var(--text-3)' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, background: on ? '#EFE3C8' : 'var(--bg)', color: on ? 'var(--accent)' : 'var(--text-3)' }}>
                 {data[key].loading ? '·' : activeCount(key)}
               </span>
             </button>
@@ -423,9 +423,9 @@ function CatalogTab({ cfg, state, canWrite }) {
                   {canWrite && (
                     <td style={{ padding: '8px 7px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button className="ies-hover" onClick={() => setEditing(r)} title="Edit"
-                        style={{ padding: 5, borderRadius: 6, color: 'var(--text-3)' }}><Icon name="edit" size={14} /></button>
+                        style={{ padding: 5, borderRadius: 'var(--radius-s)', color: 'var(--text-3)' }}><Icon name="edit" size={14} /></button>
                       <button className="ies-hover" onClick={() => setRetiring(r)} title={rowActive(cfg, r) ? 'Retire' : 'Restore'}
-                        style={{ padding: '4px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, color: rowActive(cfg, r) ? 'var(--bad)' : 'var(--good, #1D6A49)' }}>
+                        style={{ padding: '4px 8px', borderRadius: 'var(--radius-s)', fontSize: 11, fontWeight: 600, color: rowActive(cfg, r) ? 'var(--bad)' : 'var(--good, #1D6A49)' }}>
                         {rowActive(cfg, r) ? 'Retire' : 'Restore'}</button>
                     </td>
                   )}

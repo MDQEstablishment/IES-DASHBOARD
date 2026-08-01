@@ -53,7 +53,7 @@ export default function AiUsageMeter({ role }) {
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, padding: 16, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, overflow: 'hidden' }}>
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>AI saving-sheet assistant</div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         Usage this calendar month against the hard cap. When the cap is reached the assistant stops calling the API and says so — every other feature keeps working. Decisions resolved from memory cost nothing and are shown separately.
@@ -71,7 +71,7 @@ export default function AiUsageMeter({ role }) {
           {usd(spent)} <span style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>/ {usd(cap)}</span>
         </div>
       </div>
-      <div style={{ height: 7, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden', marginTop: 10 }}>
+      <div style={{ height: 7, borderRadius: 4, background: 'var(--track)', overflow: 'hidden', marginTop: 10 }}>
         <div style={{ height: '100%', width: pct + '%', background: spent >= cap ? 'var(--bad)' : 'var(--accent)' }} />
       </div>
       {spent >= cap && <div style={{ fontSize: 11.5, color: 'var(--bad)', marginTop: 6 }}>Monthly cap reached — AI calls are paused until next month or until the cap is raised.</div>}
@@ -80,9 +80,9 @@ export default function AiUsageMeter({ role }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 14 }}>
         {settings.map((s) => (
           <div key={s.key} style={{ minWidth: 0 }}>
-            <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 4 }}>{s.key.replace(/_/g, ' ').toUpperCase()}</span>
+            <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>{s.key.replace(/_/g, ' ').toUpperCase()}</span>
             <input lang="en" dir="ltr" defaultValue={s.value} disabled={!canWrite} onBlur={(e) => saveSetting(s.key, e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)' }} />
+              style={{ width: '100%', boxSizing: 'border-box', padding: '6px 9px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', fontSize: 12, fontFamily: 'var(--mono)' }} />
             <span style={{ display: 'block', fontSize: 10.5, color: 'var(--text-3)', marginTop: 3 }}>{s.description}</span>
           </div>
         ))}
@@ -107,7 +107,7 @@ export default function AiUsageMeter({ role }) {
               <tr key={r.id} style={{ borderTop: '1px solid var(--line)', opacity: r.success ? 1 : 0.6 }}>
                 <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDateTime(r.created_at)}</td>
                 <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10.5 }}>{r.project?.code || '—'}</td>
-                <td style={{ padding: '6px' }}>{r.job}{!r.success && <span title={r.error || ''} style={{ marginLeft: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 5, color: '#96271E', background: '#F9ECEA' }}>FAILED</span>}</td>
+                <td style={{ padding: '6px' }}>{r.job}{!r.success && <span title={r.error || ''} style={{ marginLeft: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-s)', color: 'var(--bad-deep)', background: 'var(--bad-bg)' }}>FAILED</span>}</td>
                 <td style={{ padding: '6px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.model || ''}>{(r.model || '—').replace(/^claude-/, '')}</td>
                 <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)' }}>{num(r.rows_requested || 0)}</td>
                 <td lang="en" dir="ltr" style={{ padding: '6px', textAlign: 'right', fontFamily: 'var(--mono)', color: 'var(--ok)' }}>{num(r.rows_from_cache || 0)}</td>

@@ -12,9 +12,9 @@ import MainWarehouse from '../components/MainWarehouse'
 // stored columns). Movements ledger kept below as the Request/Receipt feature.
 function statusOf(inStock, threshold) {
   const t = threshold || 0
-  if (inStock < t) return { label: 'Reorder', color: '#B3362B', bg: '#F9ECEA' }
-  if (inStock < t * 1.5) return { label: 'Low', color: '#B45309', bg: '#FAF3E3' }
-  return { label: 'Healthy', color: '#217A54', bg: '#E9F3EE' }
+  if (inStock < t) return { label: 'Reorder', color: 'var(--bad)', bg: 'var(--bad-bg)' }
+  if (inStock < t * 1.5) return { label: 'Low', color: 'var(--warn)', bg: 'var(--warn-bg)' }
+  return { label: 'Healthy', color: 'var(--ok)', bg: 'var(--ok-bg)' }
 }
 
 export default function ManageEsms() {
@@ -83,7 +83,7 @@ export default function ManageEsms() {
         <PageTitle kicker="STOCK · ALL PROJECTS" title="Materials" />
         {canMove && (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 13 }}><Icon name="plus" size={15} />Add Material</button>
+            <button onClick={() => setAddOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 'var(--radius-s)', background: 'var(--accent)', color: 'var(--surface-1)', fontWeight: 700, fontSize: 13 }}><Icon name="plus" size={15} />Add Material</button>
           </div>
         )}
       </div>
@@ -91,22 +91,22 @@ export default function ManageEsms() {
       <MainWarehouse />
 
       {lowCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9ECEA', border: '1px solid #EBCFC9', color: '#96271E', borderRadius: 8, padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bad-bg)', border: '1px solid #EBCFC9', color: 'var(--bad-deep)', borderRadius: 'var(--radius-s)', padding: '9px 13px', fontSize: 12.5, marginBottom: 16 }}>
           <Icon name="alert" size={15} /><span><strong>{lowCount}</strong> material(s) below threshold — reorder action required. Surfaced on the PMO dashboard.</span>
         </div>
       )}
 
       {loading ? <Loading /> : groups.length === 0 ? <Empty icon="box">No ESMs.</Empty>
         : decorated.length === 0 ? (
-          <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: '40px 16px', textAlign: 'center' }}>
+          <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: '40px 16px', textAlign: 'center' }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>No materials yet</div>
             <div style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '4px 0 16px' }}>Add your first material to build the catalog. Variants are grouped by ESM and category.</div>
-            {canMove && <button onClick={() => setAddOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 18px', borderRadius: 8, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}><Icon name="plus" size={16} />Add first material</button>}
+            {canMove && <button onClick={() => setAddOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '11px 18px', borderRadius: 'var(--radius-s)', background: 'var(--accent)', color: 'var(--surface-1)', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer' }}><Icon name="plus" size={16} />Add first material</button>}
           </div>
         ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {groups.map((g) => (
-            <div key={g.no} style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+            <div key={g.no} style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{g.no}</span>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>{g.name}</span>
@@ -130,7 +130,7 @@ export default function ManageEsms() {
                       <tr><td colSpan={8} style={{ padding: '14px 8px', color: 'var(--text-3)' }}>No materials in this ESM.</td></tr>
                     ) : g.cats.map((c) => (
                       <Fragment key={c.cat.id}>
-                        <tr><td colSpan={8} style={{ padding: '7px 8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', background: '#FAF8F2', borderTop: '1px solid var(--line)' }}>{c.cat.name_en}</td></tr>
+                        <tr><td colSpan={8} style={{ padding: '7px 8px', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', background: 'var(--hover)', borderTop: '1px solid var(--line)' }}>{c.cat.name_en}</td></tr>
                         {c.nameGroups.map((ng) => <CatalogNameRow key={c.cat.id + ng.name} group={ng} canMove={canMove} onThresh={onThresh} />)}
                       </Fragment>
                     ))}
@@ -158,7 +158,7 @@ export default function ManageEsms() {
                   <tr key={m.id} className="ies-trow">
                     <td style={{ fontFamily: 'var(--mono)', whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtShort(m.occurred_at)}</td>
                     <td style={{ fontFamily: 'var(--mono)' }}>{m.material?.code || '—'}</td>
-                    <td><Chip label={m.kind === 'receipt' ? 'Receipt' : 'Request'} color={m.kind === 'receipt' ? '#217A54' : '#A0762B'} bg={m.kind === 'receipt' ? '#E9F3EE' : '#F5EEDF'} /></td>
+                    <td><Chip label={m.kind === 'receipt' ? 'Receipt' : 'Request'} color={m.kind === 'receipt' ? 'var(--ok)' : 'var(--accent)'} bg={m.kind === 'receipt' ? 'var(--ok-bg)' : 'var(--accent-tint)'} /></td>
                     <td style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{num(m.qty)}</td>
                     <td style={{ whiteSpace: 'nowrap' }}><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Avatar name={m.by?.full_name || 'system'} size={22} /><span>{m.by?.full_name || 'system'}</span></div></td>
                     <td style={{ color: 'var(--text-3)', fontSize: 11.5, maxWidth: 260 }}>{(m.note || '').replace(/^\[seed\]\s*/, '') || '—'}</td>
@@ -191,7 +191,7 @@ function CatalogNameRow({ group, canMove, onThresh }) {
         <div style={{ fontWeight: 600 }}>{name}</div>
         {multi ? (
           <select lang="en" value={idx} onChange={(e) => setIdx(Number(e.target.value))} title="Brand"
-            style={{ marginTop: 4, fontSize: 11, padding: '3px 6px', border: '1px solid var(--line)', borderRadius: 6, color: 'var(--text-3)', maxWidth: 240, background: '#fff' }}>
+            style={{ marginTop: 4, fontSize: 11, padding: '3px 6px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', color: 'var(--text-3)', maxWidth: 240, background: 'var(--surface-1)' }}>
             {variants.map((v, i) => <option key={v.id} value={i}>{[v.brand || v.brand_spec || '—', v.unit].filter(Boolean).join(' · ')}</option>)}
           </select>
         ) : (
@@ -200,16 +200,16 @@ function CatalogNameRow({ group, canMove, onThresh }) {
       </td>
       <td style={tdR}>{num(m.requested)}</td>
       <td style={tdR}>{num(m.received)}</td>
-      <td style={{ ...tdR, fontWeight: 700, color: m.shortage > 0 ? '#B3362B' : 'var(--text-3)' }}>{num(m.shortage)}</td>
+      <td style={{ ...tdR, fontWeight: 700, color: m.shortage > 0 ? 'var(--bad)' : 'var(--text-3)' }}>{num(m.shortage)}</td>
       <td style={{ ...tdR, color: 'var(--text-3)' }}>{num(m.consumed)}</td>
       <td style={{ ...tdR, fontWeight: 700 }}>{num(m.inStock)}</td>
       <td style={{ padding: '10px 8px', textAlign: 'center' }}>
         {canMove
-          ? <input lang="en" defaultValue={m.threshold} onBlur={(e) => onThresh(m, e.target.value)} style={{ width: 60, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 6, fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'center' }} />
+          ? <input lang="en" defaultValue={m.threshold} onBlur={(e) => onThresh(m, e.target.value)} style={{ width: 60, padding: '5px 7px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', fontSize: 12, fontFamily: 'var(--mono)', textAlign: 'center' }} />
           : <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-3)' }}>{num(m.threshold)}</span>}
       </td>
       <td style={{ padding: '10px 8px' }}>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, color: m.st.color, background: m.st.bg }}>{m.st.label}</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--radius-s)', color: m.st.color, background: m.st.bg }}>{m.st.label}</span>
       </td>
     </tr>
   )

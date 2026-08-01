@@ -10,9 +10,9 @@ import InspectionFormModal from './InspectionFormModal'
 import FileDropZone from './FileDropZone'
 
 const DSTATUS = {
-  pending: ['Pending', '#8A8577', '#F0EDE4'], in_transit: ['In Transit', '#A0762B', '#F5EEDF'],
-  pending_approval: ['Pending approval', '#B45309', '#FAF3E3'],
-  delivered: ['Delivered', '#217A54', '#E9F3EE'], rejected: ['Rejected', '#B3362B', '#F9ECEA'],
+  pending: ['Pending', 'var(--text-3)', 'var(--line-soft)'], in_transit: ['In Transit', 'var(--accent)', 'var(--accent-tint)'],
+  pending_approval: ['Pending approval', 'var(--warn)', 'var(--warn-bg)'],
+  delivered: ['Delivered', 'var(--ok)', 'var(--ok-bg)'], rejected: ['Rejected', 'var(--bad)', 'var(--bad-bg)'],
 }
 const DDESC = {
   pending: 'Supplier confirmed the order but it has not shipped yet.',
@@ -23,7 +23,7 @@ const DDESC = {
 }
 // Engineers (proje) can add + approve alongside the other write roles (migration 0061).
 const WRITE_ROLES = ['admin', 'pmo', 'projm', 'progm', 'procm', 'proco', 'proje']
-const inp = { padding: '7px 9px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, background: '#fff' }
+const inp = { padding: '7px 9px', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', fontSize: 12.5, background: 'var(--surface-1)' }
 const today = localToday
 
 export default function MaterialDeliveries({ projectId, buildings = [] }) {
@@ -46,7 +46,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>Materials Delivery</div>
         {canWrite && <div style={{ display: 'flex', gap: 8 }}>
@@ -78,7 +78,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
                   <tr key={r.id} style={{ borderTop: '1px solid var(--line)' }}>
                     <td style={{ padding: '9px 8px', fontWeight: 600, maxWidth: 280 }}>
                       <span className="ies-ellipsis" title={r.material_name} style={{ verticalAlign: 'middle' }}>{r.material_name}</span>
-                      {isPdf && r.pdf_path && <button onClick={() => openPdf(r.pdf_path)} title="Open the source delivery-note PDF" style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 6, padding: '1px 6px', background: '#fff', cursor: 'pointer' }}>📎 PDF</button>}
+                      {isPdf && r.pdf_path && <button onClick={() => openPdf(r.pdf_path)} title="Open the source delivery-note PDF" style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: 'var(--accent)', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', padding: '1px 6px', background: 'var(--surface-1)', cursor: 'pointer' }}>📎 PDF</button>}
                     </td>
                     <td style={{ padding: '9px 8px' }}>
                       {canWrite
@@ -256,7 +256,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
     return (
       <div>
         <FileDropZone label="Delivery note — PDF or image (max 5 MB)" accept={ACCEPT} maxSizeMb={5} onFiles={(f) => { setFile(f); setErr('') }} helperText="PDF, JPG, PNG or WEBP" />
-        {err && <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginBottom: 10 }}>{err}</div>}
+        {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginBottom: 10 }}>{err}</div>}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Btn onClick={onClose}>Cancel</Btn>
           <Btn variant="primary" onClick={extract} disabled={!file || busy} title={!file ? 'Choose a file first' : undefined}>{busy ? 'Reading delivery note… 5–15s' : 'Extract delivery'}</Btn>
@@ -274,13 +274,13 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
         <Field label="Delivery Note No"><input lang="en" style={inputStyle} value={header.delivery_note_no} onChange={(e) => setHeader({ ...header, delivery_note_no: e.target.value })} /></Field>
         <Field label="Delivery date">
           <DateInput style={inputStyle} value={header.delivery_date} onChange={(e) => setHeader({ ...header, delivery_date: e.target.value, dateDefaulted: false })} />
-          {header.dateDefaulted && <div style={{ fontSize: 11, color: '#B45309', marginTop: 3 }}>ⓘ defaulted to today (none found)</div>}
+          {header.dateDefaulted && <div style={{ fontSize: 11, color: 'var(--warn)', marginTop: 3 }}>ⓘ defaulted to today (none found)</div>}
         </Field>
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>Review each line. Unmatched lines (⚠) must be linked to a catalog material — or create a new variant — before saving. Each line is added to the project warehouse pool.</div>
-      <div className="ies-table-wrap" style={{ maxHeight: 300, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 6 }}>
+      <div className="ies-table-wrap" style={{ maxHeight: 300, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)', position: 'sticky', top: 0, background: '#FAF8F2' }}>
+          <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)', position: 'sticky', top: 0, background: 'var(--hover)' }}>
             <th style={{ padding: 7 }} /><th style={{ padding: 7 }}>MATERIAL</th><th style={{ padding: 7, width: 56 }}>QTY</th><th style={{ padding: 7, width: 66 }}>UNIT</th><th style={{ padding: 7, width: 36 }} />
           </tr></thead>
           <tbody>
@@ -288,7 +288,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
               const matched = !!l.material_id
               return (
                 <tr key={i} style={{ borderTop: '1px solid var(--line)', verticalAlign: 'top' }}>
-                  <td style={{ padding: '6px 7px', textAlign: 'center' }} title={matched ? 'Matched' : 'Not in catalog'}>{matched ? <span style={{ color: '#217A54' }}>✓</span> : <span style={{ color: '#B45309' }}>⚠</span>}</td>
+                  <td style={{ padding: '6px 7px', textAlign: 'center' }} title={matched ? 'Matched' : 'Not in catalog'}>{matched ? <span style={{ color: 'var(--ok)' }}>✓</span> : <span style={{ color: 'var(--warn)' }}>⚠</span>}</td>
                   <td style={{ padding: '6px 7px' }}>
                     <select value={l.material_id} onChange={(e) => setLine(i, { material_id: e.target.value })} style={{ ...inp, width: '100%', borderColor: matched ? 'var(--line)' : '#FCA5A5' }}>
                       <option value="">{`⚠ Pick from catalog — "${(l.material_description || '').slice(0, 36)}"`}</option>
@@ -298,11 +298,11 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
                       <div style={{ fontSize: 10.5, marginTop: 3 }}>
                         {l.matched_category_id
                           ? <button onClick={() => setLine(i, { creating: true })} style={{ color: 'var(--accent)', fontWeight: 700 }}>+ Link to “{l.matched_category_name}” (create variant)</button>
-                          : <span style={{ color: '#96271E' }}>Pick an existing material, or add it in the Materials catalog first.</span>}
+                          : <span style={{ color: 'var(--bad-deep)' }}>Pick an existing material, or add it in the Materials catalog first.</span>}
                       </div>
                     )}
                     {!matched && l.creating && (
-                      <div style={{ marginTop: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 6, background: '#FAF8F2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <div style={{ marginTop: 6, padding: 8, border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', background: 'var(--hover)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                         <div style={{ gridColumn: '1 / -1', fontSize: 11, fontWeight: 700 }}>New variant under {l.matched_category_name}</div>
                         <input style={inp} placeholder="Brand" value={l.brand} onChange={(e) => setLine(i, { brand: e.target.value })} />
                         <input style={inp} placeholder="Supplier" value={l.supplier} onChange={(e) => setLine(i, { supplier: e.target.value })} />
@@ -326,9 +326,9 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
           </tbody>
         </table>
       </div>
-      {err && <div style={{ background: '#F9ECEA', border: '1px solid #EBCFC9', borderRadius: 6, padding: 10, fontSize: 12.5, color: '#96271E', marginTop: 10 }}>{err}</div>}
+      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid #EBCFC9', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-        <span style={{ fontSize: 11.5, color: allMatched ? '#1D6A49' : '#B45309' }}>{allMatched ? `Ready — ${lines.length} line(s) into the warehouse.` : 'Some lines are unmatched — resolve them to enable Save.'}</span>
+        <span style={{ fontSize: 11.5, color: allMatched ? 'var(--ok-deep)' : 'var(--warn)' }}>{allMatched ? `Ready — ${lines.length} line(s) into the warehouse.` : 'Some lines are unmatched — resolve them to enable Save.'}</span>
         <div style={{ display: 'flex', gap: 8 }}>
           <Btn onClick={onClose}>Cancel</Btn>
           <Btn variant="primary" onClick={save} disabled={!canSave} title={!allMatched ? 'Resolve unmatched lines' : undefined}>{saving ? 'Saving…' : 'Save delivery'}</Btn>
