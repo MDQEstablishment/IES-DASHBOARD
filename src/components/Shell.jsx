@@ -8,6 +8,7 @@ import { useAuth } from '../rbac'
 import { useBreadcrumb } from '../breadcrumbs'
 import { useLiveQuery, bgUpdate } from '../lib/db'
 import { fmtClock, ago } from '../lib/format'
+import MurshidLauncher from './murshid/MurshidLauncher'
 
 // 8W/9G(3) — the top-bar bell. Seven kinds of notification now arrive here:
 // the chat @mention from 0088, plus the six task/escalation lifecycle events
@@ -281,6 +282,10 @@ export default function Shell() {
           <Outlet />
         </main>
       </div>
+      {/* 9L — مُرشد rides the shell, so it is present on every routed page
+          without any page importing it. It reads the page's own
+          data-screen-label from the DOM; nothing is passed down. */}
+      <MurshidLauncher collapsed={collapsed} />
     </div>
   )
 }

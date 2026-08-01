@@ -115,6 +115,21 @@ h1,h2,h3,p{margin:0}
   .ies-login{grid-template-columns:1fr !important}
   .ies-loginleft{display:none !important}
 }
+/* ---- 9L: the مُرشد dock -------------------------------------------------
+   Anchored to the bottom-left of the CONTENT area, not the viewport: the
+   sidebar owns the left edge for its full height, so a viewport-corner button
+   would sit on top of the navigation. The offset follows the sidebar's own
+   width and its collapse transition, and below 1024px — where the sidebar
+   becomes an off-canvas drawer and the content starts at x=0 — it drops to the
+   true corner. z-index 110 keeps it above page content but under the modal
+   layer (1000), the drawer (130) and its scrim (125). */
+.ies-murshid-dock{position:fixed;bottom:20px;left:256px;z-index:110;
+  display:flex;flex-direction:column;align-items:flex-start;transition:left .16s ease}
+.ies-murshid-dock.collapsed{left:84px}
+@media (max-width:1023px){
+  .ies-murshid-dock,.ies-murshid-dock.collapsed{left:16px;bottom:16px}
+}
+
 /* Wide tables scroll INSIDE their card at every viewport width. The scrollbar
    is styled to stay VISIBLE — macOS overlay scrollbars are invisible until
    touched, which made a working scroll container read as a clipped table. */

@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 49 files · 532 interactive controls · 267 database touches.**
+**Totals: 52 files · 539 interactive controls · 267 database touches.**
 
 ## Per-file summary
 
@@ -48,6 +48,9 @@ that commit message.
 | `src/components/Shell.jsx` | 11 | 4 | — | ☐ |
 | `src/components/SurveyTab.jsx` | 3 | 1 | — | ☐ |
 | `src/components/TarshidImportModal.jsx` | 4 | 0 | — | ☐ |
+| `src/components/murshid/MurshidLauncher.jsx` | 1 | 0 | — | ☐ |
+| `src/components/murshid/MurshidPanel.jsx` | 6 | 0 | — | ☐ |
+| `src/components/murshid/helpContent.js` | 0 | 0 | — | ☐ |
 | `src/components/survey/DailyLog.jsx` | 6 | 0 | — | ☐ |
 | `src/components/survey/EntriesTable.jsx` | 15 | 1 | — | ☐ |
 | `src/components/survey/EntryForm.jsx` | 21 | 5 | — | ☐ |
@@ -57,7 +60,7 @@ that commit message.
 | `src/pages/DailyProgress.jsx` | 9 | 7 | Project Daily Progress | ☐ |
 | `src/pages/Dashboard.jsx` | 1 | 9 | Dashboard | ☐ |
 | `src/pages/DesignSystem.jsx` | 0 | 0 | Design System | ☐ |
-| `src/pages/Escalations.jsx` | 16 | 8 | — | ☐ |
+| `src/pages/Escalations.jsx` | 16 | 8 | Escalations | ☐ |
 | `src/pages/ManageEsms.jsx` | 20 | 9 | Materials | ☐ |
 | `src/pages/ProjectDetail.jsx` | 25 | 10 | Project Detail | ☐ |
 | `src/pages/Projects.jsx` | 7 | 6 | Projects | ☐ |
@@ -815,6 +818,29 @@ shared primitives: Btn×2, Empty×1, Loading×1
 
 shared primitives: Btn×3, Field×1, Modal×1
 
+### `src/components/murshid/MurshidLauncher.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onClick:setOpen` | 1 |
+
+### `src/components/murshid/MurshidPanel.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onChange:setDraft` | 1 |
+| `onClick:onClose` | 1 |
+| `onClick:setDraft+setTab` | 1 |
+| `onClick:setOpenFaq` | 1 |
+| `onClick:setOpenGuide` | 1 |
+| `onClick:setTab` | 1 |
+
+### `src/components/murshid/helpContent.js`
+
+| control → handler | count |
+| --- | --- |
+| _(no interactive controls)_ | 0 |
+
 ### `src/components/survey/DailyLog.jsx`
 
 | control → handler | count |
@@ -994,6 +1020,7 @@ screen label: **Design System**
 shared primitives: Btn×5, Chip×2, Field×2, FileDropZone×2
 
 ### `src/pages/Escalations.jsx`
+screen label: **Escalations**
 
 | control → handler | count |
 | --- | --- |

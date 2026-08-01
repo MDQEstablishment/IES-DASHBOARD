@@ -78,8 +78,10 @@ export default function Escalations() {
       severity: e.severity, status: 'open',
     }, { okMsg: 'Escalated one level higher' })
 
+  // 9L — the one page that never carried a screen label. Same unstyled wrapper
+  // the other nine use; مُرشد reads the attribute to pick its help content.
   return (
-    <>
+    <div data-screen-label="Escalations">
       <PageTitle kicker="Hierarchy chain" title="Escalations"
         right={!noManager && <Btn variant="primary" icon="plus" onClick={() => { setPrefill(null); setShowNew(true) }}>Raise escalation</Btn>} />
 
@@ -118,7 +120,7 @@ export default function Escalations() {
 
       {showNew && <NewEscalation onClose={() => { setShowNew(false); setPrefill(null) }} user={user} prefill={prefill} />}
       {resolving && <ResolveModal e={resolving} onClose={() => setResolving(null)} />}
-    </>
+    </div>
   )
 }
 
