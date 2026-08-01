@@ -177,17 +177,17 @@ export default function Dashboard() {
     <div data-screen-label="Dashboard">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 18, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 600, letterSpacing: '2.5px', color: 'var(--accent)' }}>EXECUTIVE SNAPSHOT</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>Executive snapshot</div>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 0' }}>{dashTitle}</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>Scope: {scopeLabel}</div>
-          <button onClick={() => setHelp(true)} className="ies-card-hover" title="What does each card mean?" style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--line)', background: '#fff', fontWeight: 800, fontSize: 14, color: 'var(--accent)' }}>?</button>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Scope: {scopeLabel}</div>
+          <button onClick={() => setHelp(true)} className="ies-card-hover" title="What does each card mean?" style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid var(--line)', background: 'var(--surface-1)', fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>?</button>
         </div>
       </div>
 
       <div className="ies-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 14 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="projects" size={16} />Total Projects</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 34, fontWeight: 700, marginTop: 8, lineHeight: 1 }}>{kpiProjects}</div>
           <div style={{ display: 'flex', gap: 14, marginTop: 10, fontSize: 11, fontFamily: 'var(--mono)' }}>
@@ -195,7 +195,7 @@ export default function Dashboard() {
             <span style={{ color: 'var(--text-3)' }}>○ {kpiDraft} draft</span>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="gauge" size={16} />Portfolio Progress</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
             <svg viewBox="0 0 64 64" style={{ width: 72, height: 72, flex: 'none' }}>
@@ -204,11 +204,11 @@ export default function Dashboard() {
             </svg>
             <div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{Math.round(overall)}<span style={{ fontSize: 15, color: 'var(--text-3)' }}>%</span></div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>weighted · {kpiActive} active</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>weighted · {kpiActive} active</div>
             </div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="curve" size={16} />S-Curve</div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}><span style={{ color: 'var(--text)' }}>━ actual</span> · <span>┄ planned</span></div>
@@ -226,7 +226,7 @@ export default function Dashboard() {
             <span>−12 WK</span><span>NOW</span><span>+12 WK</span>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="doc" size={16} />COCs Signed</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
             <svg viewBox="0 0 64 64" style={{ width: 72, height: 72, flex: 'none' }}>
@@ -235,17 +235,17 @@ export default function Dashboard() {
             </svg>
             <div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{cocX}<span style={{ fontSize: 15, color: 'var(--text-3)' }}> of {cocY}</span></div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4, fontFamily: 'var(--mono)' }}>individual COCs approved across active projects</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>individual COCs approved across active projects</div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="ies-2col" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 14, marginBottom: 14 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Progress by Project</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>WEIGHTED %</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Weighted %</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
             {projectBars.length === 0 ? <Empty icon="projects">No projects yet.</Empty> : projectBars.map((p, i) => (
@@ -254,17 +254,17 @@ export default function Dashboard() {
                   <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, color: p.barColor, flex: 'none', marginLeft: 8 }}>{p.prog}%</span>
                 </div>
-                <div style={{ height: 9, borderRadius: 5, background: '#EDEAE0', overflow: 'hidden' }}>
+                <div style={{ height: 9, borderRadius: 5, background: 'var(--track)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: p.progW, background: p.barColor }} />
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Progress by ESM</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>PORTFOLIO</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Portfolio</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
             {esmBars.map((e, i) => (
@@ -273,7 +273,7 @@ export default function Dashboard() {
                   <span style={{ fontSize: 12 }}><span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{e.no}</span> {e.name}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, flex: 'none', marginLeft: 8 }}>{e.prog}%</span>
                 </div>
-                <div style={{ height: 9, borderRadius: 5, background: '#EDEAE0', overflow: 'hidden' }}>
+                <div style={{ height: 9, borderRadius: 5, background: 'var(--track)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: e.progW, background: 'linear-gradient(90deg,#A0762B,#C29A4B)' }} />
                 </div>
               </div>
@@ -283,16 +283,16 @@ export default function Dashboard() {
       </div>
 
       <div className="ies-2col" style={{ display: 'grid', gridTemplateColumns: '1.7fr 1fr', gap: 14 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Attention List</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>{scopeLabel}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{scopeLabel}</div>
           </div>
           <div className="ies-table-wrap">
             {attentionList.length === 0 ? <Empty icon="check">All clear — nothing needs attention.</Empty> : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 520 }}>
                 <thead>
-                  <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 11, fontFamily: 'var(--mono)' }}>
+                  <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 12 }}>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>TYPE</th>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>ITEM</th>
                     <th style={{ padding: '9px 8px', fontWeight: 600 }}>PROJECT</th>
@@ -317,10 +317,10 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Recent Activity</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>LAST 24H</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Last 24h</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {recentActivity.length === 0 ? <Empty icon="bell">No recent activity.</Empty> : recentActivity.map((a, i) => (
@@ -337,21 +337,21 @@ export default function Dashboard() {
       </div>
 
       {/* Critical Materials (dc 251-263) */}
-      <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16, marginTop: 14 }}>
+      <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, marginTop: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Critical Materials</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>RUNNING LOW · ALL PROJECTS</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Running low · all projects</div>
         </div>
         {criticalMaterials.length === 0 ? <Empty icon="check">All materials above threshold.</Empty> : (
           <div className="ies-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
             {criticalMaterials.map((m, i) => (
-              <div key={i} style={{ border: '1px solid var(--line)', borderLeft: `3px solid ${m.color}`, borderRadius: 10, padding: 12 }}>
+              <div key={i} style={{ border: '1px solid var(--line)', borderLeft: `3px solid ${m.color}`, borderRadius: 'var(--radius-m)', padding: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)' }}>{m.esm}</span>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: m.color }}>{m.status}</span>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13, margin: '6px 0 8px' }}>{m.name}</div>
-                <div style={{ height: 6, borderRadius: 4, background: '#EDEAE0', overflow: 'hidden' }}><div style={{ height: '100%', width: m.w, background: m.color }} /></div>
+                <div style={{ height: 6, borderRadius: 4, background: 'var(--track)', overflow: 'hidden' }}><div style={{ height: '100%', width: m.w, background: m.color }} /></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 6 }}>
                   <span>{m.stock} in stock</span><span>min {m.threshold}</span>
                 </div>
@@ -364,7 +364,7 @@ export default function Dashboard() {
       <Drawer open={help} title="Understanding the Dashboard" subtitle="What each card shows, where the data comes from, and what changes it." onClose={() => setHelp(false)} width={440}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {CARD_DOCS.map(([name, def, source, controls]) => (
-            <div key={name} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12 }}>
+            <div key={name} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12 }}>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{name}</div>
               <div style={{ fontSize: 12.5, color: 'var(--text)', marginTop: 4 }}>{def}</div>
               <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}><span style={{ fontFamily: 'var(--mono)' }}>Source:</span> {source}</div>

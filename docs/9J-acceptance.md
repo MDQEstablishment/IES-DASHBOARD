@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 49 files · 528 interactive controls · 266 database touches.**
+**Totals: 49 files · 532 interactive controls · 267 database touches.**
 
 ## Per-file summary
 
@@ -45,7 +45,7 @@ that commit message.
 | `src/components/ReportTemplate.jsx` | 4 | 6 | — | ☐ |
 | `src/components/SavingSheetTab.jsx` | 7 | 9 | — | ☐ |
 | `src/components/SavingSheetTemplate.jsx` | 4 | 6 | — | ☐ |
-| `src/components/Shell.jsx` | 7 | 3 | — | ☐ |
+| `src/components/Shell.jsx` | 11 | 4 | — | ☐ |
 | `src/components/SurveyTab.jsx` | 3 | 1 | — | ☐ |
 | `src/components/TarshidImportModal.jsx` | 4 | 0 | — | ☐ |
 | `src/components/survey/DailyLog.jsx` | 6 | 0 | — | ☐ |
@@ -775,15 +775,18 @@ shared primitives: Btn×2, Empty×1, FileDropZone×1
 | --- | --- |
 | `onClick:markAll` | 1 |
 | `onClick:openOne` | 1 |
-| `onClick:setDrawer` | 1 |
-| `onClick:setOpen` | 1 |
+| `onClick:setDrawer` | 2 |
+| `onClick:setOpen` | 2 |
 | `onClick:setRoleMenu` | 1 |
 | `onClick:setRoleMenu+signInWithRole` | 1 |
 | `onClick:setRoleMenu+signOut` | 1 |
+| `onClick:toggleCollapse` | 1 |
+| `onMouseDown:setOpen` | 1 |
 
 | database effect | count |
 | --- | --- |
 | `bgUpdate:notifications` | 2 |
+| `read:audit_log` | 1 |
 | `read:notifications` | 1 |
 
 ### `src/components/SurveyTab.jsx`

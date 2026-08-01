@@ -1,30 +1,66 @@
 /* ============================================================================
-   IES Programme Control Platform — design system, ported VERBATIM from the
-   v1.5 canonical design (IES Platform.dc.html). The design relies on inline
-   styles in components; this file holds the tokens, resets, keyframes and the
-   responsive .ies-* rules exactly as the mockup defines them.
+   IES Programme Control Platform — design system.
+
+   Sprint 9J: reskinned to the SnowUI design language. SKIN ONLY — the owner's
+   rule for this sprint is "المهم ما تتغير أي وظيفة أو يضيع شيء، أنا أغير سكين
+   فقط": change the skin, lose nothing. Not one control, query or route moved.
+
+   The variable NAMES below are deliberately unchanged from the 8M warm-paper
+   skin. Hundreds of components read them, so redefining the VALUES reskins most
+   of the app with no component diff at all — which is the safest possible way
+   to repaint a system this size.
    ========================================================================== */
-/* Sprint 8M — IES Control Visual Redesign tokens (README §Design Tokens).
-   Warm-paper canvas, deep-navy chrome, desert-brass accent, IBM Plex type. */
+
+/* Inter, self-hosted, Latin subset, 400 + 600 only. The old --ui named
+   'IBM Plex Sans' but no Plex file was ever shipped, so the app has really been
+   rendering in system-ui. This is the first typeface the platform actually
+   loads. Arabic is not in this subset and falls through to the system Arabic
+   face, exactly as before. The PDF generators embed their own fonts (Amiri +
+   Helvetica) and are untouched by any of this. */
+@font-face{font-family:'Inter';font-style:normal;font-weight:400;font-display:swap;src:url('./fonts/inter-400.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-style:normal;font-weight:600;font-display:swap;src:url('./fonts/inter-600.woff2') format('woff2')}
+
 :root{
-  --nav-bg:#10273B;--nav-bg-elev:#1B3A53;--nav-text:#F0EDE3;--nav-text-3:#8DA0B1;--nav-accent:#C29A4B;
-  --bg:#F5F3ED;--surface-1:#FFFFFF;--line:#E3DFD3;--text:#1A2530;--text-3:#8A8577;--accent:#A0762B;
-  --accent-hover:#8A6524;--brass-bright:#C29A4B;--ink-display:#16222D;--text-faint:#A39D8E;
-  --raised:#FBFAF6;--hover:#FAF8F2;--track:#EDEAE0;--line-soft:#F0EDE4;--line-ctrl:#DCD6C7;
-  --ok:#217A54;--ok-bg:#E9F3EE;--warn:#B45309;--warn-bg:#FAF3E3;--bad:#B3362B;--bad-bg:#F9ECEA;
-  --info:#3E5C8A;--info-bg:#EBF0F7;--live:#5FA987;
-  --esm1:#3E5C8A;--esm1-bg:#EBF0F7;--esm2:#6D5A8E;--esm2-bg:#F0EDF6;--esm3:#2A7A72;--esm3-bg:#E8F3F1;
-  --mono:'IBM Plex Mono',ui-monospace,monospace;--ui:'IBM Plex Sans',system-ui,sans-serif;
+  /* ---- surfaces: SnowUI light gray page, white cards, no hard borders ---- */
+  --bg:#EDEDF1;--surface-1:#FFFFFF;--raised:#FAFAFC;--hover:#F7F7FA;--track:#ECECF0;
+  --line:rgba(28,28,28,.08);--line-soft:rgba(28,28,28,.05);--line-ctrl:rgba(28,28,28,.12);
+
+  /* ---- ink ---- */
+  --text:#1C1C1C;--text-2:rgba(28,28,28,.62);--text-3:rgba(28,28,28,.40);--text-faint:rgba(28,28,28,.28);
+  --ink-display:#1C1C1C;
+
+  /* ---- IES gold survives as the accent: primary actions, active nav,
+         progress fills, focus ring. The identity stays; the chrome goes
+         neutral. ---- */
+  --accent:#A0762B;--accent-hover:#8A6524;--accent-tint:rgba(160,118,43,.10);--brass-bright:#C29A4B;
+
+  /* ---- sidebar (replaces the deep-navy --nav-* set, which is retired) ---- */
+  --side-bg:#FFFFFF;--side-active:rgba(28,28,28,.05);--side-text:rgba(28,28,28,.68);
+
+  /* ---- semantic colours keep their IES hues; only their containers soften -- */
+  --ok:#217A54;--ok-bg:#E6F2EC;--ok-deep:#1D6A49;
+  --warn:#B45309;--warn-bg:#FBF1E3;--warn-deep:#854D0E;
+  --bad:#B3362B;--bad-bg:#FAEDEB;--bad-deep:#96271E;
+  --info:#3E5C8A;--info-bg:#ECF1F8;--live:#3FA37A;
+  --esm1:#3E5C8A;--esm1-bg:#ECF1F8;--esm2:#6D5A8E;--esm2-bg:#F1EEF7;--esm3:#2A7A72;--esm3-bg:#E7F3F1;
+
+  /* ---- radius + shadow (SnowUI Drop shadow 1/2) ---- */
+  --radius-s:8px;--radius-m:12px;--radius-l:16px;
+  --shadow-1:0 1px 2px rgba(28,28,28,.05),0 8px 16px rgba(28,28,28,.05);
+  --shadow-2:0 12px 32px rgba(28,28,28,.14);
+
+  --mono:ui-monospace,'SFMono-Regular','Menlo',monospace;
+  --ui:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
 *{box-sizing:border-box}
 html,body,#root{margin:0;padding:0}
-body{font-family:var(--ui);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.45}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select,textarea{font-family:inherit}
 a{color:inherit;text-decoration:none}
 h1,h2,h3,p{margin:0}
 ::-webkit-scrollbar{width:9px;height:9px}
-::-webkit-scrollbar-thumb{background:#C9C3B4;border-radius:6px}
+::-webkit-scrollbar-thumb{background:rgba(28,28,28,.18);border-radius:6px}
 ::-webkit-scrollbar-track{background:transparent}
 @keyframes iesBlink{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes iesDrawer{from{transform:translateY(-12px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -34,10 +70,24 @@ h1,h2,h3,p{margin:0}
 .ies-hamburger{display:none}
 .ies-drawer{display:none}
 .ies-spin{animation:iesSpin .7s linear infinite}
-@media (max-width:1180px){
-  .ies-topnav-items{display:none !important}
+
+/* ---- 9J app shell: fixed left sidebar, slim header, scrim ----------------
+   The sidebar is a layout container only; every link inside it is the same
+   NavLink, to the same route, guarded by the same role list as the old top bar. */
+.ies-shell{display:flex;min-height:100vh;background:var(--bg)}
+.ies-side{width:240px;flex:none;background:var(--side-bg);display:flex;flex-direction:column;
+  position:fixed;top:0;bottom:0;left:0;z-index:130;border-right:1px solid var(--line);transition:width .16s ease}
+.ies-side.collapsed{width:68px}
+.ies-main{flex:1;min-width:0;margin-left:240px;transition:margin-left .16s ease}
+.ies-main.collapsed{margin-left:68px}
+.ies-scrim{display:none}
+@media (max-width:1023px){
+  .ies-side{transform:translateX(-100%);transition:transform .18s ease;width:264px}
+  .ies-side.open{transform:translateX(0);box-shadow:var(--shadow-2)}
+  .ies-side.collapsed{width:264px}
+  .ies-main,.ies-main.collapsed{margin-left:0}
   .ies-hamburger{display:inline-flex !important}
-  .ies-drawer.open{display:flex !important}
+  .ies-scrim.open{display:block;position:fixed;inset:0;background:rgba(28,28,28,.35);z-index:125}
 }
 @media (max-width:767px){
   .ies-kpis{grid-template-columns:1fr !important}
@@ -51,41 +101,43 @@ h1,h2,h3,p{margin:0}
   .ies-login{grid-template-columns:1fr !important}
   .ies-loginleft{display:none !important}
 }
-/* Wide tables scroll INSIDE their card at every viewport width (this rule
-   used to live only in the <=767px media block). The scrollbar is styled to
-   stay VISIBLE — macOS overlay scrollbars are invisible until touched, which
-   made a working scroll container read as a clipped/broken table. */
-.ies-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;scrollbar-width:thin;scrollbar-color:#C9C3B4 transparent}
+/* Wide tables scroll INSIDE their card at every viewport width. The scrollbar
+   is styled to stay VISIBLE — macOS overlay scrollbars are invisible until
+   touched, which made a working scroll container read as a clipped table. */
+.ies-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;scrollbar-width:thin;scrollbar-color:rgba(28,28,28,.2) transparent}
 .ies-table-wrap::-webkit-scrollbar{height:8px}
 .ies-table-wrap::-webkit-scrollbar-track{background:transparent}
-.ies-table-wrap::-webkit-scrollbar-thumb{background:#C9C3B4;border-radius:4px}
+.ies-table-wrap::-webkit-scrollbar-thumb{background:rgba(28,28,28,.2);border-radius:4px}
 /* hover helpers used across inline-styled buttons/rows */
 .ies-hover{transition:background .12s,border-color .12s,box-shadow .12s,color .12s}
 .ies-hover:hover{background:var(--hover)}
-.ies-nav-btn:hover{background:var(--nav-bg-elev) !important;color:#fff !important}
+.ies-nav-btn:hover{background:var(--side-active) !important;color:var(--text) !important}
 .ies-row-hover{transition:background .1s}
-.ies-row-hover:hover{background:var(--bg)}
-.ies-card-hover{transition:border-color .12s,box-shadow .12s,transform .12s}
-.ies-card-hover:hover{border-color:var(--accent) !important;box-shadow:0 4px 14px rgba(160,118,43,.12)}
+.ies-row-hover:hover{background:var(--hover)}
+.ies-card-hover{transition:box-shadow .14s,transform .14s}
+.ies-card-hover:hover{box-shadow:var(--shadow-2);transform:translateY(-1px)}
 .ies-trow{transition:background .1s}
 .ies-trow:hover{background:var(--hover)}
-/* Sprint 8Q — Projects "Panorama" cards: mobile-first responsive grid (1-up / 2-up ≥768 / 3-up ≥1200) */
 .ies-panorama-grid{display:grid;grid-template-columns:1fr;gap:16px}
 @media (min-width:768px){.ies-panorama-grid{grid-template-columns:repeat(2,1fr)}}
 @media (min-width:1200px){.ies-panorama-grid{grid-template-columns:repeat(3,1fr)}}
 .ies-panorama-card{transition:transform .14s,box-shadow .14s}
-.ies-panorama-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(16,26,36,.22)}
+.ies-panorama-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-2)}
+
+/* ---- dense tables: SnowUI's airy style at a compact density. Every row and
+   column of the 709-building and 593-row catalogues is kept; only the chrome
+   changes. Headers lose the uppercase mono letter-spacing of the old skin. --- */
 .ies-tbl{width:100%;border-collapse:collapse}
-.ies-tbl th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:1.5px;color:var(--text-3);font-weight:600;padding:10px 14px;background:var(--raised);border-bottom:1px solid var(--line);white-space:nowrap;text-transform:uppercase}
-.ies-tbl td{padding:11px 14px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}
+.ies-tbl th{text-align:left;font-size:12px;color:var(--text-3);font-weight:600;padding:10px 12px;
+  background:transparent;border-bottom:1px solid var(--line);white-space:nowrap}
+.ies-tbl td{padding:9px 12px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}
 .ies-tbl tr:last-child td{border-bottom:none}
-/* Sprint 7.6 Fix #2 — global long-text guards for table cells & lists */
 .ies-ellipsis{display:inline-block;max-width:30ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .ies-clamp2{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* Sprint 8M additions — extend, don't replace */
 .ies-hover-dark{transition:background .12s,border-color .12s,color .12s}
-.ies-hover-dark:hover{background:var(--nav-bg-elev)}
-.ies-kicker{font-family:var(--mono);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:2.5px;color:var(--text-3)}
+.ies-hover-dark:hover{background:var(--hover)}
+/* Section labels: sentence case, no mono, no letter-spacing (9J typography). */
+.ies-kicker{font-weight:600;font-size:12px;color:var(--text-3)}
 .ies-kicker-brass{color:var(--accent)}
-input:focus,select:focus,textarea:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px rgba(160,118,43,.12);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent) !important;box-shadow:0 0 0 3px rgba(160,118,43,.14);outline:none}

@@ -21,24 +21,24 @@ export function Chip({ status, label, color, bg }) {
   const [c, b, l] = statusMeta(status)
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 4,
-      fontFamily: 'var(--mono)', fontSize: 10.5, fontWeight: 700, letterSpacing: '.3px',
+      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999,
+      fontSize: 12, fontWeight: 600,
       color: color || c, background: bg || b, whiteSpace: 'nowrap',
     }}>{label || l}</span>
   )
 }
 
 export function Card({ children, style, pad = 16, ...rest }) {
-  return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: pad, ...style }} {...rest}>{children}</div>
+  return <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: pad, ...style }} {...rest}>{children}</div>
 }
 
 export function ProgressBar({ value = 0, max = 100, color = 'var(--accent)', height = 9 }) {
   const w = max > 0 ? Math.min(100, (value / max) * 100) : 0
-  return <div style={{ height, borderRadius: 5, background: '#EDEAE0', overflow: 'hidden' }}><div style={{ height: '100%', width: w + '%', background: color }} /></div>
+  return <div style={{ height, borderRadius: 999, background: 'var(--track)', overflow: 'hidden' }}><div style={{ height: '100%', width: w + '%', background: color }} /></div>
 }
 
 // SVG donut ring (KPI cards)
-export function RingChart({ value = 0, max = 100, size = 72, color = '#A0762B', track = '#EDEAE0', stroke = 8 }) {
+export function RingChart({ value = 0, max = 100, size = 72, color = 'var(--accent)', track = 'var(--track)', stroke = 8 }) {
   const r = 26, circ = 2 * Math.PI * r
   const frac = max > 0 ? Math.min(1, value / max) : 0
   return (
@@ -51,7 +51,7 @@ export function RingChart({ value = 0, max = 100, size = 72, color = '#A0762B', 
 }
 
 export function Spinner({ size = 18 }) {
-  return <span className="ies-spin" style={{ width: size, height: size, border: '2px solid var(--line)', borderTopColor: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }} />
+  return <span className="ies-spin" style={{ width: size, height: size, border: '2px solid var(--track)', borderTopColor: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }} />
 }
 
 export function Loading({ label = 'Loading…' }) {
@@ -59,15 +59,15 @@ export function Loading({ label = 'Loading…' }) {
 }
 
 export function Empty({ icon = 'doc', children = 'Nothing here yet.' }) {
-  return <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 13 }}><span style={{ color: '#C9C3B4' }}><Icon name={icon} size={22} /></span><span>{children}</span></div>
+  return <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 13 }}><span style={{ color: 'var(--text-faint)' }}><Icon name={icon} size={22} /></span><span>{children}</span></div>
 }
 
 export function PageTitle({ kicker, title, right }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 18, flexWrap: 'wrap' }}>
       <div>
-        {kicker && <div style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '2px', color: 'var(--text-3)' }}>{kicker}</div>}
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: '4px 0 0' }}>{title}</h1>
+        {kicker && <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)' }}>{kicker}</div>}
+        <h1 style={{ fontSize: 24, fontWeight: 600, margin: '2px 0 0', letterSpacing: '-.01em' }}>{title}</h1>
       </div>
       {right}
     </div>
@@ -76,12 +76,12 @@ export function PageTitle({ kicker, title, right }) {
 
 // Primary/secondary buttons matching the dc inline style
 export function Btn({ variant = 'secondary', icon, children, style, ...rest }) {
-  const base = { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 6, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
+  const base = { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 'var(--radius-s)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }
   const variants = {
     primary: { background: 'var(--accent)', color: '#fff' },
-    secondary: { background: '#fff', color: 'var(--text)', border: '1px solid var(--line-ctrl)' },
+    secondary: { background: 'var(--track)', color: 'var(--text)' },
     danger: { background: 'var(--bad)', color: '#fff' },
-    ghost: { background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--line)' },
+    ghost: { background: 'transparent', color: 'var(--text-2)' },
   }
   // Disabled buttons must LOOK disabled — a blue-but-inert primary button reads as
   // clickable and trips up users (Sprint 8B #11).
@@ -102,11 +102,11 @@ export function Modal({ open, title, onClose, children, footer, width = 520 }) {
   // (tiles 200 / markers 600 / popup 700) at z-index 1000. Sprint 8J-1.
   return createPortal(
     <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(16,26,36,.55)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: width, background: '#fff', borderRadius: 12, boxShadow: '0 24px 60px rgba(16,26,36,.3)', display: 'flex', flexDirection: 'column', maxHeight: '86vh' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(28,28,28,.42)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
+      <div style={{ width: '100%', maxWidth: width, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-2)', display: 'flex', flexDirection: 'column', maxHeight: '86vh' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
-          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
+          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 'var(--radius-s)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
         </div>
         <div style={{ padding: 20, overflow: 'auto' }}>{children}</div>
         {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
@@ -127,14 +127,14 @@ export function Drawer({ open, title, subtitle, onClose, children, footer, width
   if (!open) return null
   return (
     <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(16,26,36,.5)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'flex-end' }}>
-      <div style={{ width: '100%', maxWidth: width, height: '100%', background: '#fff', boxShadow: '-16px 0 40px rgba(16,26,36,.25)', display: 'flex', flexDirection: 'column', animation: 'iesSlideR .2s ease' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,28,28,.42)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ width: '100%', maxWidth: width, height: '100%', background: 'var(--surface-1)', boxShadow: 'var(--shadow-2)', display: 'flex', flexDirection: 'column', animation: 'iesSlideR .2s ease' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
             {subtitle && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</div>}
           </div>
-          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
+          <button className="ies-hover" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 'var(--radius-s)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="x" size={18} /></button>
         </div>
         <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>{children}</div>
         {footer && <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '14px 20px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
@@ -144,10 +144,10 @@ export function Drawer({ open, title, subtitle, onClose, children, footer, width
 }
 
 export function Field({ label, children }) {
-  return <label style={{ display: 'block', marginBottom: 14 }}><span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 6 }}>{label}</span>{children}</label>
+  return <label style={{ display: 'block', marginBottom: 14 }}><span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>{label}</span>{children}</label>
 }
 
-export const inputStyle = { width: '100%', padding: '10px 12px', border: '1px solid var(--line-ctrl)', borderRadius: 6, background: '#fff', fontSize: 13.5 }
+export const inputStyle = { width: '100%', padding: '10px 12px', border: '1px solid var(--line-ctrl)', borderRadius: 'var(--radius-s)', background: 'var(--surface-1)', fontSize: 13.5 }
 
 export function Toaster() {
   const [items, setItems] = useState([])
@@ -156,7 +156,7 @@ export function Toaster() {
   return (
     <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 500, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
       {items.map((t) => (
-        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 500, boxShadow: '0 12px 30px rgba(16,26,36,.3)', background: t.type === 'err' ? '#96271E' : '#16222D', animation: 'iesToast .16s ease-out' }}>
+        <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 500, boxShadow: 'var(--shadow-2)', background: t.type === 'err' ? 'var(--bad-deep)' : 'var(--text)', animation: 'iesToast .16s ease-out' }}>
           <Icon name={t.type === 'err' ? 'alert' : 'check'} size={15} />{t.message}
         </div>
       ))}
