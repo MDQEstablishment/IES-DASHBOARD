@@ -6,7 +6,12 @@ import { statusMeta } from '../lib/constants'
 import { initials } from '../lib/format'
 
 // Solid-circle avatar (design uses role color + white mono initials)
-export function Avatar({ name, color = 'var(--text-3)', size = 28, title }) {
+// 9K(3) H3 — the default was --text-3, a 40%-alpha ink meant for de-emphasised
+// TEXT. As a circle fill under white initials it produced pale grey on pale
+// grey. Ten of the fourteen call sites pass a role colour and were always fine;
+// the four that do not (the activity feed, building chat, the movements table
+// and the building-engineer column) were unreadable. --avatar-bg is solid.
+export function Avatar({ name, color = 'var(--avatar-bg)', size = 28, title }) {
   return (
     <span title={title || name} style={{
       width: size, height: size, borderRadius: '50%', background: color, color: 'var(--surface-1)',
@@ -102,7 +107,7 @@ export function Modal({ open, title, onClose, children, footer, width = 520 }) {
   // (tiles 200 / markers 600 / popup 700) at z-index 1000. Sprint 8J-1.
   return createPortal(
     <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(28,28,28,.42)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--scrim)', backdropFilter: 'blur(2px)', display: 'grid', placeItems: 'center', padding: 24 }}>
       <div style={{ width: '100%', maxWidth: width, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-2)', display: 'flex', flexDirection: 'column', maxHeight: '86vh' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
@@ -127,7 +132,7 @@ export function Drawer({ open, title, subtitle, onClose, children, footer, width
   if (!open) return null
   return (
     <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(28,28,28,.42)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'flex-end' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'var(--scrim)', backdropFilter: 'blur(2px)', display: 'flex', justifyContent: 'flex-end' }}>
       <div style={{ width: '100%', maxWidth: width, height: '100%', background: 'var(--surface-1)', boxShadow: 'var(--shadow-2)', display: 'flex', flexDirection: 'column', animation: 'iesSlideR .2s ease' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
           <div>

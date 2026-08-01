@@ -44,7 +44,32 @@ Every commit below records `shots pending credential` until that happens.
 | --- | --- | --- |
 | 1366×768 login | ✅ captured | ✅ captured |
 | 390×844 login | ✅ captured | ✅ captured |
-| all authenticated screens, both viewports | ⏳ pending credential | ⏳ pending credential |
+| all authenticated screens, both viewports | ⏳ blocked — see below | ⏳ blocked — see below |
+
+### Why it is still open after the credential arrived (9K)
+
+The credential was supplied and the run was attempted. It got further than
+before and then stopped on something the repository cannot fix: the build
+serves, Chromium launches, the rig fills the login form and submits — and the
+sign-in never completes, because **the execution environment's egress policy
+refuses the Supabase host**. The proxy answers `403` to
+`CONNECT mzuyvajefqkmaxludijm.supabase.co:443`; plain `curl` from the same
+container gets the identical refusal, and the browser console shows
+`net::ERR_TUNNEL_CONNECTION_FAILED` followed by `TypeError: Failed to fetch`
+from the auth call.
+
+This had not surfaced earlier in the sprint because nothing else needed the
+container itself to reach Supabase — the database work all runs through
+tooling, and the generator harnesses are local.
+
+**What unblocks it:** allow `*.supabase.co` in the environment's network policy,
+then re-run the two passes. Nothing else is outstanding — the credential belongs
+in git-ignored `.env.local` (never committed), the rig is verified working, and
+`9j-before` is pinned at `622ff71`.
+
+**9J therefore stays open.** The visual regressions found in 9K(3) below are
+exactly the class this gate exists to catch, which is the argument for finishing
+it rather than waiving it.
 
 ## Commits
 
@@ -233,11 +258,31 @@ argument for finishing the screenshot gate.
 | generator assertions | 179, green at every commit |
 | hex literals in the UI layer | 561 → **0** |
 
+## 9K(3) — the skin defects the census could not see
+
+Found by reading the tree rather than by looking at it, since the screenshot
+gate is still blocked. All three are things a census proves nothing about: the
+wiring was correct in every case and the pixels were wrong.
+
+| defect | what shipped | fix |
+| --- | --- | --- |
+| **H3 — unreadable avatars** | `Avatar` defaulted its circle fill to `--text-3`, a **40%-alpha** ink intended for de-emphasised text, under white initials. 4 of 14 call sites rely on that default: the activity feed, building chat, the stock-movement table and the building-engineer column. | new solid `--avatar-bg`; white on it measures **5.7:1** |
+| **M1 — five popovers lost their shadow** | The 9J colour pass inserted `boxShadow: 'var(--shadow-1)'` **before** the pre-existing raw shadow in the same style object. The later key wins in JS, so the token was dead and every one of these panels still rendered its pre-9J shadow. | one `var(--shadow-2)` each — the elevation token modals already use |
+| **dead CSS** | `.ies-drawer`, `.ies-hover-dark` and `@keyframes iesDrawer` referenced nowhere | removed |
+
+M1 also removed the last five raw colour literals from the styling layer, and
+the two inline modal/drawer scrims are now `--scrim`.
+
+Gates for this commit: build clean; **census diff empty** — no control, query,
+route or `src/lib` hash moved; harnesses green at 209 assertions.
+
 ## Still open
 
 1. **Screenshots + overflow assertions** — the whole authenticated set, both
-   viewports. Reproducible from tag `9j-before` the moment a credential exists.
-   The 390×844 pass over the field tools is the most valuable item in it.
+   viewports. Blocked by the environment's egress policy, not by the repository;
+   see the gate section above. The 390×844 pass over the field tools is the most
+   valuable item in it, and 9K(3) is the evidence: three visual defects shipped
+   through nine census-clean commits.
 2. `npm run dev` is broken independently of 9J — harfbuzzjs uses top-level await,
    which the dev optimizer's browser target rejects. `vite build` is unaffected.
    Nobody can run the app locally without the `vite preview` workaround. Not 9J

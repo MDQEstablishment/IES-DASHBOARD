@@ -50,7 +50,7 @@ export function AttachmentChip({ docs = [], onOpen }) {
       {open && (
         <>
           <div onClick={(e) => { e.stopPropagation(); setOpen(false) }} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', zIndex: 31, top: '100%', left: 0, marginTop: 4, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 8px 24px rgba(16,26,36,.14)', padding: 6, minWidth: 190 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', zIndex: 31, top: '100%', left: 0, marginTop: 4, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-2)', padding: 6, minWidth: 190 }}>
             {withFiles.map((d) => (
               <button key={d.id} className="ies-hover" onClick={() => { setOpen(false); onOpen?.(d) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--accent)', fontWeight: 600, borderRadius: 'var(--radius-s)' }}>

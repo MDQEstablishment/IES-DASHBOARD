@@ -166,7 +166,7 @@ export default function BuildingChat({ buildingId, user }) {
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
         <div style={{ flex: 1, position: 'relative' }}>
           {mention && filtered.length > 0 && (
-            <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', zIndex: 40 }}>
+            <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-2)', overflow: 'hidden', zIndex: 40 }}>
               <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '6px 10px 4px' }}>MENTION</div>
               {filtered.map((p, i) => (
                 <button key={p.id} type="button" onMouseDown={(e) => { e.preventDefault(); pickMention(p) }}

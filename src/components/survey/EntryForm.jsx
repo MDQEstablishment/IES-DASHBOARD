@@ -382,7 +382,7 @@ function OldUnitPicker({ registry, matched, value, refValue, matchSource, matchC
             placeholder={loading ? 'Loading the registry…' : rows.length ? 'Search make, model or tonnage — e.g. Gree, GWC, 2 TR…' : 'The old-model registry is empty — import it in Settings'}
             onChange={(e) => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)} />
           {open && !loading && (matches.length > 0 || q.trim() !== '') && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', boxShadow: '0 10px 28px rgba(16,26,36,.14)', overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, marginTop: 4, background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-2)', overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
               {matches.length > 0 ? matches.map((r) => (
                 <button key={r.id} type="button" title={titleOf(r)} onMouseDown={(e) => { e.preventDefault(); onPick(r); setOpen(false); setQ('') }}
                   className="ies-row-hover" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, background: 'none', cursor: 'pointer' }}>
