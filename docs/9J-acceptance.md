@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 52 files · 539 interactive controls · 267 database touches.**
+**Totals: 53 files · 543 interactive controls · 269 database touches.**
 
 ## Per-file summary
 
@@ -48,8 +48,9 @@ that commit message.
 | `src/components/Shell.jsx` | 11 | 4 | — | ☐ |
 | `src/components/SurveyTab.jsx` | 3 | 1 | — | ☐ |
 | `src/components/TarshidImportModal.jsx` | 4 | 0 | — | ☐ |
+| `src/components/murshid/MurshidFeedback.jsx` | 1 | 1 | — | ☐ |
 | `src/components/murshid/MurshidLauncher.jsx` | 1 | 0 | — | ☐ |
-| `src/components/murshid/MurshidPanel.jsx` | 6 | 0 | — | ☐ |
+| `src/components/murshid/MurshidPanel.jsx` | 9 | 1 | — | ☐ |
 | `src/components/murshid/helpContent.js` | 0 | 0 | — | ☐ |
 | `src/components/survey/DailyLog.jsx` | 6 | 0 | — | ☐ |
 | `src/components/survey/EntriesTable.jsx` | 15 | 1 | — | ☐ |
@@ -818,6 +819,18 @@ shared primitives: Btn×2, Empty×1, Loading×1
 
 shared primitives: Btn×3, Field×1, Modal×1
 
+### `src/components/murshid/MurshidFeedback.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onClick:setCat` | 1 |
+
+| database effect | count |
+| --- | --- |
+| `read:murshid_feedback` | 1 |
+
+shared primitives: Empty×1, Loading×1
+
 ### `src/components/murshid/MurshidLauncher.jsx`
 
 | control → handler | count |
@@ -829,11 +842,18 @@ shared primitives: Btn×3, Field×1, Modal×1
 | control → handler | count |
 | --- | --- |
 | `onChange:setDraft` | 1 |
+| `onChange:setFbMsg+setFbSent` | 1 |
 | `onClick:onClose` | 1 |
+| `onClick:sendFeedback` | 1 |
 | `onClick:setDraft+setTab` | 1 |
+| `onClick:setFbCat` | 1 |
 | `onClick:setOpenFaq` | 1 |
 | `onClick:setOpenGuide` | 1 |
 | `onClick:setTab` | 1 |
+
+| database effect | count |
+| --- | --- |
+| `bgInsert:murshid_feedback` | 1 |
 
 ### `src/components/murshid/helpContent.js`
 

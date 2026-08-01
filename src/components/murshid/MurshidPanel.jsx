@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import Icon from '../Icon'
+import { useAuth } from '../../rbac'
+import { bgInsert } from '../../lib/db'
 import { helpForScreen, FIELD_GUIDES, FAQ } from './helpContent'
 
 // مُرشد — the assistant panel. Sprint 9L(1): static content only.
@@ -18,7 +20,12 @@ const TABS = [
   ['ask', 'اسأل مُرشد'],
   ['guide', 'دليل المعرفة'],
   ['faq', 'الأسئلة الشائعة'],
+  ['feedback', 'ملاحظات'],
 ]
+
+// The three the table's CHECK constraint accepts — kept in step with 0119 by
+// the harness, so widening one without the other fails a gate.
+const CATEGORIES = ['اقتراح', 'مشكلة', 'استفسار']
 
 const card = {
   background: 'var(--surface-1)', borderRadius: 'var(--radius-l)',
@@ -26,11 +33,29 @@ const card = {
 }
 
 export default function MurshidPanel({ screen, onClose }) {
+  const { user } = useAuth()
   const [tab, setTab] = useState('ask')
   const [draft, setDraft] = useState('')
   const [openGuide, setOpenGuide] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
+  const [fbCat, setFbCat] = useState(CATEGORIES[0])
+  const [fbMsg, setFbMsg] = useState('')
+  const [fbBusy, setFbBusy] = useState(false)
+  const [fbSent, setFbSent] = useState(false)
   const help = helpForScreen(screen)
+
+  // The screen is captured with the message — "the table is confusing" is
+  // unactionable; "the table on Doc Tracker is confusing" is a ticket.
+  const sendFeedback = async () => {
+    const message = fbMsg.trim()
+    if (!message || !user?.id) return
+    setFbBusy(true)
+    const { error } = await bgInsert('murshid_feedback',
+      { user_id: user.id, screen: screen || null, category: fbCat, message },
+      { okMsg: 'وصلت ملاحظتك — شكراً لك' })
+    setFbBusy(false)
+    if (!error) { setFbMsg(''); setFbSent(true) }
+  }
 
   return (
     <div dir="rtl" lang="ar" style={{
@@ -144,6 +169,49 @@ export default function MurshidPanel({ screen, onClose }) {
                 </div>
               ))}
             </div>
+          </>
+        )}
+
+        {tab === 'feedback' && (
+          <>
+            <div style={{ color: 'var(--text-2)', marginBottom: 12 }}>
+              اقتراح، مشكلة، أو استفسار — تصل ملاحظتك إلى مكتب إدارة المشاريع مع اسم الشاشة التي أنت فيها.
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+              {CATEGORIES.map((c) => (
+                <button key={c} onClick={() => setFbCat(c)} style={{
+                  padding: '6px 13px', borderRadius: 999, fontSize: 12.5, fontWeight: 600,
+                  background: fbCat === c ? 'var(--accent)' : 'var(--track)',
+                  color: fbCat === c ? 'var(--surface-1)' : 'var(--text-2)',
+                }}>{c}</button>
+              ))}
+            </div>
+            <textarea
+              value={fbMsg} onChange={(e) => { setFbMsg(e.target.value); setFbSent(false) }}
+              rows={5} maxLength={4000} placeholder="اكتب ملاحظتك هنا…"
+              style={{
+                width: '100%', padding: '9px 11px', borderRadius: 'var(--radius-s)',
+                border: '1px solid var(--line-ctrl)', background: 'var(--surface-1)',
+                color: 'var(--text)', fontSize: 13, lineHeight: 1.7, resize: 'vertical',
+              }} />
+            {screen && (
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)', margin: '6px 0 10px' }}>
+                سترفق مع الملاحظة الشاشة: <span dir="ltr">{screen}</span>
+              </div>
+            )}
+            <button onClick={sendFeedback} disabled={fbBusy || !fbMsg.trim()} style={{
+              padding: '9px 16px', borderRadius: 'var(--radius-s)', fontWeight: 600, fontSize: 13,
+              background: fbMsg.trim() ? 'var(--accent)' : 'var(--track)',
+              color: fbMsg.trim() ? 'var(--surface-1)' : 'var(--text-3)',
+              cursor: fbMsg.trim() && !fbBusy ? 'pointer' : 'not-allowed',
+              opacity: fbBusy ? 0.6 : 1,
+            }}>{fbBusy ? 'جارٍ الإرسال…' : 'إرسال'}</button>
+            {fbSent && (
+              <div style={{
+                marginTop: 12, padding: '9px 12px', borderRadius: 'var(--radius-s)',
+                background: 'var(--ok-bg)', color: 'var(--ok-deep)', fontSize: 12.5,
+              }}>تم إرسال ملاحظتك. يمكنك إرسال المزيد في أي وقت.</div>
+            )}
           </>
         )}
 
