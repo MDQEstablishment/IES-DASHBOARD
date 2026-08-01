@@ -107,13 +107,13 @@ that commit message.
 
 | module | sha256 (16) |
 | --- | --- |
-| `cocPdf.js` | `9d17731b19762f95` |
-| `constants.js` | `cffde92c30aea79d` |
+| `cocPdf.js` | `20bddbc4f054bd4f` |
+| `constants.js` | `a3b54e7be5774f86` |
 | `db.js` | `1f41b6cbdb277f8b` |
-| `docPdf.js` | `885ebbd9f2149af8` |
+| `docPdf.js` | `7cd7e26696f9b63d` |
 | `format.js` | `c03144e8bd851ea0` |
 | `image.js` | `377425ac96352664` |
-| `inspectionDocs.js` | `b3d4e4491a9cb205` |
+| `inspectionDocs.js` | `f7edaacaf482e34c` |
 | `nav.js` | `6464a869ec8aaa79` |
 | `progressReport.js` | `5892ad1d9ad9b878` |
 | `progressReportGen.js` | `7e03efbab161a197` |

@@ -4,11 +4,9 @@
 // to the private coc-pdfs bucket, and marks the COC generated.
 import { supabase } from './supabase'
 import { uploadToBucket } from './db'
-import { generateDocPdf } from './docPdf'
+import { generateDocPdf, AC_ESM_RE as AC_RE } from './docPdf'
 import { localToday } from './format'
 import { CONTROL_ESM_RE as CTRL_RE } from './constants'
-
-const AC_RE = /\ba\/?c\b|air.?cond|cool|hvac/i
 
 // Display name for a certificate's scope: AC if every covered ESM is an AC
 // measure, Lighting otherwise. esmName maps code -> display name.

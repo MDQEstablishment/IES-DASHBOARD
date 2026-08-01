@@ -6,6 +6,7 @@ import { Modal, Field, inputStyle, Btn } from './ui'
 import { compressImage } from '../lib/image'
 import { toast } from '../lib/toast'
 import { buildInspectionPdf, commitInspectionDoc } from '../lib/inspectionDocs'
+import { contentKeyFor } from '../lib/docPdf'
 import { localToday } from '../lib/format'
 
 // Multi-item MIR / WIR generator with a LIVE side-by-side PDF preview: the iframe
@@ -67,7 +68,11 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
       .map((code) => ({ code, selected: code === sel, items: byEsm[code].slice().sort((x, y) => (x.item_description || '').localeCompare(y.item_description || '') || (x.model_code || '').localeCompare(y.model_code || '')) }))
   })()
   const validRows = rows.filter((r) => r.description.trim())
-  const isLightingWir = kind === 'wir' && chosenEsm && !/esm\s*3/i.test(chosenEsm.code || '')
+  // 9K(2): ask the generator which block this document gets rather than keeping
+  // a second copy of the rule here. The two used to be independent tests of the
+  // ESM code, so a project that did not number its AC measure "ESM3" could get
+  // the lux/control-list UI over a PDF that rendered the AC block, or vice versa.
+  const isLightingWir = kind === 'wir' && !!chosenEsm && contentKeyFor('wir', chosenEsm.code, chosenEsm.name) === 'wirLighting'
   const itemsForPdf = validRows.map((r) => ({ description: r.description.trim(), brand: r.brand.trim(), model: r.model.trim(), qty: r.qty, unit: r.unit, boqRef: (r.boqRef || '').trim(), existingType: (r.existingType || '').trim(), luxE: r.luxE || ['', '', ''], luxP: r.luxP || ['', '', ''] }))
   const itemById = Object.fromEntries(items.map((x) => [x.id, x]))
   const label = (x) => [x?.item_description, x?.model_code].filter(Boolean).join(' ')
@@ -112,14 +117,38 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
 
   const addBlank = () => setRows((r) => [...r, emptyRow()])
+  // 9K(2) H1 — a photo's `rowKey` is an INDEX into `rows`, so any edit that
+  // DROPS a row silently re-points every photo above it at its neighbour: the
+  // evidence photograph ends up filed under the wrong item, and a photo whose
+  // own row went away attaches to whatever slid into that slot. Nothing warns,
+  // and the document generates as if it were correct.
+  //
+  // Both row-dropping edits therefore remap the keys in the same tick they
+  // change the rows: `kept` is the old indices that survive, in their new
+  // order, so old -> new is its position in that list, and a key that is not in
+  // it belonged to a row that is gone and becomes null (unassigned).
+  // Computed from the current `rows` OUTSIDE the setRows updater — a state
+  // updater must stay pure, and React may invoke it more than once.
+  const remapPhotoRows = (kept) => {
+    const moved = new Map(kept.map((oldIdx, newIdx) => [oldIdx, newIdx]))
+    setPhotos((p) => p.map((x) => (x.rowKey == null ? x
+      : { ...x, rowKey: moved.has(x.rowKey) ? moved.get(x.rowKey) : null })))
+  }
   const addFromItem = (id) => {
     const it = items.find((x) => x.id === id); if (!it) return
+    // this drops every blank row, so the keys above each blank shift down
+    remapPhotoRows(rows.map((_, idx) => idx).filter((idx) => rows[idx].description || rows[idx].qty))
     setRows((r) => [...r.filter((x) => x.description || x.qty), {
       description: it.item_description || '', brand: '', model: it.model_code || '', qty: it.total_quantity ?? '', unit: it.capacity_unit || 'pcs', boqRef: '',
     }])
   }
   const setRow = (i, patch) => setRows((r) => r.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))
-  const removeRow = (i) => setRows((r) => (r.length === 1 ? [emptyRow()] : r.filter((_, idx) => idx !== i)))
+  const removeRow = (i) => {
+    // the last row is replaced by a blank rather than removed, so nothing
+    // survives to point at: every key on it is cleared.
+    remapPhotoRows(rows.length === 1 ? [] : rows.map((_, idx) => idx).filter((idx) => idx !== i))
+    setRows((r) => (r.length === 1 ? [emptyRow()] : r.filter((_, idx) => idx !== i)))
+  }
   const addPhotos = async (e) => {
     const files = Array.from(e.target.files || []); e.target.value = ''
     if (!files.length) return

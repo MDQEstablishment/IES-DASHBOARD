@@ -25,6 +25,10 @@ function inspectionPdfData({ kind, project, esm, building, items, photoFiles, ph
     beneficiary: project?.beneficiary_entity || project?.client || '',
     contractor: project?.contractor_name || '',
     esmNo: esm?.code || '', esmName: title || esm?.name || '',
+    // 9K(2): esmName is the DISPLAY line and may be a user-typed document title,
+    // so it cannot decide AC-vs-Lighting. The measure's real name is carried
+    // separately for contentKeyFor() alone.
+    esmRealName: esm?.name || '',
     items: items || [],
     storageLocation: storage || building?.name || project?.region || '',
     installationLocation: installation || building?.name || project?.region || '',

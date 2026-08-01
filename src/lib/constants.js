@@ -114,6 +114,11 @@ export const labelize = (s) => (s == null ? '—' : String(s).replace(/_/g, ' ')
 // exported here so the mapping editor and the assembler cannot drift apart.
 export const CONTROL_ESM_RE = /control|sensor/i
 
+// 9K(2) — the AC-measure test that pairs with the one above lives in
+// `docPdf.js`, not here: this module reads import.meta.env at load time, which
+// only Vite provides, and the generator harnesses import the generator directly
+// in plain Node. See AC_ESM_RE there.
+
 export const CAN_SURVEY = ['proje', 'projm', 'progm', 'pmo', 'admin']
 export const SURVEY_CATEGORIES = [['lighting', 'Lighting'], ['ac', 'AC'], ['sensor', 'Sensor'], ['other', 'Other']]
 

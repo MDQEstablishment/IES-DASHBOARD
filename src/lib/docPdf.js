@@ -7,6 +7,20 @@
 // by HarfBuzz WASM (harfbuzzjs) with the Amiri face and painted as vector
 // glyph paths (8S P3.5 v2).
 
+// 9K(2) — an ESM is an AIR-CONDITIONING measure when its NAME says so. The COC
+// layer has always decided AC-vs-Lighting this way (kindLabel and the
+// certificate groupings built on it); the inspection documents instead tested
+// the ESM CODE against /esm\s*3/i, which holds only while a project numbers its
+// AC measure "ESM3". On a project numbered any other way the two layers
+// disagreed: the certificate said AC while the work inspection rendered the
+// lighting block, lux readings and all.
+//
+// It lives HERE rather than beside CONTROL_ESM_RE in constants.js because that
+// module reads import.meta.env at load time — Vite-only — and the generator
+// harnesses import this file directly in plain Node. cocPdf.js imports it from
+// here, so there is still exactly one definition.
+export const AC_ESM_RE = /\ba\/?c\b|air.?cond|cool|hvac/i
+
 const A4 = [595.28, 841.89]
 const M = 34
 const BAR_BLUE = [0.726, 0.800, 0.918] // #B9CCEA  inspection section bars
@@ -430,8 +444,17 @@ const APPENDIX = {
 }
 
 // Which content block a document gets. WIR is ESM-specific; MIR never is.
-export function contentKeyFor(kind, esmCode) {
+//
+// 9K(2): decide on the ESM's NAME, the same test the COC layer has always used
+// (AC_ESM_RE, shared from constants). The old test read the CODE for /esm\s*3/,
+// which is right only while a project numbers its AC measure "ESM3" — on any
+// other numbering the certificate said AC while this document rendered the
+// lighting block. The code test survives ONLY as the fallback for callers that
+// have no name to give, so their behaviour is unchanged.
+export function contentKeyFor(kind, esmCode, esmName) {
   if (kind === 'mir') return 'mir'
+  const name = String(esmName || '').trim()
+  if (name) return AC_ESM_RE.test(name) ? 'wirAc' : 'wirLighting'
   return /esm\s*3/i.test(String(esmCode || '')) || !esmCode ? 'wirAc' : 'wirLighting'
 }
 
@@ -474,7 +497,7 @@ export async function renderInspection(kind, data, assets) {
   bar('DESCRIPTION:')
   if (data.esmName || data.brief || data.esmNo) { ensure(14); ltr(`${data.esmNo ? data.esmNo + ' - ' : ''}${data.esmName || data.brief || ''}`, M + 4, st.y, { size: 8.5, f: helvB, maxW: W - 8 }); st.y -= 14 }
   const api = { data, ensure, bar, ltr, rect, st, W, fonts: { helv, helvB, helvI }, pdf, P }
-  const contentKey = data.contentKey || contentKeyFor(kind, data.esmNo)
+  const contentKey = data.contentKey || contentKeyFor(kind, data.esmNo, data.esmRealName)
   const items = (CONTENT[contentKey] || CONTENT.mir)(api)
 
   // storage & installation
