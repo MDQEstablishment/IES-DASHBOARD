@@ -14,7 +14,7 @@ export function smartFilename({ projectCode, kind, referenceNo, title, revNo = 0
 }
 
 // Assemble the PDF data object from project defaults + the modal's items/photos.
-function inspectionPdfData({ kind, project, esm, building, items, photoFiles, title, generatedBy, preparedByTitle, expectedResubmission, referenceNo, storage, installation }) {
+function inspectionPdfData({ kind, project, esm, building, items, photoFiles, photoItems, title, generatedBy, preparedByTitle, expectedResubmission, referenceNo, storage, installation }) {
   return {
     referenceNo, projectName: project?.name, projectCode: project?.code,
     clientName: project?.client || 'Tarshid', date: localToday(),
@@ -29,7 +29,7 @@ function inspectionPdfData({ kind, project, esm, building, items, photoFiles, ti
     storageLocation: storage || building?.name || project?.region || '',
     installationLocation: installation || building?.name || project?.region || '',
     attachmentsChecked: (photoFiles && photoFiles.length) ? ['Pictures'] : [],
-    photoFiles: photoFiles || [],
+    photoFiles: photoFiles || [], photoItems: photoItems || [],
   }
 }
 

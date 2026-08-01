@@ -196,6 +196,113 @@ const CONTENT = {
   wirLighting: (api) => drawItemTable(api),
 }
 
+// 9H(6) — per-item evidence pages, drawn after the signature grid because they
+// are appendix material: the form itself must stay readable as a form.
+//
+// PHOTO CAP: 40 embedded photographs, the same ceiling reportPhotoAnnex uses
+// (~150 KB each, ~6 MB — large enough to be useful, small enough to email).
+// The 9F annex module is NOT reused here: it is storage-backed and resolves
+// signed URLs, whereas these photographs are local File objects that have never
+// been uploaded. Anything past the cap is DROPPED AND SAID SO, on the page, in
+// the document itself — never silently.
+const MAX_INSPECTION_PHOTOS = 40
+
+async function drawPhotoGrid(api, photos, startIndex, total) {
+  const { pdf, ltr, rect, st, W, P } = api
+  const gap = 12, capH = 12
+  let pageTop = 0, cellH = 0
+  for (let i = 0; i < photos.length; i++) {
+    let img = null
+    try { img = (photos[i].type || '').includes('png') ? await pdf.embedPng(photos[i].bytes) : await pdf.embedJpg(photos[i].bytes) } catch { continue }
+    if (i % 2 === 0) {
+      if (i > 0) P.newPage()
+      pageTop = st.y
+      cellH = (pageTop - (M + 30) - gap) / 2
+    }
+    const cellTop = pageTop - (i % 2) * (cellH + gap)
+    rect(M, cellTop - cellH, W, cellH)
+    const dim = img.scaleToFit(W - 14, cellH - capH - 10)
+    st.page.drawImage(img, { x: M + (W - dim.width) / 2, y: cellTop - cellH + capH + ((cellH - capH - dim.height) / 2), width: dim.width, height: dim.height })
+    ltr(photos[i].caption || `Photo ${startIndex + i + 1} of ${total}`, M + W / 2, cellTop - cellH + 3, { size: 7, color: GREY, align: 'center' })
+    st.y = cellTop - cellH - 6
+  }
+}
+
+// Group the document's photographs by the item they were assigned to.
+function photosByItem(data) {
+  const photos = data.photos || []
+  const assign = data.photoItems || []
+  const byItem = new Map()
+  const loose = []
+  photos.forEach((p, i) => {
+    const idx = assign[i]
+    if (idx == null || idx < 0) { loose.push(p); return }
+    if (!byItem.has(idx)) byItem.set(idx, [])
+    byItem.get(idx).push(p)
+  })
+  return { byItem, loose }
+}
+
+const APPENDIX = {
+  // MIR — one page per item: BOQ Reference / Description / Picture on Site.
+  mir: async (api) => {
+    const { data, bar, ltr, rect, st, W, fonts, P } = api
+    const items = data.items || []
+    const { byItem, loose } = photosByItem(data)
+    let used = 0
+    let dropped = 0
+
+    for (let i = 0; i < items.length; i++) {
+      const mine = byItem.get(i) || []
+      if (!mine.length && !items[i].boqRef) continue
+      P.newPage()
+      bar(`ITEM ${i + 1} OF ${items.length}`)
+      const rowH = 16
+      ;[['BOQ Reference', items[i].boqRef || '—'], ['Description', items[i].description || '—'],
+        ['Quantity', `${items[i].qty ?? ''}${items[i].unit ? ' ' + items[i].unit : ''}` || '—']].forEach(([k, v]) => {
+        rect(M, st.y - rowH, 120, rowH, LINE, [0.93, 0.95, 0.98])
+        rect(M + 120, st.y - rowH, W - 120, rowH)
+        ltr(k, M + 5, st.y - 11, { size: 8, f: fonts.helvB })
+        ltr(v, M + 125, st.y - 11, { size: 8, maxW: W - 130 })
+        st.y -= rowH
+      })
+      st.y -= 10
+      if (mine.length) {
+        const room = Math.max(0, MAX_INSPECTION_PHOTOS - used)
+        const show = mine.slice(0, room)
+        dropped += mine.length - show.length
+        if (show.length) {
+          bar('PICTURE ON SITE:')
+          await drawPhotoGrid(api, show, 0, show.length)
+          used += show.length
+        }
+        if (mine.length > show.length) {
+          ltr(`${mine.length - show.length} further photograph(s) for this item were not included — the form caps embedded photographs at ${MAX_INSPECTION_PHOTOS}.`,
+            M + 4, st.y - 12, { size: 8, f: fonts.helvI, color: GREY, maxW: W - 8 })
+          st.y -= 18
+        }
+      }
+    }
+
+    if (loose.length) {
+      const room = Math.max(0, MAX_INSPECTION_PHOTOS - used)
+      const show = loose.slice(0, room)
+      dropped += loose.length - show.length
+      if (show.length) {
+        P.newPage(); bar('PHOTOS (NOT ASSIGNED TO AN ITEM):')
+        await drawPhotoGrid(api, show, 0, show.length)
+        used += show.length
+      }
+    }
+    if (dropped > 0) {
+      api.ensure(24)
+      ltr(`${dropped} photograph(s) in total exceeded the ${MAX_INSPECTION_PHOTOS}-photograph cap and are not in this document.`,
+        M + 4, st.y - 12, { size: 8, f: fonts.helvB, color: [0.70, 0.21, 0.17], maxW: W - 8 })
+      st.y -= 18
+    }
+  },
+}
+
 // Which content block a document gets. WIR is ESM-specific; MIR never is.
 export function contentKeyFor(kind, esmCode) {
   if (kind === 'mir') return 'mir'
@@ -326,24 +433,29 @@ export async function renderInspection(kind, data, assets) {
   })
   st.y = gy - 8
 
-  // photos — on their own LAST page(s): 2 per page, stacked vertically and large
-  const photos = data.photos || []
-  const gap = 12, capH = 12
-  let pageTop = 0, cellH = 0
-  for (let i = 0; i < photos.length; i++) {
-    const p = photos[i]
-    let img = null
-    try { img = (p.type || '').includes('png') ? await pdf.embedPng(p.bytes) : await pdf.embedJpg(p.bytes) } catch { continue }
-    if (i % 2 === 0) { // start each pair on a fresh page
-      newPage(); bar('PHOTOS:')
-      pageTop = st.y
-      cellH = (pageTop - (M + 30) - gap) / 2
+  // ── appendix: per-item evidence, or the flat photo pages ────────────────
+  const appendix = APPENDIX[contentKey]
+  if (appendix) {
+    await appendix(api)
+  } else {
+    const photos = data.photos || []
+    const gap = 12, capH = 12
+    let pageTop = 0, cellH = 0
+    for (let i = 0; i < photos.length; i++) {
+      const p = photos[i]
+      let img = null
+      try { img = (p.type || '').includes('png') ? await pdf.embedPng(p.bytes) : await pdf.embedJpg(p.bytes) } catch { continue }
+      if (i % 2 === 0) { // start each pair on a fresh page
+        newPage(); bar('PHOTOS:')
+        pageTop = st.y
+        cellH = (pageTop - (M + 30) - gap) / 2
+      }
+      const cellTop = pageTop - (i % 2) * (cellH + gap)
+      rect(M, cellTop - cellH, W, cellH)
+      const dim = img.scaleToFit(W - 14, cellH - capH - 10)
+      st.page.drawImage(img, { x: M + (W - dim.width) / 2, y: cellTop - cellH + capH + ((cellH - capH - dim.height) / 2), width: dim.width, height: dim.height })
+      ltr(`Photo ${i + 1} of ${photos.length}`, M + W / 2, cellTop - cellH + 3, { size: 7, color: GREY, align: 'center' })
     }
-    const cellTop = pageTop - (i % 2) * (cellH + gap)
-    rect(M, cellTop - cellH, W, cellH)
-    const dim = img.scaleToFit(W - 14, cellH - capH - 10)
-    st.page.drawImage(img, { x: M + (W - dim.width) / 2, y: cellTop - cellH + capH + ((cellH - capH - dim.height) / 2), width: dim.width, height: dim.height })
-    ltr(`Photo ${i + 1} of ${photos.length}`, M + W / 2, cellTop - cellH + 3, { size: 7, color: GREY, align: 'center' })
   }
 
   // ── final pass: Page N of M + the form code, on every page ────────────────

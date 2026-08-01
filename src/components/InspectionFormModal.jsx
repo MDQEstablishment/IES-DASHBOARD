@@ -12,7 +12,9 @@ import { localToday } from '../lib/format'
 // re-renders (debounced) as the user edits any field/item/photo. Project-level
 // defaults (Reference No / Contractor / Beneficiary) come from the project record.
 // Download commits to Doc Tracker + Project Documents; Cancel persists nothing.
-const emptyRow = () => ({ description: '', brand: '', model: '', qty: '', unit: 'pcs' })
+// 9H(6) — boqRef feeds the MIR's per-item evidence page (BOQ Reference /
+// Description / Picture on Site).
+const emptyRow = () => ({ description: '', brand: '', model: '', qty: '', unit: 'pcs', boqRef: '' })
 
 export default function InspectionFormModal({ kind, project, esm = null, building = null, onClose, onDone, replaceOf = null }) {
   const { user, profile } = useAuth()
@@ -56,7 +58,10 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
       .map((code) => ({ code, selected: code === sel, items: byEsm[code].slice().sort((x, y) => (x.item_description || '').localeCompare(y.item_description || '') || (x.model_code || '').localeCompare(y.model_code || '')) }))
   })()
   const validRows = rows.filter((r) => r.description.trim())
-  const itemsForPdf = validRows.map((r) => ({ description: r.description.trim(), brand: r.brand.trim(), model: r.model.trim(), qty: r.qty, unit: r.unit }))
+  const itemsForPdf = validRows.map((r) => ({ description: r.description.trim(), brand: r.brand.trim(), model: r.model.trim(), qty: r.qty, unit: r.unit, boqRef: (r.boqRef || '').trim() }))
+  // Photo -> item index, resolved against the SAME filtered list the PDF gets,
+  // so an empty row above a photo's item can never shift its assignment.
+  const photoItems = photos.map((p) => (p.rowKey == null ? -1 : validRows.findIndex((r) => r === rows[p.rowKey])))
 
   // peek the reference number once; reused by every preview build + the commit.
   // When replacing, keep the original reference (a revision shares it).
@@ -75,7 +80,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
       try {
         const bytes = await buildInspectionPdf({
           kind, project, esm: chosenEsm, building, items: itemsForPdf,
-          photoFiles: photos.map((p) => p.preview), title: docTitle.trim(),
+          photoFiles: photos.map((p) => p.preview), photoItems, title: docTitle.trim(),
           generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim(),
         })
         if (seq !== buildSeq.current) return // superseded by a newer edit
@@ -94,7 +99,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
   const addFromItem = (id) => {
     const it = items.find((x) => x.id === id); if (!it) return
     setRows((r) => [...r.filter((x) => x.description || x.qty), {
-      description: it.item_description || '', brand: '', model: it.model_code || '', qty: it.total_quantity ?? '', unit: it.capacity_unit || 'pcs',
+      description: it.item_description || '', brand: '', model: it.model_code || '', qty: it.total_quantity ?? '', unit: it.capacity_unit || 'pcs', boqRef: '',
     }])
   }
   const setRow = (i, patch) => setRows((r) => r.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))
@@ -106,10 +111,11 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     const metas = await Promise.all(files.map(async (orig) => {
       let preview = orig
       try { preview = orig.type.startsWith('image/') ? await compressImage(orig, { maxBytes: 140000, maxDim: 900 }) : orig } catch { /* use orig */ }
-      return { orig, preview, url: URL.createObjectURL(orig) }
+      return { orig, preview, url: URL.createObjectURL(orig), rowKey: null }
     }))
     setPhotos((p) => [...p, ...metas])
   }
+  const setPhotoRow = (i, rowKey) => setPhotos((p) => p.map((x, idx) => (idx === i ? { ...x, rowKey } : x)))
   const removePhoto = (i) => setPhotos((p) => { const m = p[i]; if (m?.url) URL.revokeObjectURL(m.url); return p.filter((_, idx) => idx !== i) })
 
   const download = async () => {
@@ -119,7 +125,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     const finalFiles = await Promise.all(photos.map((p) => (p.orig.type.startsWith('image/') ? compressImage(p.orig, { maxBytes: 350000, maxDim: 1280 }).catch(() => p.orig) : p.orig)))
     let bytes
     try {
-      bytes = await buildInspectionPdf({ kind, project, esm: chosenEsm, building, items: itemsForPdf, photoFiles: finalFiles, title: docTitle.trim(), generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim() })
+      bytes = await buildInspectionPdf({ kind, project, esm: chosenEsm, building, items: itemsForPdf, photoFiles: finalFiles, photoItems, title: docTitle.trim(), generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim() })
     } catch (e) { setBusy(false); toast('Could not build the PDF — ' + (e?.message || ''), 'err'); return }
     const res = await commitInspectionDoc({ kind, project, esm: chosenEsm, building, userId: user.id, referenceNo: refNo, revNo, title: docTitle.trim() || (chosenEsm ? chosenEsm.code : kind.toUpperCase()), storage: storage.trim(), installation: installation.trim(), bytes })
     setBusy(false)
@@ -176,7 +182,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
           </div>
           <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              <th style={{ padding: 4 }}>DESCRIPTION</th><th style={{ padding: 4, width: 80 }}>BRAND</th><th style={{ padding: 4, width: 90 }}>MODEL</th><th style={{ padding: 4, width: 54 }}>QTY</th><th style={{ padding: 4, width: 50 }}>UNIT</th><th style={{ width: 24 }} />
+              <th style={{ padding: 4 }}>DESCRIPTION</th><th style={{ padding: 4, width: 80 }}>BRAND</th><th style={{ padding: 4, width: 90 }}>MODEL</th><th style={{ padding: 4, width: 54 }}>QTY</th><th style={{ padding: 4, width: 50 }}>UNIT</th><th style={{ padding: 4, width: 80 }}>BOQ REF</th><th style={{ width: 24 }} />
             </tr></thead>
             <tbody>
               {rows.map((r, i) => (
@@ -186,13 +192,16 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
                   <td style={{ padding: 2 }}><input lang="en" style={cell} value={r.model} onChange={(e) => setRow(i, { model: e.target.value })} placeholder="Model" /></td>
                   <td style={{ padding: 2 }}><input lang="en" inputMode="numeric" style={cell} value={r.qty} onChange={(e) => setRow(i, { qty: e.target.value })} placeholder="Qty" /></td>
                   <td style={{ padding: 2 }}><input lang="en" style={cell} value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })} placeholder="pcs" /></td>
+                  <td style={{ padding: 2 }}><input lang="en" style={cell} value={r.boqRef} onChange={(e) => setRow(i, { boqRef: e.target.value })} placeholder="BOQ ref" /></td>
                   <td style={{ padding: 2, textAlign: 'center' }}><button title="Remove row" onClick={() => removeRow(i)} style={{ color: 'var(--bad)', fontWeight: 700 }}>×</button></td>
                 </tr>
               ))}
             </tbody>
           </table></div>
 
-          <Field label={`Photos (${photos.length}) — 2 per page, large, on the last pages`}>
+          <Field label={kind === 'mir'
+            ? `Photos (${photos.length}) — assign each to an item to give it a "Picture on Site" page`
+            : `Photos (${photos.length}) — 2 per page, large, on the last pages`}>
             <label className="ies-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: '1px dashed var(--line)', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               + Add photos<input type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: 'none' }} />
             </label>
@@ -200,9 +209,21 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
           {photos.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {photos.map((f, i) => (
-                <div key={i} style={{ position: 'relative', width: 60, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)' }}>
-                  <img src={f.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button onClick={() => removePhoto(i)} title="Remove" style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, lineHeight: '16px' }}>×</button>
+                <div key={i} style={{ width: 92 }}>
+                  <div style={{ position: 'relative', width: 92, height: 66, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                    <img src={f.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button onClick={() => removePhoto(i)} title="Remove" style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 12, lineHeight: '16px' }}>×</button>
+                  </div>
+                  {kind === 'mir' && (
+                    <select value={f.rowKey ?? ''} onChange={(e) => setPhotoRow(i, e.target.value === '' ? null : Number(e.target.value))}
+                      title="Which item is this a picture of?"
+                      style={{ width: '100%', marginTop: 3, padding: '2px 3px', fontSize: 10, border: '1px solid var(--line)', borderRadius: 4 }}>
+                      <option value="">Unassigned</option>
+                      {rows.map((r, ri) => r.description.trim() && (
+                        <option key={ri} value={ri}>{r.description.trim().slice(0, 22)}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               ))}
             </div>
