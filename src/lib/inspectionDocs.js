@@ -14,11 +14,12 @@ export function smartFilename({ projectCode, kind, referenceNo, title, revNo = 0
 }
 
 // Assemble the PDF data object from project defaults + the modal's items/photos.
-function inspectionPdfData({ kind, project, esm, building, items, photoFiles, title, generatedBy, referenceNo, storage, installation }) {
+function inspectionPdfData({ kind, project, esm, building, items, photoFiles, title, generatedBy, preparedByTitle, expectedResubmission, referenceNo, storage, installation }) {
   return {
     referenceNo, projectName: project?.name, projectCode: project?.code,
     clientName: project?.client || 'Tarshid', date: localToday(),
-    generatedBy: generatedBy || '', region: project?.region || '',
+    generatedBy: generatedBy || '', preparedByTitle: preparedByTitle || '',
+    expectedResubmission: expectedResubmission || '', region: project?.region || '',
     rev: project?.doc_rev || '00', revDate: localToday(),
     projectRef: project?.project_reference_no || '',
     beneficiary: project?.beneficiary_entity || project?.client || '',

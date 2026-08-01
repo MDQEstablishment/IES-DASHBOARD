@@ -18,6 +18,8 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
   const { user, profile } = useAuth()
   const today = localToday()
   const generatedBy = profile?.full_name || user?.email || ''
+  // 9H(4) — fills the ESCO column of the new tri-party signature grid.
+  const preparedByTitle = profile?.job_title || ''
   const revNo = replaceOf ? (replaceOf.revNo || 0) : 0
   const heading = (replaceOf ? `Replace ${kind.toUpperCase()}` : (kind === 'mir' ? 'Generate MIR' : 'Generate WIR')) + (revNo > 0 ? ` · R${revNo}` : '')
 
@@ -74,7 +76,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
         const bytes = await buildInspectionPdf({
           kind, project, esm: chosenEsm, building, items: itemsForPdf,
           photoFiles: photos.map((p) => p.preview), title: docTitle.trim(),
-          generatedBy, referenceNo: refNo, storage: storage.trim(), installation: installation.trim(),
+          generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim(),
         })
         if (seq !== buildSeq.current) return // superseded by a newer edit
         const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
@@ -117,7 +119,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
     const finalFiles = await Promise.all(photos.map((p) => (p.orig.type.startsWith('image/') ? compressImage(p.orig, { maxBytes: 350000, maxDim: 1280 }).catch(() => p.orig) : p.orig)))
     let bytes
     try {
-      bytes = await buildInspectionPdf({ kind, project, esm: chosenEsm, building, items: itemsForPdf, photoFiles: finalFiles, title: docTitle.trim(), generatedBy, referenceNo: refNo, storage: storage.trim(), installation: installation.trim() })
+      bytes = await buildInspectionPdf({ kind, project, esm: chosenEsm, building, items: itemsForPdf, photoFiles: finalFiles, title: docTitle.trim(), generatedBy, preparedByTitle, referenceNo: refNo, storage: storage.trim(), installation: installation.trim() })
     } catch (e) { setBusy(false); toast('Could not build the PDF — ' + (e?.message || ''), 'err'); return }
     const res = await commitInspectionDoc({ kind, project, esm: chosenEsm, building, userId: user.id, referenceNo: refNo, revNo, title: docTitle.trim() || (chosenEsm ? chosenEsm.code : kind.toUpperCase()), storage: storage.trim(), installation: installation.trim(), bytes })
     setBusy(false)

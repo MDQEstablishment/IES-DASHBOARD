@@ -16,7 +16,10 @@ const DARK = [0.06, 0.09, 0.16]
 const GREY = [0.42, 0.47, 0.53]
 const LINE = [0.72, 0.76, 0.82]
 
-const ATTACH_INSPECTION = ['Specification', 'Sample', 'Approved Shop Drawing', 'BOQ Reference', 'Pictures', 'Valid SASO/Saber', 'Approved Material Submittal', 'Test Reports', 'Other']
+// 9H(4) — label set taken from the supplied samples. Two differ from what we
+// printed before: 'Specification' -> 'Approved Material Inspection' and
+// 'Valid SASO/Saber' -> 'Approved Method Statement'.
+const ATTACH_INSPECTION = ['Approved Material Inspection', 'Sample', 'Approved Shop Drawing', 'BOQ Reference', 'Pictures', 'Approved Method Statement', 'Approved Material Submittal', 'Test Reports', 'Other']
 
 // Arabic label vocabulary for the COC — wording matches the signed MONG-D
 // samples verbatim (Sprint 8S authoritative templates).
@@ -133,7 +136,72 @@ function primitives(pdf, rgb, fonts) {
   return { st, col, W, newPage, rect, ltr, rtl }
 }
 
-// ── MIR / WIR (English, pale-blue bars) ────────────────────────────────────
+// ── MIR / WIR ───────────────────────────────────────────────────────────────
+// 9H(4) — ONE SHELL, PER-ESM CONTENT.
+//
+// The official MIR and WIR are the same form. Header block, DESCRIPTION,
+// STORAGE & INSTALLATION, ATTACHMENTS, the decision row, the three comment
+// sections, the tri-party signature grid and the PMT-003-V1 footer are
+// identical on both; only the block sitting under DESCRIPTION differs. Before
+// this, "MIR" and "WIR" were one function that differed by a single title
+// string, and everything below DESCRIPTION was hardcoded — so there was nowhere
+// to put a lux table without also putting it on the material inspection.
+//
+// Splitting shell from content is what lets the ESM3 (AC) work-inspection
+// content stay exactly what it is today — the owner froze it — while ESM1/ESM2
+// get their own block in 9H(7). The harness asserts that freeze by diffing the
+// rendered strings against a baseline captured before this refactor.
+
+const DECISIONS = ['A) Accepted', 'B) Accepted with Comments', 'C) Resubmit', 'D) Rejected', 'E) Retained for Information']
+const SIGN_PARTIES = ['TARSHID', 'ENTITY', 'ESCO']
+const SIGN_ROWS = [['Name', 22], ['Designation', 22], ['Signature', 30], ['Date', 20]]
+const COMMENT_SECTIONS = ["TARSHID's COMMENTS:", "ENTITY's COMMENTS:", "ESCO's COMMENTS:"]
+
+// The classic item table (# / DESCRIPTION / BRAND / MODEL / QTY). This is the
+// ESM3 work-inspection content and the MIR batch content; it is deliberately
+// unchanged from the pre-9H renderer.
+function drawItemTable(api) {
+  const { data, ensure, ltr, rect, st, W, fonts } = api
+  const items = (data.items && data.items.length)
+    ? data.items
+    : (data.installed || []).map((it) => ({ description: it.item_description, brand: it.brand || '', model: it.model_code, qty: it.total_quantity, unit: it.capacity_unit, notes: '' }))
+  const cols = [{ w: 24, h: '#' }, { w: W - 24 - 96 - 96 - 56, h: 'DESCRIPTION' }, { w: 96, h: 'BRAND' }, { w: 96, h: 'MODEL' }, { w: 56, h: 'QTY' }]
+  ensure(15)
+  let hx = M
+  cols.forEach((c) => { rect(hx, st.y - 14, c.w, 14, LINE, [0.93, 0.95, 0.98]); ltr(c.h, hx + 4, st.y - 10, { size: 7, f: fonts.helvB, color: GREY }); hx += c.w })
+  st.y -= 14
+  items.forEach((it, i) => {
+    ensure(14)
+    let cx = M
+    const vals = [String(i + 1), it.description || '', it.brand || '', it.model || '', `${it.qty ?? ''}${it.unit ? ' ' + it.unit : ''}`]
+    cols.forEach((c, ci) => { rect(cx, st.y - 13, c.w, 13); ltr(vals[ci], cx + 4, st.y - 10, { size: 7.5, maxW: c.w - 7 }); cx += c.w })
+    st.y -= 13
+  })
+  if (!items.length) { ensure(14); ltr('(No items added)', M + 4, st.y - 4, { size: 8, color: GREY }); st.y -= 14 }
+  st.y -= 4
+  return items
+}
+
+// Content blocks. Each returns the normalized item list so the shell can total
+// quantities without re-deriving them.
+const CONTENT = {
+  // ESM3 / AC work inspection — FROZEN by the owner: the platform's current
+  // output is the correct format. Do not add to this block.
+  wirAc: (api) => drawItemTable(api),
+  // Material & equipment inspection.
+  mir: (api) => drawItemTable(api),
+  // ESM1 / ESM2 lighting work inspection. 9H(7) replaces this with the lux
+  // table and the control list; until then it renders what it renders today,
+  // so nothing regresses in the meantime.
+  wirLighting: (api) => drawItemTable(api),
+}
+
+// Which content block a document gets. WIR is ESM-specific; MIR never is.
+export function contentKeyFor(kind, esmCode) {
+  if (kind === 'mir') return 'mir'
+  return /esm\s*3/i.test(String(esmCode || '')) || !esmCode ? 'wirAc' : 'wirLighting'
+}
+
 export async function renderInspection(kind, data, assets) {
   const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib')
   const pdf = await PDFDocument.create()
@@ -143,8 +211,7 @@ export async function renderInspection(kind, data, assets) {
   const logo = assets.logo ? await pdf.embedPng(assets.logo).catch(() => null) : null
   const P = primitives(pdf, rgb, { helv, helvB, helvI })
   const { st, W, newPage, rect, ltr } = P
-  const ensure = (need) => { if (st.y - need < M + 26) { footer(); newPage() } }
-  const footer = () => { ltr(`Page ${st.pageNo}`, A4[0] / 2, 20, { size: 8, color: GREY, align: 'center', f: helv }); ltr('PMT-003-V1', A4[0] - M, 14, { size: 7.5, color: GREY, align: 'right' }) }
+  const ensure = (need) => { if (st.y - need < M + 26) { newPage() } }
   const bar = (label) => { ensure(30); rect(M, st.y - 16, W, 16, BAR_BLUE, BAR_BLUE, 0); ltr(label, M + 6, st.y - 12, { size: 8.5, f: helvB }); st.y -= 30 } // 8pt breathing room under the bar
   const titleBar = (label) => { rect(M, st.y - 22, W, 22, BAR_BLUE, BAR_BLUE, 0); rect(M, st.y - 22, W, 22, LINE); ltr(label, A4[0] / 2, st.y - 15, { size: 11, f: helvB, align: 'center' }); st.y -= 28 }
 
@@ -170,40 +237,29 @@ export async function renderInspection(kind, data, assets) {
   R.forEach(([k, v]) => { ltr(`${k}:`, M + half + 6, ly, { size: 8, f: helvB }); ltr(v || '', M + half + 6 + helvB.widthOfTextAtSize(`${k}: `, 8), ly, { size: 8, f: helvI }); ly -= 11.5 })
   st.y -= boxH + 16 // clear gap so the title block doesn't kiss the DESCRIPTION bar
 
-  // description — ESM line + multi-item table
+  // ── DESCRIPTION: the ESM line, then the swappable content block ───────────
   bar('DESCRIPTION:')
   if (data.esmName || data.brief || data.esmNo) { ensure(14); ltr(`${data.esmNo ? data.esmNo + ' - ' : ''}${data.esmName || data.brief || ''}`, M + 4, st.y, { size: 8.5, f: helvB, maxW: W - 8 }); st.y -= 14 }
-  // normalize items: prefer the multi-item list, fall back to installed-items
-  const items = (data.items && data.items.length)
-    ? data.items
-    : (data.installed || []).map((it) => ({ description: it.item_description, brand: it.brand || '', model: it.model_code, qty: it.total_quantity, unit: it.capacity_unit, notes: '' }))
-  // item table with header row (# / Description / Brand / Model / Qty)
-  const cols = [{ w: 24, h: '#' }, { w: W - 24 - 96 - 96 - 56, h: 'DESCRIPTION' }, { w: 96, h: 'BRAND' }, { w: 96, h: 'MODEL' }, { w: 56, h: 'QTY' }]
-  ensure(15); let hx = M
-  cols.forEach((c) => { rect(hx, st.y - 14, c.w, 14, LINE, [0.93, 0.95, 0.98]); ltr(c.h, hx + 4, st.y - 10, { size: 7, f: helvB, color: GREY }); hx += c.w })
-  st.y -= 14
-  items.forEach((it, i) => {
-    ensure(14); let cx = M
-    const vals = [String(i + 1), it.description || '', it.brand || '', it.model || '', `${it.qty ?? ''}${it.unit ? ' ' + it.unit : ''}`]
-    cols.forEach((c, ci) => { rect(cx, st.y - 13, c.w, 13); ltr(vals[ci], cx + 4, st.y - 10, { size: 7.5, maxW: c.w - 7 }); cx += c.w })
-    st.y -= 13
-  })
-  if (!items.length) { ensure(14); ltr('(No items added)', M + 4, st.y - 4, { size: 8, color: GREY }); st.y -= 14 }
-  st.y -= 4
+  const api = { data, ensure, bar, ltr, rect, st, W, fonts: { helv, helvB, helvI }, pdf, P }
+  const contentKey = data.contentKey || contentKeyFor(kind, data.esmNo)
+  const items = (CONTENT[contentKey] || CONTENT.mir)(api)
 
   // storage & installation
   bar('STORAGE & INSTALLATION LOCATION/S:')
   ensure(34); rect(M, st.y - 30, half, 32); rect(M + half, st.y - 30, half, 32)
   ltr('Storage:', M + 5, st.y - 11, { size: 8, f: helvB }); ltr(data.storageLocation || '', M + 5 + helvB.widthOfTextAtSize('Storage: ', 8), st.y - 11, { size: 8, f: helvI, maxW: half - 50 })
   ltr('Installation:', M + half + 5, st.y - 11, { size: 8, f: helvB }); ltr(data.installationLocation || '', M + half + 5, st.y - 23, { size: 8, f: helvI, maxW: half - 60 })
-  const totQty = items.reduce((s, i) => s + (Number(i.qty) || 0), 0)
+  const totQty = (items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)
   if (totQty) ltr(`Qty: ${totQty}`, M + W - 5, st.y - 23, { size: 8, f: helvB, align: 'right' })
   st.y -= 38
 
   // attachments
   bar('ATTACHMENTS:')
   const checked = new Set(data.attachmentsChecked || [])
-  ensure(40); const perRow = 5, cw = W / perRow
+  // 9H(4) — 3 per row, not 5. The corrected labels ("Approved Material
+  // Inspection", "Approved Method Statement") are long enough that a fifth of
+  // the page width truncated them mid-word.
+  ensure(56); const perRow = 3, cw = W / perRow
   ATTACH_INSPECTION.forEach((it, i) => {
     const row = Math.floor(i / perRow), cx = M + (i % perRow) * cw, cy = st.y - row * 16
     rect(cx, cy - 9, 9, 9); if (checked.has(it)) rect(cx + 1, cy - 8, 7, 7, DARK, DARK)
@@ -211,9 +267,64 @@ export async function renderInspection(kind, data, assets) {
   })
   st.y -= Math.ceil(ATTACH_INSPECTION.length / perRow) * 16 + 6
 
-  // comments — BEFORE the photos (photos are the final pages)
-  bar("TARSHID's COMMENTS:")
-  ensure(40); rect(M, st.y - 38, W, 40); st.y -= 46
+  // ── decision row ──────────────────────────────────────────────────────────
+  // Rendered BLANK, always. The reviewing party ticks one at signing, on paper —
+  // the same rule the COC's approval grid has followed since 8U. The platform's
+  // own document status is recorded separately in the Doc Tracker.
+  bar('DECISION:')
+  ensure(20)
+  const dw = W / DECISIONS.length
+  DECISIONS.forEach((d, i) => {
+    const cx = M + i * dw
+    rect(cx, st.y - 9, 9, 9)
+    ltr(d, cx + 13, st.y - 7, { size: 6.8, maxW: dw - 16 })
+  })
+  st.y -= 22
+
+  // ── three comment sections + expected re-submission date ──────────────────
+  COMMENT_SECTIONS.forEach((label) => {
+    bar(label)
+    ensure(38); rect(M, st.y - 34, W, 36); st.y -= 42
+  })
+  ensure(16)
+  ltr('EXPECTED RE-SUBMISSION DATE (if applicable):', M + 2, st.y - 8, { size: 8, f: helvB })
+  const rsX = M + 2 + helvB.widthOfTextAtSize('EXPECTED RE-SUBMISSION DATE (if applicable): ', 8)
+  rect(rsX, st.y - 11, 120, 13)
+  if (data.expectedResubmission) ltr(data.expectedResubmission, rsX + 5, st.y - 8, { size: 8, f: helvI })
+  st.y -= 20
+
+  // ── tri-party signature grid ──────────────────────────────────────────────
+  // The form before this had NO signature block at all — only a blank
+  // "Signature:" line inside the header box. ESCO's column auto-fills with the
+  // person who generated the document; TARSHID's and the entity's stay blank
+  // for wet signature, matching the COC.
+  const labelColW = 78
+  const partyW = (W - labelColW) / SIGN_PARTIES.length
+  const gridH = 18 + SIGN_ROWS.reduce((s, [, h]) => s + h, 0)
+  ensure(30 + gridH)
+  bar('SIGNATURES:')
+  let gy = st.y
+  let cx0 = M + labelColW
+  rect(M, gy - 18, labelColW, 18, LINE, [0.93, 0.95, 0.98])
+  SIGN_PARTIES.forEach((pty) => {
+    rect(cx0, gy - 18, partyW, 18, LINE, [0.93, 0.95, 0.98])
+    ltr(pty, cx0 + partyW / 2, gy - 12, { size: 7.5, f: helvB, align: 'center' })
+    cx0 += partyW
+  })
+  gy -= 18
+  const escoCell = { Name: data.generatedBy || '', Designation: data.preparedByTitle || '', Date: data.date || '' }
+  SIGN_ROWS.forEach(([label, h]) => {
+    rect(M, gy - h, labelColW, h)
+    ltr(label, M + 5, gy - h / 2 - 3, { size: 7.5, f: helvB })
+    let cx = M + labelColW
+    SIGN_PARTIES.forEach((pty) => {
+      rect(cx, gy - h, partyW, h)
+      if (pty === 'ESCO' && escoCell[label]) ltr(escoCell[label], cx + partyW / 2, gy - h / 2 - 3, { size: 7.5, f: helvI, align: 'center', maxW: partyW - 8 })
+      cx += partyW
+    })
+    gy -= h
+  })
+  st.y = gy - 8
 
   // photos — on their own LAST page(s): 2 per page, stacked vertically and large
   const photos = data.photos || []
@@ -224,7 +335,7 @@ export async function renderInspection(kind, data, assets) {
     let img = null
     try { img = (p.type || '').includes('png') ? await pdf.embedPng(p.bytes) : await pdf.embedJpg(p.bytes) } catch { continue }
     if (i % 2 === 0) { // start each pair on a fresh page
-      footer(); newPage(); bar('PHOTOS:')
+      newPage(); bar('PHOTOS:')
       pageTop = st.y
       cellH = (pageTop - (M + 30) - gap) / 2
     }
@@ -235,7 +346,16 @@ export async function renderInspection(kind, data, assets) {
     ltr(`Photo ${i + 1} of ${photos.length}`, M + W / 2, cellTop - cellH + 3, { size: 7, color: GREY, align: 'center' })
   }
 
-  footer()
+  // ── final pass: Page N of M + the form code, on every page ────────────────
+  // Was "Page N" with no total, so a reader could not tell whether a printed
+  // stack was complete — on a 162-page inspection that matters.
+  const pages = pdf.getPages()
+  pages.forEach((pg, i) => {
+    const t = `Page ${i + 1} of ${pages.length}`
+    pg.drawText(t, { x: A4[0] / 2 - helv.widthOfTextAtSize(t, 8) / 2, y: 20, size: 8, font: helv, color: rgb(GREY[0], GREY[1], GREY[2]) })
+    pg.drawText('PMT-003-V1', { x: A4[0] - M - helv.widthOfTextAtSize('PMT-003-V1', 7.5), y: 14, size: 7.5, font: helv, color: rgb(GREY[0], GREY[1], GREY[2]) })
+  })
+
   return await pdf.save()
 }
 
