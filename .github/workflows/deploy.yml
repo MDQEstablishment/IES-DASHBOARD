@@ -30,7 +30,17 @@ jobs:
         with:
           path: dist
 
+  # Only main deploys. The `github-pages` environment refuses a deployment from
+  # any other branch, so without this guard every claude/** push produced a
+  # `deploy` job that failed in ~2 seconds having executed zero steps and been
+  # assigned no runner. See the commit that added this line: that failure was
+  # invisible for months because `concurrency: cancel-in-progress` cancelled the
+  # branch run whenever a main push followed it, so the run was marked
+  # `cancelled` before it ever reached `deploy`. Feature branches now build-check
+  # only, and a red X on a branch means the BUILD is broken — which is the whole
+  # point of having the signal.
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
