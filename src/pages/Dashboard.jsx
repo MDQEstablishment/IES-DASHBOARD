@@ -186,7 +186,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="ies-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 14 }}>
+      {/* 9P(B) — three KPI cards, not four. The S-Curve moved out to the large
+          bottom-left panel, and the owner's decision is that the row stays at
+          three evenly distributed cards rather than backfilling a fourth: a KPI
+          invented to fill a gap is worse than a clean row. */}
+      <div className="ies-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 14 }}>
         <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="projects" size={16} />Total Projects</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 34, fontWeight: 700, marginTop: 8, lineHeight: 1 }}>{kpiProjects}</div>
@@ -206,24 +210,6 @@ export default function Dashboard() {
               <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{Math.round(overall)}<span style={{ fontSize: 15, color: 'var(--text-3)' }}>%</span></div>
               <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>weighted · {kpiActive} active</div>
             </div>
-          </div>
-        </div>
-        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 12, fontWeight: 600 }}><Icon name="curve" size={16} />S-Curve</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}><span style={{ color: 'var(--text)' }}>━ actual</span> · <span>┄ planned</span></div>
-          </div>
-          <svg viewBox="0 0 260 92" preserveAspectRatio="none" style={{ width: '100%', height: 92, marginTop: 8, display: 'block' }}>
-            <line x1="0" y1="23" x2="260" y2="23" stroke="var(--track)" strokeWidth="1" />
-            <line x1="0" y1="46" x2="260" y2="46" stroke="var(--track)" strokeWidth="1" />
-            <line x1="0" y1="69" x2="260" y2="69" stroke="var(--track)" strokeWidth="1" />
-            <line x1="130" y1="0" x2="130" y2="92" stroke="var(--line-ctrl)" strokeWidth="1" strokeDasharray="2 3" />
-            <polyline points={planPoints} fill="none" stroke="var(--text-faint)" strokeWidth="1.6" strokeDasharray="1.5 4" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline points={actualPoints} fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
-            <circle cx={actualNowX} cy={actualNowY} r="3.2" fill="var(--accent)" />
-          </svg>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--text-3)', marginTop: 2 }}>
-            <span>−12 WK</span><span>NOW</span><span>+12 WK</span>
           </div>
         </div>
         <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
@@ -282,8 +268,72 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="ies-2col" style={{ display: 'grid', gridTemplateColumns: '1.7fr 1fr', gap: 14 }}>
+      {/* 9P(B) — the bottom section. LEFT is now the promoted S-Curve at panel
+          size; RIGHT stacks Recent Activity over the Attention List. Same two
+          columns and the same gap as before, so nothing above or below moves. */}
+      <div className="ies-2col" style={{ display: 'grid', gridTemplateColumns: '1.7fr 1fr', gap: 14, alignItems: 'start' }}>
+
+        {/* --- S-Curve, promoted out of the KPI row ------------------------- */}
         <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>S-Curve</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}><span style={{ color: 'var(--text)' }}>━ actual</span> · <span>┄ planned</span></div>
+          </div>
+          {/* The SERIES IS UNCHANGED — same 13 points, same 260x92 viewBox, same
+              planPoints/actualPoints computed above. Only the rendered height
+              grows, from 92px in the KPI card to 300px here.
+              vector-effect="non-scaling-stroke" is what makes that safe: the
+              viewBox is stretched by preserveAspectRatio="none", so without it
+              every stroke would be scaled by ~3x horizontally and the grid
+              lines would render as thick bars. With it the strokes stay in
+              screen units and the curve reads at panel size.
+              The "now" marker is a ZERO-LENGTH LINE with a round cap rather
+              than a <circle>: a circle in a non-uniformly stretched viewBox
+              draws as an ellipse, whereas a round line cap is measured in
+              screen units and stays a true dot at any panel width. */}
+          <svg viewBox="0 0 260 92" preserveAspectRatio="none" style={{ width: '100%', height: 300, marginTop: 8, display: 'block' }}>
+            <line x1="0" y1="23" x2="260" y2="23" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <line x1="0" y1="46" x2="260" y2="46" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <line x1="0" y1="69" x2="260" y2="69" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            <line x1="130" y1="0" x2="130" y2="92" stroke="var(--line-ctrl)" strokeWidth="1" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+            <polyline points={planPoints} fill="none" stroke="var(--text-faint)" strokeWidth="1.6" strokeDasharray="3 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            <polyline points={actualPoints} fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <line x1={actualNowX} y1={actualNowY} x2={actualNowX} y2={actualNowY} stroke="var(--accent)" strokeWidth="8" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 4 }}>
+            <span>−12 WK</span><span>NOW</span><span>+12 WK</span>
+          </div>
+        </div>
+
+        {/* --- right column: Recent Activity ON TOP, Attention List beneath --
+            gridTemplateColumns is minmax(0,1fr), not the implicit `auto`, and
+            that is load-bearing rather than decorative. The Attention List
+            below holds a table with min-width:520px. `.ies-2col>*{min-width:0}`
+            from 9J(10b) reaches this wrapper because it is a DIRECT child of
+            .ies-2col — but it does not reach the cards inside this nested grid,
+            which get min-width:auto again and re-inflate to their min-content.
+            The screenshot gate caught exactly that: scrollWidth 1500 vs 1366.
+            minmax(0,1fr) here plus minWidth:0 on the card is the same fix as
+            9J(10b), applied one level deeper. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 14, minWidth: 0 }}>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Recent Activity</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Last 24h</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {recentActivity.length === 0 ? <Empty icon="bell">No recent activity.</Empty> : recentActivity.map((a, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '9px 0', borderTop: '1px solid var(--line)' }}>
+                <span style={{ flex: 'none', width: 8, height: 8, borderRadius: '50%', background: a.dot, marginTop: 5 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5 }}><span style={{ fontWeight: 600 }}>{a.actor}</span> <span style={{ color: 'var(--text-3)' }}>{a.what}</span></div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{a.where} · {a.when}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>Attention List</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{scopeLabel}</div>
@@ -317,22 +367,6 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-        <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>Recent Activity</div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Last 24h</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {recentActivity.length === 0 ? <Empty icon="bell">No recent activity.</Empty> : recentActivity.map((a, i) => (
-              <div key={i} style={{ display: 'flex', gap: 10, padding: '9px 0', borderTop: '1px solid var(--line)' }}>
-                <span style={{ flex: 'none', width: 8, height: 8, borderRadius: '50%', background: a.dot, marginTop: 5 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5 }}><span style={{ fontWeight: 600 }}>{a.actor}</span> <span style={{ color: 'var(--text-3)' }}>{a.what}</span></div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{a.where} · {a.when}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
