@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 55 files · 548 interactive controls · 272 database touches.**
+**Totals: 56 files · 555 interactive controls · 272 database touches.**
 
 ## Per-file summary
 
@@ -30,6 +30,7 @@ that commit message.
 | `src/components/DateInput.jsx` | 10 | 0 | — | ☐ |
 | `src/components/EquipmentCatalogs.jsx` | 17 | 3 | — | ☐ |
 | `src/components/FileDropZone.jsx` | 5 | 0 | — | ☐ |
+| `src/components/GlobalSearch.jsx` | 7 | 0 | — | ☐ |
 | `src/components/Icon.jsx` | 0 | 0 | — | ☐ |
 | `src/components/InspectionFormModal.jsx` | 22 | 5 | — | ☐ |
 | `src/components/LightingReplacements.jsx` | 5 | 2 | — | ☐ |
@@ -126,6 +127,7 @@ that commit message.
 | `reportPhotoAnnex.js` | `118486cb831caf0f` |
 | `savingSheet.js` | `f0f807e2c7ca42c3` |
 | `savingSheetGen.js` | `e25cfb6c04b83480` |
+| `search.js` | `f4d469e48f2e18d6` |
 | `supabase.js` | `33b838e12ee34aca` |
 | `surveyExport.js` | `5a8816358ca31772` |
 | `tarshidImport.js` | `c962fc0d0cae0a42` |
@@ -402,6 +404,18 @@ shared primitives: Btn×8, Empty×1, Field×1, Loading×1, Modal×2
 | `onClick:click` | 2 |
 | `onClick:remove+stopPropagation` | 1 |
 | `onKeyDown:click+preventDefault` | 1 |
+
+### `src/components/GlobalSearch.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onBlur:setExpanded` | 1 |
+| `onChange:setQ` | 1 |
+| `onClick:focus+setExpanded+setTimeout` | 1 |
+| `onClick:go` | 1 |
+| `onFocus:setOpen` | 1 |
+| `onKeyDown:onKeyDown` | 1 |
+| `onMouseEnter:setCursor` | 1 |
 
 ### `src/components/Icon.jsx`
 

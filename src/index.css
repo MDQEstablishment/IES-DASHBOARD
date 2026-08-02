@@ -247,6 +247,17 @@ h1,h2,h3,p{margin:0}
 .ies-table-wrap::-webkit-scrollbar{height:8px}
 .ies-table-wrap::-webkit-scrollbar-track{background:transparent}
 .ies-table-wrap::-webkit-scrollbar-thumb{background:rgba(28,28,28,.2);border-radius:4px}
+/* 9Q(2) — the top-bar search. The bar is 56px and already carries a hamburger,
+   a collapse toggle, a wrapping breadcrumb, the Live dot, the clock and the
+   bell. A 320px field fits at 1024 and up; below that it collapses to an icon
+   which expands on click, so the bar cannot be broken by the field at any
+   width. .ies-topmeta already hides Live + clock under 768. */
+@media (max-width:1023px){
+  .ies-search-trigger{display:inline-flex !important}
+  .ies-search-field{display:none}
+  .ies-search-field.expanded{display:block;position:absolute;right:0;top:0;width:min(320px,70vw);z-index:131}
+}
+
 /* hover helpers used across inline-styled buttons/rows */
 .ies-hover{transition:background .12s,border-color .12s,box-shadow .12s,color .12s}
 .ies-hover:hover{background:var(--hover)}

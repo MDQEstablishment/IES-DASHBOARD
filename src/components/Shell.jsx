@@ -8,6 +8,7 @@ import { useAuth } from '../rbac'
 import { useBreadcrumb } from '../breadcrumbs'
 import { useLiveQuery, bgUpdate } from '../lib/db'
 import { fmtClock, ago } from '../lib/format'
+import GlobalSearch from './GlobalSearch'
 import MurshidLauncher from './murshid/MurshidLauncher'
 
 // 8W/9G(3) — the top-bar bell. Seven kinds of notification now arrive here:
@@ -271,7 +272,11 @@ export default function Shell() {
             ))}
           </div>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* 9Q(2) — global search. Sits BEFORE the marginLeft:auto group so the
+              Live indicator, the Clock and the NotifBell keep their positions
+              and their order; it takes the slack the breadcrumb leaves. */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <GlobalSearch />
             <div className="ies-topmeta" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--live)' }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--live)', animation: 'iesBlink 1.6s infinite' }} />Live</div>
             <Clock />
             <NotifBell />

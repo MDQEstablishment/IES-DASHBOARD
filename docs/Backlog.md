@@ -123,3 +123,32 @@ and/or `Escalations.jsx` — the age is already computed and rendered at both
 sites, so it is a threshold constant plus a style branch, and a comparator if
 sorting changes. Deciding the threshold is the expensive part, and it is a
 judgement about how this programme is actually run, which is the owner's.
+
+---
+
+## SEARCH_CROSS_SCRIPT — `masjid` does not find `مسجد`
+
+**Status:** open · logged, not built · owner decision · raised by 9Q(2)
+
+**What works today.** Global search matches Arabic **and** English, because it
+searches the Arabic columns directly — `buildings.name_ar` (92 of 815 rows carry
+one) and `projects.entity_name_ar` — alongside the Latin ones. Someone who typed
+the data in Arabic finds it in Arabic; someone who typed it in English finds it
+in English. Digits fold both ways already: `toLatin` normalises Arabic-Indic
+(٢) and Persian (۲) numerals, so `١.٥` and `1.5` are the same query.
+
+**What does not work.** There is no letter-level transliteration between the
+scripts, so a Latin spelling of an Arabic word will not match the Arabic string
+and vice versa: `masjid` does not find `مسجد`, `Asir` does not find `عسير`.
+
+**Why it is not built.** People search in the script they entered the data in,
+so the gap is narrow in practice — and closing it properly is not a small
+change. Arabic↔Latin transliteration has no single correct mapping (`ق` is q/k/g
+by dialect; short vowels are unwritten and must be guessed; `ع` has no Latin
+letter at all), so any implementation is a table of judgement calls that will be
+wrong for some names and will need tuning against real data. That is a piece of
+work with its own acceptance criteria, not a helper function.
+
+**If it is ever built,** it belongs in `src/lib/search.js` beside `toLatin` and
+must serve the survey catalogue picker too — both call sites share one matcher
+and that must not be forked to add this.

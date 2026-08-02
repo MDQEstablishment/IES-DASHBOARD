@@ -5,6 +5,7 @@ import { fetchAllRows } from '../../lib/tarshidImport'
 import { m2PerTon } from '../../lib/savingSheet'
 import { num, roomKey, toLatin } from '../../lib/format'
 import { compressImage } from '../../lib/image'
+import { norm, tokenize, tokenHit } from '../../lib/search'
 import { Modal, Btn, Field, inputStyle } from '../ui'
 import { toast } from '../../lib/toast'
 import { SURVEY_CATEGORIES } from '../../lib/constants'
@@ -303,7 +304,6 @@ const SectionLabel = ({ children }) => <div style={{ fontFamily: 'var(--mono)', 
 // tolerance TARSHID uses — because the stored strings don't contain '2 TR'
 // verbatim. Default list ranks by proximity to the tonnage already typed, or
 // shows a representative sample across size categories, never import order.
-const UNIT_WORDS = new Set(['tr', 'w', 'watt', 'watts', 'seer', 'eer', 'btu', 'ton', 'tons', 'hrs'])
 function OldUnitPicker({ registry, matched, value, refValue, matchSource, matchConfidence, onPick, onClear }) {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
@@ -316,20 +316,13 @@ function OldUnitPicker({ registry, matched, value, refValue, matchSource, matchC
   const titleOf = (r) => [r.size_category, r.surveyed_unit_description].filter(Boolean).join(' — ')
 
   const matches = useMemo(() => {
-    const norm = (s) => toLatin(String(s ?? '')).toLowerCase()
+    // 9Q(2) — the tokeniser, the unit-word list and the ±10% numeric tolerance
+    // used to live here. They are now src/lib/search.js, shared with global
+    // search, so the two can never drift apart. Behaviour is unchanged.
     const hayOf = (r) => norm([r.model_no, r.make, r.equipment_type, r.size_category, r.surveyed_unit_description].filter(Boolean).join(' '))
     const numsOf = (r) => [r.tr, r.t1_btu, r.t1_eer, r.equivalent_seer].filter((v) => v != null).map(Number)
-    // tokens: split, strip standalone unit words, peel unit suffixes ('2tr' -> '2')
-    const tokens = norm(q).split(/\s+/).filter(Boolean)
-      .filter((t) => !UNIT_WORDS.has(t))
-      .map((t) => { const m = /^(\d+(?:\.\d+)?)(tr|w|watts?|seer|eer|btu|tons?)$/.exec(t); return m ? m[1] : t })
-    const tokenHit = (r, t) => {
-      if (hayOf(r).includes(t)) return true
-      const n = /^\d+(?:\.\d+)?$/.test(t) ? parseFloat(t) : NaN
-      if (Number.isNaN(n)) return false
-      return numsOf(r).some((v) => v >= n * 0.9 && v <= n * 1.1)   // ±10% (TARSHID tolerance)
-    }
-    let list = tokens.length ? rows.filter((r) => tokens.every((t) => tokenHit(r, t))) : [...rows]
+    const tokens = tokenize(q)
+    let list = tokens.length ? rows.filter((r) => tokens.every((t) => tokenHit(hayOf(r), numsOf(r), t))) : [...rows]
     const ref = refValue != null && String(refValue).trim() !== '' ? parseFloat(toLatin(String(refValue))) : NaN
     if (!Number.isNaN(ref)) {
       list.sort((a, b) => {
