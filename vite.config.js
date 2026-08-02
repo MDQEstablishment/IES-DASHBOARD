@@ -3,8 +3,27 @@ import react from '@vitejs/plugin-react'
 
 // Deployed to GitHub Pages at https://mdqestablishment.github.io/IES-DASHBOARD/
 // HashRouter handles client-side routing so deep links survive a static host.
+// 9Q(3) — the build id. Baked into the bundle AND written to dist/version.json,
+// so a running tab can compare what it IS against what is DEPLOYED. In CI this
+// is the commit SHA; locally it is the build time, which is enough to tell two
+// builds apart.
+const BUILD_ID = process.env.GITHUB_SHA || `local-${Date.now()}`
+
+// Writes dist/version.json beside index.html. Deliberately NOT hashed and
+// NOT cached — it is the one file whose whole job is to be re-read.
+function emitVersion() {
+  return {
+    name: 'ies-emit-version',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ buildId: BUILD_ID }) })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), emitVersion()],
+  define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
   base: '/IES-DASHBOARD/',
   // target es2022: harfbuzzjs self-initializes its WASM via top-level await,
   // which the default es2020 target rejects at build time.
