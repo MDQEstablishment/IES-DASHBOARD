@@ -63,7 +63,39 @@
   /* ---- semantic colours keep their IES hues; only their containers soften -- */
   --ok:#217A54;--ok-bg:#E6F2EC;--ok-deep:#1D6A49;
   --warn:#B45309;--warn-bg:#FBF1E3;--warn-deep:#854D0E;
-  --bad:#B3362B;--bad-bg:#FAEDEB;--bad-deep:#96271E;
+  /* 9P(A) — THE ONE COLOUR THIS SPRINT CHANGES. `--bad` was #B3362B, a
+     saturated signal red that belonged to no other family on the page: the
+     shell is warm-neutral, the accent is brass (#A0762B, hue 38), and a hue-5
+     red at 61% saturation read as a foreign alert colour pasted onto a SnowUI
+     surface rather than as this platform's own critical state.
+
+     NO NEW TOKEN IS ADDED, deliberately. `--bad` already IS the semantic danger
+     token and 9J tokenised every call site — 139 of them across the app — so
+     the raw red the owner was looking at on the Dashboard was this value, not a
+     literal in a component. Adding a second "critical" token beside it would
+     have recoloured the three places named in the brief and left the other 136
+     on the clashing red, which is how a palette ends up with two reds. The
+     value moves; the token, and every reference to it, stays exactly as it was.
+
+     The replacement is a muted clay/terracotta: hue 5 -> 10, so it sits between
+     the brass and the old red rather than outside the family, and saturation
+     61% -> 41%, which is what takes the shout out of it.
+
+     Measured, not eyeballed:
+       --bad on a white card    6.21:1  AA
+       --bad on --bad-bg        5.42:1  AA   (the ESC / CRITICAL chip text)
+       --bad on the page --bg   5.32:1  AA
+       --bad-deep on white      8.03:1  AA
+     and it stays LOUDER than the body ink it competes with, so critical still
+     reads as more urgent than a normal row.
+
+     The one thing worth checking on any future change here: --bad has to stay
+     distinguishable from --warn (#B45309) because they sit adjacent as ESC/TASK
+     and CRITICAL/LOW. Moving a red toward brass necessarily moves it toward the
+     amber, so this was measured too — the luminance ratio between the two chips
+     is 1.24, slightly BETTER separated than the 1.20 of the red it replaces,
+     and they differ by 16 degrees of hue and 49 points of saturation. */
+  --bad:#954C3E;--bad-bg:#F5EEED;--bad-deep:#7C3F33;
   --info:#3E5C8A;--info-bg:#ECF1F8;--live:#3FA37A;
   --esm1:#3E5C8A;--esm1-bg:#ECF1F8;--esm2:#6D5A8E;--esm2-bg:#F1EEF7;--esm3:#2A7A72;--esm3-bg:#E7F3F1;
 
