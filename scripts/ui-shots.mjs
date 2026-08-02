@@ -62,12 +62,43 @@ async function shoot(page, vp, slug) {
   const file = path.join(OUT, vp.name, `${slug}.png`)
   fs.mkdirSync(path.dirname(file), { recursive: true })
   await page.screenshot({ path: file, fullPage: true })
-  const overflow = await page.evaluate(() => ({
-    scrollW: document.documentElement.scrollWidth,
-    innerW: window.innerWidth,
-  }))
-  const bad = overflow.scrollW > overflow.innerW + 1
-  console.log(`  ${bad ? 'OVERFLOW' : '   ok   '}  ${vp.name}  ${slug}  (scrollW ${overflow.scrollW} vs ${overflow.innerW})`)
+  const overflow = await page.evaluate(() => {
+    // 9Q(1) — TWO assertions, not one.
+    //
+    // The body-level check below is necessary and insufficient, and 9P(B) is the
+    // proof: the Attention List was moved into a one-third column, its table no
+    // longer fit, and `.ies-table-wrap` did exactly what it was built to do —
+    // it scrolled INSIDE the card. So the page never overflowed, the gate
+    // reported ok at all three viewports, and the defect shipped. A crushed
+    // table with a horizontal scrollbar is precisely what this project's
+    // discipline rule forbids, and the body-level check is structurally blind
+    // to it, because a working scroll container is what hides it.
+    //
+    // So every .ies-table-wrap is now measured against its own client width.
+    // Above the mobile breakpoint a table is expected to FIT its card; at 390
+    // it is expected to scroll, which is the whole point of the wrapper, so the
+    // card-level assertion is applied only at >=768px.
+    const wraps = [...document.querySelectorAll('.ies-table-wrap')].map((w) => {
+      const card = w.closest('[style*="border-radius"], [style*="borderRadius"]') || w.parentElement
+      const label = (card?.querySelector('div')?.textContent || '').trim().slice(0, 28)
+      return { label, clientW: w.clientWidth, scrollW: w.scrollWidth }
+    })
+    return {
+      scrollW: document.documentElement.scrollWidth,
+      innerW: window.innerWidth,
+      wraps,
+    }
+  })
+  const bodyBad = overflow.scrollW > overflow.innerW + 1
+  const cardBad = vp.width >= 768
+    ? overflow.wraps.filter((w) => w.scrollW > w.clientW + 1)
+    : []
+  const bad = bodyBad || cardBad.length > 0
+  const detail = bodyBad ? `body scrollW ${overflow.scrollW} vs ${overflow.innerW}` : `scrollW ${overflow.scrollW} vs ${overflow.innerW}`
+  console.log(`  ${bad ? 'OVERFLOW' : '   ok   '}  ${vp.name}  ${slug}  (${detail}${overflow.wraps.length ? `; ${overflow.wraps.length} table card(s) checked` : ''})`)
+  for (const w of cardBad) {
+    console.log(`      ↳ TABLE DOES NOT FIT ITS CARD: "${w.label}" scrollWidth ${w.scrollW} vs clientWidth ${w.clientW}`)
+  }
   return bad ? `${vp.name}/${slug}` : null
 }
 
