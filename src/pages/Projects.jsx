@@ -151,14 +151,27 @@ export default function Projects() {
 }
 
 // Sprint 8Q — "Panorama Vertical" project card (handoff 2a). Full-bleed cover
-// photo (beige fallback when absent) under a navy scrim, all data overlaid.
-// On-dark status pill palette (the light statusMeta colors would vanish on navy).
+// photo (--track when absent) under a navy scrim, all data overlaid.
+//
+// The status pill palette below CLAIMED to be on-dark and measurably was not.
+// `draft` was --line-ctrl — rgba(28,28,28,.12), a BORDER token, 12% dark ink —
+// and `closed`/`deleted` were --text-3, rgba(28,28,28,.40). Painting 12% and
+// 40% black onto a navy scrim gives 1.05:1 - 1.44:1, which is why DRAFT reached
+// the owner as a ghost outline with nothing legible inside it. The two that
+// were real colours were no better: --live 1.76:1, --brass-bright 2.15:1.
+//
+// Only the TEXT moves, to --on-band. Each row keeps its own background and
+// border untouched: those carry the status identity (green / grey / amber /
+// slate) and they are the part of the pill that was always doing that job.
+// Worst case after, white ink over the pill's own translucent fill over the
+// scrim over a pure-white photo: draft 4.87:1, active 5.51:1, on_hold 5.64:1,
+// closed/deleted 6.42:1. All AA.
 const PILL = {
-  active:  ['var(--live)', 'rgba(33,122,84,0.30)', 'rgba(123,201,163,0.40)'],
-  draft:   ['var(--line-ctrl)', 'rgba(120,132,143,0.32)', 'rgba(199,206,213,0.35)'],
-  on_hold: ['var(--brass-bright)', 'rgba(180,83,9,0.32)', 'rgba(232,182,98,0.40)'],
-  closed:  ['var(--text-3)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
-  deleted: ['var(--text-3)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
+  active:  ['var(--on-band)', 'rgba(33,122,84,0.30)', 'rgba(123,201,163,0.40)'],
+  draft:   ['var(--on-band)', 'rgba(120,132,143,0.32)', 'rgba(199,206,213,0.35)'],
+  on_hold: ['var(--on-band)', 'rgba(180,83,9,0.32)', 'rgba(232,182,98,0.40)'],
+  closed:  ['var(--on-band)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
+  deleted: ['var(--on-band)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
 }
 const SCRIM = 'linear-gradient(180deg, rgba(16,39,59,0.88) 0%, rgba(16,39,59,0.35) 22%, rgba(16,39,59,0) 45%, rgba(16,39,59,0.55) 68%, rgba(16,39,59,0.95) 100%)'
 
@@ -171,7 +184,7 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
   const stat = (val, label, color) => (
     <div style={{ flex: 1, textAlign: 'center', padding: '0 6px' }}>
       <div style={{ fontSize: 17, fontWeight: 700, color, lineHeight: 1.1 }}>{val}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--text-3)', marginTop: 3 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 8, color: 'var(--on-band-2)', marginTop: 3 }}>{label}</div>
     </div>
   )
   return (
@@ -188,12 +201,12 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
         {/* top row */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{p.code}</span>
+            <span style={{ fontSize: 12, color: 'var(--on-band-2)' }}>{p.code}</span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '3px 9px', borderRadius: 999, color: pillC, background: pillBg, border: `1px solid ${pillBd}`, whiteSpace: 'nowrap' }}>{pillLabel}</span>
           </div>
           {canEdit && (
             <button title="Edit project" onClick={(e) => { e.stopPropagation(); onEdit() }}
-              style={{ width: 28, height: 28, borderRadius: 'var(--radius-s)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--surface-1)', border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(16,39,59,0.4)', cursor: 'pointer' }}>
+              style={{ width: 28, height: 28, borderRadius: 'var(--radius-s)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--on-band)', border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(16,39,59,0.4)', cursor: 'pointer' }}>
               <Icon name="edit" size={13} />
             </button>
           )}
@@ -203,15 +216,15 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
         <div>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px', color: 'var(--hover)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta || '—'}</div>
+              <div style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.3px', color: 'var(--on-band)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--on-band-2)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta || '—'}</div>
             </div>
             <div style={{ position: 'relative', width: 52, height: 52, flex: 'none' }}>
               <svg viewBox="0 0 52 52" style={{ width: 52, height: 52 }}>
                 <circle cx="26" cy="26" r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="6" />
                 <circle cx="26" cy="26" r={r} fill="none" stroke="var(--brass-bright)" strokeWidth="6" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 26 26)" />
               </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--surface-1)' }}>{pp}%</div>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--on-band)' }}>{pp}%</div>
             </div>
           </div>
           {/* progress bar */}
@@ -220,11 +233,11 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
           </div>
           {/* stats strip */}
           <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.16)', marginTop: 13, paddingTop: 11 }}>
-            {stat(num(remaining), 'REMAINING', 'var(--brass-bright)')}
+            {stat(num(remaining), 'REMAINING', 'var(--on-band)')}
             <div style={{ width: 1, background: 'rgba(255,255,255,0.16)' }} />
-            {stat(bldgs, 'BLDGS', 'var(--hover)')}
+            {stat(bldgs, 'BLDGS', 'var(--on-band)')}
             <div style={{ width: 1, background: 'rgba(255,255,255,0.16)' }} />
-            {stat(esms, 'ESMS', 'var(--hover)')}
+            {stat(esms, 'ESMS', 'var(--on-band)')}
           </div>
         </div>
       </div>
