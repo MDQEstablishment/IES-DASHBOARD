@@ -11,10 +11,19 @@ control shown to an actor the trigger will reject, or a scope label claiming a
 reach that RLS does not grant. Both failures look fine in a screenshot and are
 only discovered by a user being told "no" after being shown "yes".
 
-So this commit builds nothing. It establishes, against the **live** database,
-which fences actually hold — by pushing on each of them and recording what came
-back. Every later commit in 9R is allowed to point here and say "this control is
-safe to render, and here is the clause that says so."
+**This document is the sprint's complete record.** It began as the 9R(1)
+pre-flight — sections 0 to 3 are that original work, unchanged: the drift check,
+what was found true of the live database before anything was built, and the six
+proofs run against it. Sections 4 onward were written at the end of the sprint
+and cover what was actually delivered: the amendments' disposition, the commit
+ledger, a verification table marking every claim measured, proven or blocked,
+and what an owner should know that is not obvious from the diff.
+
+The method throughout was the same one section 0 establishes: read the live
+database rather than the migration file, push on the fence rather than describe
+it, and never write down a number that was not observed. Sections 7 and 8 are
+where that discipline costs something — three proofs are blocked and deploy is
+pending, and none of them is softened.
 
 Everything below was executed on 2026-08-03 against project `mzuyvajefqkmaxludijm`.
 
@@ -322,72 +331,187 @@ Constraints.md #2. Logged as `MYTASKS_EMAIL_NOTIFICATIONS` in `docs/Backlog.md`.
 
 ---
 
-## 4. The amendments contract, as 9R will implement it
+## 4. Amendments A–F — final disposition
 
-The owner's amendments override the spec. Summarised here so later commits are
-checked against one statement of intent.
+The owner's amendments override the spec. Each row states what was built and
+where the enforcement actually lives, because "the UI does it" is not an answer
+when the UI is the thing that can be wrong.
 
-| | amendment | how 9R satisfies it |
+| | amendment | disposition |
 | --- | --- | --- |
-| **A** | Soft delete into Trash; rows and audit stay forever; hard delete stays impossible | `deleted_at` / `deleted_by_id` in 0124; Trash view with Restore in 9R(4). No DELETE policy is ever added — §1.1 is the guarantee, not the obstacle |
-| **B** | Editable after creation by creator or manager-above-assignee; every edit audited with a summary that NAMES what changed | `tasks_edit_guard` in 0124; `audit_tasks_fn()` replaces the generic writer on the `audit_tasks` trigger, emitting field-level old→new prose (§1.4 records the generic before-picture) |
-| **C** | Cancel ≠ Trash. Both exist, separate controls. Every trash writes an audit row naming actor, task and prior status; Team widget header carries a trashed-in-last-30-days count | Cancel keeps the existing `cancelled` status path proven in (d); Trash is the new `deleted_at` path. Separate controls in 9R(4), count in 9R(5) |
-| **D** | Subtree + responsibility | 0125 widens `tasks_read` so a project's `pm_id` may READ that project's tasks. **Read only.** Write, reassign, status and edit authority stay subtree-based — proofs (a)–(f) are exactly what must keep passing afterwards |
-| **E** | Create-modal targeting: Project · filtered Building · filtered ESM; project-with-no-building is a valid programme-level state | 9R(6). "Linked stage" resolves to ESM (D1): `esm_id` filtered through `project_esms` where `archived = false` |
-| **F** | E-mail out of scope; record the deviations | §3 above; `MYTASKS_EMAIL_NOTIFICATIONS` in the backlog |
-
-Two further items are recorded as deliberately **not built**:
-`MYTASKS_EMAIL_NOTIFICATIONS` and `MYTASKS_ENGINEER_READ_WIDENING`
-(`docs/Backlog.md`). The second is the `building_engineers` route to widening
-`tasks_read` for a proje — a real option, considered, declined for now, and
-written down so declining it stays a decision rather than becoming an oversight.
+| **A** | Soft delete into Trash; rows and audit stay forever; hard delete stays impossible | **Built.** `deleted_at` / `deleted_by_id` (0124); Trash view + Restore in the status filter (9R(4)). **No DELETE policy was added** — §1.1 remains true, which is what makes the soft delete safe rather than what obstructs it |
+| **B** | Editable after creation by creator or manager-above-assignee; every edit audited with a summary naming what changed | **Built.** `tasks_edit_guard` (0124) splits content authority from status authority; `audit_tasks_fn` emits field-level old→new prose. The assignee is deliberately excluded from content edits — holding a task does not let you rewrite the brief you are judged against |
+| **C** | Cancel ≠ Trash, separate controls; every trash audited naming actor, task and prior status; trashed-30d count on the Team widget | **Built.** Cancel stays a status transition on the creator-only path; Trash is a separate button. Audit reads `moved '…' to trash (was in progress)`. The widget's trashed counter is the only place a trashed row is counted — it is excluded from every other metric, which is the anti-gaming design |
+| **D** | Subtree + responsibility | **Built, read-only.** 0125 adds one branch to `tasks_read` via `is_project_pm()`. `tasks_upd` and all guards are untouched: a pm who is not creator, assignee or manager-above-assignee reads such a task and changes nothing. Proven both halves (proof ix) |
+| **E** | Create-modal targeting: Project · filtered Building · filtered ESM; programme-level is valid; links survive edit and appear in audit | **Built.** `useTargeting` / `TargetFields` shared by both modals (9R(6)). Project-with-no-building renders as "programme-level", not as missing data. Link changes produce named audit sentences (§5) |
+| **F** | E-mail out of scope; record the deviations | **Honoured.** No provider, no adapter, no stub. Deviations recorded in §3; `MYTASKS_EMAIL_NOTIFICATIONS` and `MYTASKS_ENGINEER_READ_WIDENING` in `docs/Backlog.md` |
 
 ---
 
-## 5. What this licenses, and what it does not
+## 5. The commit ledger
 
-Proven safe to build on:
+| commit | what it changed |
+| --- | --- |
+| `a117014` | **9R(1)** — proof harness + this document + two backlog items. No behaviour change |
+| `7bda783` | **ci** — regenerated the census manifest. Inherited failure from 9Q(3), which added `BuildWatcher.jsx` without regenerating; raised rather than absorbed into a sprint commit |
+| `570c0ab` | **9R(2)** — `isManager` from the subtree instead of a hard-coded role list; reassign control on rows |
+| `aeec1d0` | **9R(3)** — migrations 0124 (columns, `tasks_edit_guard`, `audit_tasks_fn`) and 0125 (`is_project_pm`, `tasks_read` branch) |
+| `07a9395` | **9R(4)** — Edit modal, separate Cancel and Trash controls, Trash view with Restore, three-way fetch split |
+| `ead62f4` | **9R(5)** — `scopeLabel`, data-gated Delegated tab, four KPI cards, full §6 widget |
+| `245be2e` | **9R(6)** — Project picker, filtered Building and ESM, Project / building column |
+| `ac1c480` | **9R(7a)** — truncation detector on the Team widget |
+| `e6d38c7` | **9R(7b)** — `scripts/tasks-perf.mjs` + harness; measured render and card fit |
 
-- a reassign control whose options are **the actor's subtree only** — (a), (b)
-  and (f) together establish that the database accepts exactly that set and
-  nothing wider;
-- Done offered **only to the assignee**, Cancel **only to the creator** — (c)
-  and (d);
-- Trash as soft delete, because hard delete is unreachable — (e).
+Audit sentences produced by link edits, captured live and rolled back (amendment E):
 
-Not licensed by anything here, and each needs its own live verification when it
-lands: the edit guard, the trash/restore guard, the project↔building and
-project↔ESM integrity checks, and the `pm_id` read widening. All are new
-behaviour introduced by 0124/0125 and are 9R(3)'s obligation to prove the same
-way — apply, then read the live body back, then push on it.
+```
+… updated 'Resolve Window 1.5 TR shortfall': ESM from none to ESM1.
+… updated 'Client sign-off walk-through — MOI-001': building from MOI-001 to MOI-003.
+… updated 'Client sign-off walk-through — MOI-001': project from PROJECT-A to PROJECT-B,
+  building from MOI-001 to none.
+```
 
 ---
 
-## 6. Gate state at 9R(1) — one inherited failure, raised not absorbed
+## 6. Verification table
 
-`npm ci` clean, `npm run build` green.
+Measured means a number was observed. Proven means a live transaction returned
+the expected outcome. Blocked means it was not done, and says why — a blocked
+proof is not softened into a passed one anywhere in this document.
 
-`node scripts/ui-census.mjs --check` is **red, and was already red at HEAD before
-this commit existed.** Cause: `src/components/BuildWatcher.jsx` was added by
-`40d67ab` (9Q(3)) without regenerating `docs/9J-acceptance.md` in the same
-commit, so the manifest describes 56 files while the tree holds 57. Everything
-after that line in the table shifts by one row, which is why a one-file omission
-reports as 1256 changed lines.
+| # | item | status | evidence |
+| --- | --- | --- | --- |
+| 1 | Live guard bodies match the repo | **Proven** | `pg_get_functiondef` × 5 diffed against 0010/0102/0104/0011 — identical; trigger wiring read from `pg_trigger` |
+| 2 | Manager → outside subtree refused | **Proven** | `42501 — You can only assign work to yourself or to someone who reports to you` |
+| 3 | Manager → subordinate accepted | **Proven** | 1 row, rolled back |
+| 4 | Non-assignee → done refused | **Proven** | `42501 — Only the assignee can mark a task done` |
+| 5 | Non-creator → cancel refused | **Proven** | `42501 — Only the person who raised a task can cancel it` |
+| 6 | DELETE affects nothing | **Proven** | 0 rows, no error; 0 DELETE policies, grant present |
+| 7 | Creator branch is not a back door | **Proven** | RLS WITH CHECK evaluated `TRUE`; trigger still refused |
+| 8 | `created_by_id` immutable | **Proven** | was ACCEPTED before 0124; now `42501 — Who raised a task cannot be changed` |
+| 9 | Assignee cannot edit content | **Proven** | `42501 — Only the person who raised this task, or a manager above the person it is assigned to, can edit its details` |
+| 10 | Creator can edit content | **Proven** | audit: `priority from medium to critical, due date from 25 Jun 2026 to 01 Dec 2026` |
+| 11 | Manager-above-assignee can trash; stamp is server-side | **Proven** | forged `deleted_by_id` overridden to the actor; `moved '…' to trash (was open).` |
+| 12 | Non-manager cannot trash | **Proven** | `42501 — …can move it to the trash` |
+| 13 | Restore clears the stamp, leaves status alone | **Proven** | `restored '…' from trash.`, status unchanged |
+| 14 | Trashed row accepts nothing but restore | **Proven** | `42501 — This task is in the trash…` and `42501 — Restore this task first…` |
+| 15 | Building from another project refused | **Proven** | `23514 — That building belongs to a different project than the task` |
+| 16 | ESM not active on project refused | **Proven** | `23514 — That ESM is not active on the task's project` |
+| 17 | ESM without a project refused | **Proven** | `23514 — A task cannot carry an ESM without a project` |
+| 18 | Project change orphaning a building refused | **Proven** | same as 15, on a project-change statement |
+| 19 | Programme-level create accepted | **Proven** | project, no building, ESM active on project — inserted, rolled back |
+| 20 | pm_id read widening, read-only | **Proven** | pm sees their project's task (1) and not another's (0); UPDATE affects **0 rows** |
+| 21 | Service context: authority skipped, integrity enforced | **Proven** | trash accepted with no `auth.uid()`; mismatched building still refused |
+| 22 | 0105 archive cascade still works | **Proven** | archiving a proje moved their open tasks 2→0, manager 2→4 |
+| 23 | UI gate == guard gate | **Proven** | `may_manage` truth table over all 45 actor×task pairs; the 19 true pairs are exactly the 19 the UI offers Edit/Trash on |
+| 24 | Audit payload shape unchanged | **Proven** | keys `old`/`new`, all columns populated — Dashboard/Settings/BuildingDetail readers unaffected |
+| 25 | Realtime publication includes `tasks` | **Proven** | `pg_publication_tables` |
+| 26 | **1000-row render < 500 ms** | **Measured** | **54.1 ms** @1366, **45.0 ms** @1280, **53.8 ms** @1040 — real component, seeded dataset |
+| 27 | **Nine-column table fits its card @1366 / @1280** | **Measured** | card **1078/1078** and **992/992** — no overflow; page never scrolls sideways; 9 columns counted in the DOM |
+| 28 | `.ies-table-wrap` mechanism actually engages | **Measured** | @1040: wrapper scrolls internally **863/720** while the card holds at **752/752** |
+| 29 | Census green | **Measured** | `ui-census.mjs --check` exit 0 at every commit |
+| 30 | Build green | **Measured** | `npm run build` exit 0 at every commit |
+| 31 | **Realtime propagation < 2 s across two sessions** | **BLOCKED** | see §7 |
+| 32 | **Full-page screenshots via `ui-shots.mjs`** | **BLOCKED** | see §7 |
+| 33 | **Truncation banner rendered** | **BLOCKED** | condition verified arithmetically against live counts (5 = 5, correctly no banner); the rendered banner was not observed — needs a signed-in session |
+| 34 | **Deploy green** | **PENDING MERGE** | see §8 |
 
-This commit is **census-neutral, and that is proven rather than asserted**: the
-checker's output was captured on a stashed, clean HEAD tree and again with all
-of this commit's changes present, and the two are byte-identical. Nothing here
-touches `src/pages`, `src/components` or `src/lib` — the commit is two new files
-under `scripts/` and `docs/` plus a `docs/Backlog.md` edit.
+---
 
-**The manifest is deliberately not regenerated here.** Folding a 1256-line
-unrelated regeneration into a commit whose entire claim is "no behaviour change"
-would bury the evidence of when the drift entered, and the sprint rule that
-mandates regeneration is scoped to commits that touch `src/lib` — which this one
-does not. (No acceptance checkbox in the manifest is ticked, so regenerating
-would lose no human-maintained state; the objection is to hiding it, not to the
-cost.)
+## 7. What is blocked, precisely, and what would unblock it
 
-It does need fixing, and soon, as its own commit: from 9R(2) onward this sprint
-edits `src/pages/Tasks.jsx`, and a gate that is already failing cannot tell
-anyone whether *that* change moved anything. Raised to the sprint lead.
+The reason is the same for all three, and it is narrower than "no credentials":
+
+**The Supabase URL and publishable key ARE available** — both are committed in
+`.env.production` on purpose, because a publishable key is RLS-protected and
+ships in the browser bundle. What is missing is **a user password**.
+`VITE_DEMO_PASSWORD` is deliberately left empty in `.env.example` and absent
+from `.env.production` ("never commit the real password"), no `.env.local`
+exists, `IES_TEST_PASSWORD` / `IES_SHOT_PASSWORD` are unset, and
+`.github/workflows/deploy.yml` does not inject one either — demo mode is off in
+production because the platform now holds real programme data.
+
+So the accurate statement is: **cannot sign in, because no user password is
+available.** Not "credentials missing".
+
+- **Realtime < 2 s (31)** needs two authenticated sessions subscribed to
+  `postgres_changes`. Realtime applies RLS per subscriber, so an anonymous
+  subscription would be denied and would prove nothing about the authenticated
+  path. No proxy measurement is offered in its place. What is established is
+  that the transport exists: `supabase_realtime` publishes `public.tasks`, and
+  `useLiveQuery` subscribes to it.
+- **`ui-shots.mjs` (32)** signs in before shooting; without a password it reaches
+  only the login screen. Note this is now the *only* blocker for that script —
+  the Chromium problem is solved (§9).
+- **Truncation banner (33)** renders on the Team tab, behind sign-in.
+
+**What would unblock all three:** one test-account password supplied as
+`IES_TEST_PASSWORD` / `VITE_DEMO_PASSWORD` in the environment. A service-role
+key would also work by minting a session, but is a much larger grant for the
+purpose.
+
+**What was deliberately NOT done to work around it:** no password was set on any
+`auth.users` row. Minting a credential on a production project holding real
+programme data, to make a test pass, is not a decision a sprint gets to take on
+its own — and it would leave a known password behind afterwards.
+
+---
+
+## 8. Deploy status — pending, not green
+
+`.github/workflows/deploy.yml` builds on `main` and on `claude/**`, but the
+deploy job carries `if: github.ref == 'refs/heads/main'`. **Branch runs build
+and never deploy.** A green run on `claude/fable-5-plan-c4g47d` is evidence of a
+clean build and of nothing else.
+
+Deploy-green is therefore **pending the merge to main** and cannot be claimed
+from this branch. No deployment evidence is asserted anywhere in this document.
+
+Post-merge, the live-site smoke check (Constraints.md #6) is still owed, and the
+three blocked proofs above become runnable against the deployed site by anyone
+holding a test password.
+
+---
+
+## 9. Notes an owner reading this cold should have
+
+**The `created_by_id` hole was found here, and it was live.** Nothing policed
+that column, and `tasks_upd`'s WITH CHECK actively rewarded changing it:
+`created_by_id = auth.uid()` is satisfied by the *new* row, so setting yourself
+as the creator passed. Verified before 0124 — an assignee set `created_by_id` to
+themselves and the update was **ACCEPTED**, which promoted them to creator and
+handed them cancel rights over someone else's task. Every rule 0124 adds hangs
+off that column, so it is now immutable outside service contexts. This was not
+on the sprint brief; it was found by asking what the new rules depend on.
+
+**Chromium was present all along.** An earlier revision of this document
+reported the render and card-fit proofs as blocked on a missing browser. That
+was wrong: this environment ships Chromium **1194** under
+`PLAYWRIGHT_BROWSERS_PATH`, while the pinned Playwright **1.49.1** resolves
+`chromium-1148` and therefore reported a missing executable. Passing
+`executablePath` explicitly fixed it, and proofs 26–28 are measured rather than
+blocked as a result. Recorded because "blocked" was asserted once without being
+exhausted, and the correction matters more than the original claim.
+
+**The widget's accuracy has a stated ceiling.** The Team fetch stops at 500 rows.
+Below that the figures are exact; above it they would be computed over a subset
+chosen by earliest due date, which skews old and therefore skews *done* — the
+numbers would flatter the team. 9R(7a) detects this exactly (same filter,
+counted server-side, compared against rows held) and says so on the card. At
+current volume — 5 task rows in the entire database — it is three orders of
+magnitude from mattering.
+
+**One deliberate silence in the UI.** `scopeLabel` does not mention amendment
+D's `pm_id` reach. There is no honest one-line phrase for "plus anything on my
+projects", and inventing one would overclaim for every user who is not a pm.
+
+**One deliberate distinction.** The Project / building column prints
+`restricted` — not a dash — when a task carries a project the viewer cannot
+read. `tasks_read` is now wider than `projects_read` in the pm_id and subtree
+directions, so this state is reachable, and printing a dash would claim the task
+has no project.
+
+**Test volume is small.** Every proof ran against the real org chart (9 people,
+correct shape) but only 5 task rows. The guards are logic and are exercised
+correctly by 5 rows; the *performance* claims rest on the 1000-row seeded
+dataset, not on live volume. Nothing here has been observed under real load.
