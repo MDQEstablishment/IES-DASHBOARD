@@ -152,3 +152,102 @@ work with its own acceptance criteria, not a helper function.
 **If it is ever built,** it belongs in `src/lib/search.js` beside `toLatin` and
 must serve the survey catalogue picker too — both call sites share one matcher
 and that must not be forked to add this.
+
+---
+
+## MYTASKS_EMAIL_NOTIFICATIONS — the bell rings, the inbox does not
+
+**Status:** open · logged, not built · owner decision · deferred at 0104, re-affirmed by 9R
+
+**What exists.** Six notification types fire today, all written by SECURITY
+DEFINER triggers so nothing depends on a client remembering to write them:
+`task_assigned`, `task_blocked`, `task_done`, `escalation_raised`,
+`escalation_acknowledged`, `escalation_resolved` (`0104`). They land in
+`notifications` and surface on the bell in the top bar. Verified live at 9R(1):
+a reassignment inside a rolled-back transaction produced the `task_assigned` row
+for the new assignee, written by `tasks_notify()`, with no client involvement.
+
+**What does not exist.** Any of it reaching a person who is not looking at the
+application. There is no mail provider configured on this project, no adapter,
+and — deliberately — no stub. A stub would be a dead button under
+Constraints.md #2, and a half-wired mail path is worse than an absent one
+because it looks delivered.
+
+**Why it is not built.** Standing up a mail provider is an owner decision with a
+cost and a vendor attached, not a side effect of a UI sprint. It also carries
+questions no sprint should answer alone: which of the six types are worth an
+e-mail at all (`task_assigned` almost certainly; `task_done` to the raiser,
+probably not every time), whether they batch or send immediately, whether people
+can opt out per type, and what the from-address and reply behaviour should be
+for a programme where the recipients are the owner's own staff.
+
+**Why deferring costs nothing later.** Every `notifications` row already carries
+the full payload an e-mail would be rendered from — recipient, actor, type, body
+preview, and the task / escalation / project / building links. Nothing has to be
+re-modelled when the decision is made; the work is a sender that reads rows that
+already exist.
+
+**Cost of deciding.** The provider choice and the per-type policy are the
+expensive parts. The implementation is a scheduled function over
+`notifications`, plus a `sent_at` column so a row is not mailed twice — additive,
+and small.
+
+---
+
+## MYTASKS_ENGINEER_READ_WIDENING — a site engineer cannot see tasks on their own building
+
+**Status:** open · logged, **explicitly not built** · owner decision · raised by 9R
+
+**What `tasks_read` does today** (live, verified 9R(1)):
+
+```
+auth_role() in ('ceo','pmo')
+  or assigned_to_id = auth.uid()
+  or created_by_id  = auth.uid()
+  or is_in_subtree(auth.uid(), assigned_to_id)
+  or is_in_subtree(auth.uid(), created_by_id)
+```
+
+Reach is the **reporting tree**, plus a two-role programme-wide carve-out. 9R
+adds one more clause (0125, amendment D): a project's `pm_id` may read tasks
+carrying that `project_id`. That is responsibility-based reach, and it is
+**read-only** — no write, reassign, status or edit authority widens with it.
+
+**The gap.** A proje at the bottom of the tree sees their own tasks and nothing
+else. If a task is raised on a building they are the assigned engineer for, but
+assigned to someone outside their (empty) subtree, they cannot see it exists.
+`building_engineers` already models that relationship and is already the basis
+of building-level scope elsewhere in the schema, so the widening is mechanically
+available: add a clause for `building_id in (select building_id from
+building_engineers where engineer_id = auth.uid())`.
+
+**Why it is deliberately not built.** Three reasons, none of them "it is hard".
+
+1. **It is a different axis of authority from the one 9R is conforming.** The
+   whole sprint's governance story — proved end to end in `docs/9R-conformance.md`
+   — is subtree-based, and amendment D widened it along exactly one axis the
+   owner named. Adding a second, unrequested axis in the same sprint means the
+   next person cannot tell which widening was asked for.
+
+2. **Read is not where it would stop.** An engineer who can *see* a task on
+   their building will reasonably expect to comment on it, mark it blocked, or
+   be assigned it. Each of those is a separate fence, and none of them is
+   subtree-shaped. Opening the read without deciding the rest invites a UI that
+   shows work nobody can act on — the exact failure mode 9R exists to prevent.
+
+3. **The blast radius is not obviously small.** `building_engineers` is a
+   many-to-many; an engineer on several buildings across several projects could
+   gain visibility of a wide set of tasks at once. That is possibly correct and
+   possibly a surprise, and the difference is a judgement about how this
+   programme is actually staffed — the owner's, not a sprint's.
+
+**Not the same as amendment D.** D is `projects.pm_id` — one named person with
+programme responsibility for one project. This is a per-building assignment
+table with a much broader membership. Conflating them would smuggle the second
+in under approval given for the first.
+
+**Cost of deciding.** The read clause itself is a few lines in an additive
+migration, verifiable the same way 9R verifies everything else. What is not
+cheap is deciding whether visibility implies any authority, and reversing it
+afterwards: a widened read that people have started relying on is politically
+hard to narrow again, even when narrowing is correct.
