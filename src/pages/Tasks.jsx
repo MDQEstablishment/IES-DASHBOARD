@@ -253,7 +253,8 @@ export default function Tasks() {
   //   everything else → live rows only, filtered server-side.
   const { rows, loading } = useLiveQuery('tasks', (q) => {
     let base = q.select('*,assignee:profiles!tasks_assigned_to_id_fkey(full_name,role),creator:profiles!tasks_created_by_id_fkey(full_name)' +
-      ',building:buildings(code)').order('due_date', { ascending: true }).limit(500)
+      ',building:buildings(code),project:projects(code),esm:esms(code,name)')
+      .order('due_date', { ascending: true }).limit(500)
     if (trashView) base = base.not('deleted_at', 'is', null)
     else if (scopeKey !== 'team') base = base.is('deleted_at', null)
     return scope.apply(base, { me: user?.id || NOBODY, ids: teamIds })
@@ -380,7 +381,7 @@ export default function Tasks() {
                 <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)', background: 'var(--raised)' }}>
                   <th style={{ padding: '11px 14px', fontWeight: 600 }}>Title</th>
                   <th style={{ padding: '11px 8px', fontWeight: 600 }}>Assignee</th>
-                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>Building</th>
+                  <th style={{ padding: '11px 8px', fontWeight: 600 }}>Project / building</th>
                   <th style={{ padding: '11px 8px', fontWeight: 600 }}>Priority</th>
                   <th style={{ padding: '11px 8px', fontWeight: 600 }}>Status</th>
                   <th style={{ padding: '11px 8px', fontWeight: 600 }}>Due</th>
@@ -482,8 +483,25 @@ export default function Tasks() {
                           ) : <span style={{ whiteSpace: 'nowrap' }}>{t.assignee?.full_name || 'Unassigned'}</span>}
                         </div>
                       </td>
+                      {/* This column exists so a task can be found in the
+                          field. A project with no building is programme-level
+                          and is a real target, so it prints the project code
+                          rather than a dash that would read as missing data. */}
                       <td style={{ padding: '12px 8px' }}>
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>{t.building?.code || '—'}</span>
+                        {t.project_id || t.building_id ? (
+                          <div>
+                            <div style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>
+                              {t.project?.code || (t.project_id ? 'restricted' : '—')}
+                              {t.building?.code && <span style={{ color: 'var(--text-3)' }}> / {t.building.code}</span>}
+                            </div>
+                            {t.project_id && !t.building_id && (
+                              <div style={{ fontSize: 10, color: 'var(--text-3)' }}>programme-level</div>
+                            )}
+                            {t.esm?.code && (
+                              <div style={{ fontSize: 10, color: 'var(--text-3)' }} title={t.esm.name}>{t.esm.code}</div>
+                            )}
+                          </div>
+                        ) : <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>—</span>}
                       </td>
                       <td style={{ padding: '12px 8px' }}><Chip status={t.priority} /></td>
                       <td style={{ padding: '12px 8px' }}>
@@ -543,6 +561,7 @@ export default function Tasks() {
 // Assignee is deliberately absent too — reassignment is its own control on the
 // row, governed by a different trigger with a different accepted set.
 function EditTask({ task, onClose }) {
+  const target = useTargeting(task)
   const [title, setTitle] = useState(task.title || '')
   const [desc, setDesc] = useState(task.description || '')
   const [priority, setPriority] = useState(task.priority || 'medium')
@@ -550,10 +569,14 @@ function EditTask({ task, onClose }) {
   const [busy, setBusy] = useState(false)
 
   const valid = title.trim().length > 0
+  const linksDirty = (target.values.project_id || null) !== (task.project_id || null)
+    || (target.values.building_id || null) !== (task.building_id || null)
+    || (target.values.esm_id || null) !== (task.esm_id || null)
   const dirty = title.trim() !== (task.title || '')
     || (desc || '') !== (task.description || '')
     || priority !== (task.priority || 'medium')
     || (due || '') !== (task.due_date || '')
+    || linksDirty
 
   const save = async () => {
     if (!valid || !dirty) return
@@ -565,6 +588,10 @@ function EditTask({ task, onClose }) {
     if ((desc || '') !== (task.description || '')) patch.description = desc || null
     if (priority !== (task.priority || 'medium')) patch.priority = priority
     if ((due || '') !== (task.due_date || '')) patch.due_date = due || null
+    // The three links move together when they move at all: sending a cleared
+    // building without its project, or vice versa, is how an inconsistent pair
+    // reaches the guard.
+    if (linksDirty) Object.assign(patch, target.values)
     const { error } = await bgUpdate('tasks', task.id, patch, { okMsg: 'Task updated' })
     setBusy(false)
     if (!error) onClose()
@@ -599,6 +626,7 @@ function EditTask({ task, onClose }) {
           </Field>
         </div>
       </div>
+      <TargetFields t={target} />
     </Modal>
   )
 }
@@ -828,12 +856,114 @@ function TeamPerformance({ rows, subtree }) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Targeting: Project (the parent scope) · Building · ESM.
+//
+// ONE implementation, shared by create and edit, because amendment E requires
+// the links to survive an edit and two copies of a dependent-dropdown rule are
+// two copies that will disagree.
+//
+// The whole design goal is that the UI CANNOT CONSTRUCT a state the guard
+// rejects. tasks_edit_guard (0124) raises three sentences here, and each one
+// has a matching rule below:
+//
+//   'That building belongs to a different project than the task'
+//        → the building list is the chosen project's buildings, and a selected
+//          building is cleared the moment the project stops containing it.
+//   'That ESM is not active on the task's project'
+//        → the ESM list is project_esms for the chosen project with
+//          archived = false, which is precisely the set the guard accepts.
+//   'A task cannot carry an ESM without a project'
+//        → clearing the project clears both links.
+//
+// Offering an option the guard would refuse is the defect class this sprint
+// exists to prevent; these are the same fence read from the other side.
+function useTargeting(initial) {
+  const [projectId, setProjectId] = useState(initial?.project_id || '')
+  const [buildingId, setBuildingId] = useState(initial?.building_id || '')
+  const [esmId, setEsmId] = useState(initial?.esm_id || '')
+
+  // RLS already narrows each of these to what the actor may read, so the
+  // pickers cannot offer a project or building the person cannot reach.
+  const { rows: projects } = useLiveQuery('projects', (q) =>
+    q.select('id,code,name').is('deleted_at', null).order('code'))
+  const { rows: buildings } = useLiveQuery('buildings', (q) =>
+    q.select('id,code,name,project_id').order('code'))
+  // project_esms carries the archived flag and the per-project custom name;
+  // the esms embed carries the catalogue fallback name.
+  const { rows: links } = useLiveQuery('project_esms', (q) =>
+    q.select('project_id,esm_id,custom_name,ordinal,esm:esms(id,code,name)')
+      .eq('archived', false).order('ordinal'))
+
+  const projectBuildings = useMemo(
+    () => (projectId ? buildings.filter((b) => b.project_id === projectId) : []),
+    [buildings, projectId])
+  const projectEsms = useMemo(
+    () => (projectId ? links.filter((l) => l.project_id === projectId) : []),
+    [links, projectId])
+
+  // Changing the parent scope invalidates anything hanging off the old one.
+  // Clearing rather than carrying is the point: a stale pair is exactly what
+  // the guard would reject, so it must not survive the change that broke it.
+  const chooseProject = (id) => {
+    setProjectId(id)
+    if (!id) { setBuildingId(''); setEsmId(''); return }
+    setBuildingId((b) => (b && buildings.some((x) => x.id === b && x.project_id === id) ? b : ''))
+    setEsmId((e) => (e && links.some((l) => l.project_id === id && l.esm_id === e) ? e : ''))
+  }
+
+  return {
+    projectId, buildingId, esmId, projects, projectBuildings, projectEsms,
+    chooseProject, setBuildingId, setEsmId,
+    values: { project_id: projectId || null, building_id: buildingId || null, esm_id: esmId || null },
+  }
+}
+
+const esmLabel = (l) => `${l.esm?.code ? `${l.esm.code} · ` : ''}${l.custom_name || l.esm?.name || 'ESM'}`
+
+function TargetFields({ t }) {
+  return (
+    <>
+      <Field label="Project">
+        <select style={inputStyle} value={t.projectId} onChange={(e) => t.chooseProject(e.target.value)}>
+          <option value="">None</option>
+          {t.projects.map((p) => <option key={p.id} value={p.id}>{p.code}</option>)}
+        </select>
+      </Field>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <Field label="Linked building (optional)">
+            <select style={inputStyle} value={t.buildingId} disabled={!t.projectId}
+              onChange={(e) => t.setBuildingId(e.target.value)}>
+              <option value="">{t.projectId ? 'None — programme-level' : 'Choose a project first'}</option>
+              {t.projectBuildings.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
+            </select>
+          </Field>
+        </div>
+        <div style={{ flex: 1 }}>
+          <Field label="Linked ESM (optional)">
+            <select style={inputStyle} value={t.esmId} disabled={!t.projectId}
+              onChange={(e) => t.setEsmId(e.target.value)}>
+              <option value="">{t.projectId ? 'None' : 'Choose a project first'}</option>
+              {t.projectEsms.map((l) => <option key={l.esm_id} value={l.esm_id}>{esmLabel(l)}</option>)}
+            </select>
+          </Field>
+        </div>
+      </div>
+      {t.projectId && !t.buildingId && (
+        <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: -6, marginBottom: 8 }}>
+          No building selected — this is a programme-level task on the project as a whole. That is a valid target, not a missing field.
+        </div>
+      )}
+    </>
+  )
+}
+
 function NewTask({ onClose, user, assignable }) {
-  const { rows: buildings } = useLiveQuery('buildings', (q) => q.select('id,code,name,project_id').order('code'))
+  const target = useTargeting(null)
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [assignee, setAssignee] = useState('')
-  const [bid, setBid] = useState('')
   const [priority, setPriority] = useState('medium')
   const [due, setDue] = useState('')
   const [busy, setBusy] = useState(false)
@@ -845,17 +975,18 @@ function NewTask({ onClose, user, assignable }) {
   const save = async () => {
     if (!valid) return
     setBusy(true)
-    const b = buildings.find((x) => x.id === bid)
+    // The project is now CHOSEN. It used to be inferred from the building, which
+    // meant a programme-level task — a real thing, a task against a project as a
+    // whole — was simply not expressible: no building, therefore no project.
     const { error } = await bgInsert('tasks', {
       title: title.trim(),
       description: desc || null,
       created_by_id: user.id,
       assigned_to_id: assignee,
-      building_id: bid || null,
-      project_id: b?.project_id || null,
       priority,
       status: 'open',
       due_date: due || null,
+      ...target.values,
     }, { okMsg: 'Task raised ✓' })
     setBusy(false)
     if (!error) onClose()
@@ -883,16 +1014,6 @@ function NewTask({ onClose, user, assignable }) {
           </Field>
         </div>
         <div style={{ flex: 1 }}>
-          <Field label="Building">
-            <select style={inputStyle} value={bid} onChange={(e) => setBid(e.target.value)}>
-              <option value="">None</option>
-              {buildings.map((b) => <option key={b.id} value={b.id}>{b.code}</option>)}
-            </select>
-          </Field>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1 }}>
           <Field label="Priority">
             <select style={inputStyle} value={priority} onChange={(e) => setPriority(e.target.value)}>
               <option value="low">Low</option>
@@ -902,12 +1023,16 @@ function NewTask({ onClose, user, assignable }) {
             </select>
           </Field>
         </div>
+      </div>
+      <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}>
           <Field label="Due date">
             <DateInput style={inputStyle} value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
         </div>
+        <div style={{ flex: 1 }} />
       </div>
+      <TargetFields t={target} />
     </Modal>
   )
 }

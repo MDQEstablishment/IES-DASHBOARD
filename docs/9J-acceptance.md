@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 566 interactive controls · 277 database touches.**
+**Totals: 57 files · 568 interactive controls · 279 database touches.**
 
 ## Per-file summary
 
@@ -71,7 +71,7 @@ that commit message.
 | `src/pages/Projects.jsx` | 7 | 6 | Projects | ☐ |
 | `src/pages/Reports.jsx` | 1 | 6 | Reports | ☐ |
 | `src/pages/Settings.jsx` | 11 | 7 | Settings | ☐ |
-| `src/pages/Tasks.jsx` | 25 | 10 | My Tasks | ☐ |
+| `src/pages/Tasks.jsx` | 27 | 12 | My Tasks | ☐ |
 
 ## Routes (must not move)
 
@@ -1263,12 +1263,14 @@ screen label: **My Tasks**
 
 | control → handler | count |
 | --- | --- |
+| `onChange:chooseProject` | 1 |
 | `onChange:onReassign` | 1 |
 | `onChange:onStatusChange` | 1 |
 | `onChange:setAssignee` | 1 |
-| `onChange:setBid` | 1 |
+| `onChange:setBuildingId` | 1 |
 | `onChange:setDesc` | 2 |
 | `onChange:setDue` | 2 |
+| `onChange:setEsmId` | 1 |
 | `onChange:setPriority` | 2 |
 | `onChange:setTitle` | 2 |
 | `onClick:escalate` | 1 |
@@ -1289,7 +1291,9 @@ screen label: **My Tasks**
 | `from:tasks` | 1 |
 | `read:buildings` | 1 |
 | `read:profiles` | 1 |
+| `read:project_esms` | 1 |
+| `read:projects` | 1 |
 | `read:tasks` | 1 |
 
-shared primitives: Btn×7, Chip×2, Empty×1, Field×10, Loading×1, Modal×2, PageTitle×1
+shared primitives: Btn×7, Chip×2, Empty×1, Field×12, Loading×1, Modal×2, PageTitle×1
 
