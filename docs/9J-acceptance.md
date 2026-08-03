@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 568 interactive controls · 280 database touches.**
+**Totals: 57 files · 544 interactive controls · 275 database touches.**
 
 ## Per-file summary
 
@@ -41,7 +41,7 @@ that commit message.
 | `src/components/ProgressReportCard.jsx` | 6 | 14 | — | ☐ |
 | `src/components/ProjectDocuments.jsx` | 25 | 11 | — | ☐ |
 | `src/components/ProjectItems.jsx` | 21 | 28 | — | ☐ |
-| `src/components/ProjectModals.jsx` | 75 | 18 | — | ☐ |
+| `src/components/ProjectModals.jsx` | 51 | 13 | — | ☐ |
 | `src/components/ProjectUnitSelection.jsx` | 15 | 6 | — | ☐ |
 | `src/components/ProjectWarehouse.jsx` | 2 | 2 | — | ☐ |
 | `src/components/ReportTemplate.jsx` | 4 | 6 | — | ☐ |
@@ -658,48 +658,36 @@ shared primitives: Btn×2, Empty×1
 | --- | --- |
 | `onBlur:bgUpdate+trim` | 1 |
 | `onChange:onFile` | 1 |
-| `onChange:set` | 30 |
+| `onChange:set` | 27 |
 | `onChange:setConfirm` | 1 |
 | `onChange:setEngineerId` | 1 |
-| `onChange:setItem` | 10 |
 | `onChange:setReason` | 1 |
 | `onChange:setStatus` | 1 |
-| `onChange:upd` | 6 |
 | `onClick:click` | 1 |
 | `onClick:del` | 1 |
 | `onClick:doImport` | 1 |
 | `onClick:downloadTemplate` | 1 |
-| `onClick:filter+setBuildings` | 1 |
-| `onClick:filter+setItems` | 1 |
 | `onClick:onClose` | 5 |
 | `onClick:save` | 3 |
-| `onClick:setBuildings` | 1 |
-| `onClick:setItems` | 1 |
 | `onClick:setPhotoFile+setRemovePhoto+setReplacing` | 1 |
 | `onClick:setRemovePhoto` | 1 |
 | `onClick:setReplacing` | 2 |
 | `onClick:setShowDelete` | 1 |
-| `onClick:setShowItems` | 1 |
 | `onClick:setShowTarshid` | 1 |
 
 | database effect | count |
 | --- | --- |
-| `bgInsert:buildings` | 1 |
-| `bgInsert:project_installed_items` | 1 |
-| `bgInsert:project_item_pairs` | 1 |
-| `bgInsert:project_removed_items` | 1 |
 | `bgInsert:projects` | 1 |
 | `bgUpdate:project_esms` | 1 |
 | `bgUpdate:projects` | 4 |
 | `io:downloadBlob` | 1 |
 | `io:signedUrlFor` | 1 |
 | `io:uploadToBucket` | 1 |
-| `read:esms` | 1 |
 | `read:profiles` | 2 |
 | `read:project_esms` | 1 |
 | `rpc:import_project_bundle` | 1 |
 
-shared primitives: Btn×15, Field×34, FileDropZone×1, Modal×5
+shared primitives: Btn×15, Field×32, FileDropZone×1, Modal×5
 
 ### `src/components/ProjectUnitSelection.jsx`
 

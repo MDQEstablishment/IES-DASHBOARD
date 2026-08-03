@@ -14,18 +14,37 @@ import { read, utils } from 'xlsx'
 const STATUSES = ['active', 'draft', 'on_hold', 'closed']
 const num = (v) => (v === '' || v == null ? null : Number(v))
 
+// ── The project schedule is the contract pair ───────────────────────────────
+// From this sprint on `projects.start_date`, `projects.end_date` and
+// `projects.total_weeks` are DERIVED COPIES of contract_sign_date /
+// works_end_date — populated, but no longer authoritative. The form neither
+// shows nor accepts them; save writes them through from the contract pair so
+// the frozen readers (lib/progressReport.js estimated completion + report
+// meta, lib/cocPdf.js date fallbacks, ProjectDetail's timeline, the Projects
+// list sort) keep producing correct output with zero generator edits.
+// Whether the columns are ever dropped is a separate later decision, and it
+// is contingent on there being no independent writer left. One is known
+// TODAY: the Excel bundle import RPC `import_project_bundle` (migration 0060)
+// writes all three from template columns. That path is out of scope here and
+// must be reconciled in the import sprint before any drop is considered.
+// Dates are ISO day keys, so UTC parsing is exact — no DST drift.
+const weeksBetween = (from, to) => {
+  if (!from || !to) return null
+  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)
+  return Number.isFinite(ms) ? Math.round(ms / (7 * 86400000)) : null
+}
+
 // ── Add / Edit project ──────────────────────────────────────────────────────
 export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const navigate = useNavigate()
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name,role').eq('archived', false).order('full_name'))
-  const { rows: allEsms } = useLiveQuery('esms', (q) => q.select('code,name').order('code'))
   const init = (k, d = '') => (project?.[k] ?? d)
   const [f, setF] = useState({
     code: init('code'), name: init('name'), client: init('client'), region: init('region'),
-    status: init('status', 'draft'), start_date: init('start_date'), end_date: init('end_date'),
+    status: init('status', 'draft'),
     contract_sign_date: init('contract_sign_date'), works_end_date: init('works_end_date'),
     coc_layout: init('coc_layout', 'concatenated'),
-    total_weeks: init('total_weeks'), pm_id: init('pm_id'), engineer_id: init('engineer_id'),
+    pm_id: init('pm_id'), engineer_id: init('engineer_id'),
     location_address: init('location_address'), location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name'), contractor_phone: init('contractor_phone'), contractor_email: init('contractor_email'),
     project_reference_no: init('project_reference_no'), beneficiary_entity: init('beneficiary_entity'),
@@ -38,9 +57,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     tarshid_poc_mobile: init('tarshid_poc_mobile'), tarshid_poc_email: init('tarshid_poc_email'),
   })
   const [showTarshid, setShowTarshid] = useState(false)
-  const [buildings, setBuildings] = useState([])
-  const [items, setItems] = useState([]) // optional pair drafts captured at creation
-  const [showItems, setShowItems] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   // Project cover photo (edit mode). photoFile = new selection; removePhoto = drop
@@ -55,17 +71,25 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     return () => { cancelled = true }
   }, [project?.photo_url])
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
-  const setItem = (i, k, v) => setItems((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
+  // Read-only on the form; also written through to the derived triple at save.
+  const derivedWeeks = weeksBetween(f.contract_sign_date, f.works_end_date)
 
   const save = async () => {
     if (!f.code.trim() || !f.name.trim()) { toast('Code and name are required', 'err'); return }
     setBusy(true)
     const payload = {
       code: f.code.trim(), name: f.name.trim(), client: f.client || null, region: f.region || null,
-      status: f.status, start_date: f.start_date || null, end_date: f.end_date || null,
+      status: f.status,
       contract_sign_date: f.contract_sign_date || null, works_end_date: f.works_end_date || null,
-      coc_layout: f.coc_layout || 'concatenated',
-      total_weeks: num(f.total_weeks), pm_id: f.pm_id || null, engineer_id: f.engineer_id || null,
+      // Write-through: the contract pair is the source of truth, these three
+      // are its derived copies (see the note at the top of this file). Both
+      // save paths re-derive them, so an edit can never leave a stale triple.
+      start_date: f.contract_sign_date || null, end_date: f.works_end_date || null,
+      total_weeks: derivedWeeks,
+      // coc_layout is only sent from edit mode — new projects take the DB
+      // default 'concatenated' (0044) and the COC workstream sets it later.
+      ...(mode === 'edit' ? { coc_layout: f.coc_layout || 'concatenated' } : {}),
+      pm_id: f.pm_id || null, engineer_id: f.engineer_id || null,
       location_address: f.location_address || null, location_lat: num(f.location_lat), location_lng: num(f.location_lng),
       contractor_name: f.contractor_name || null, contractor_phone: f.contractor_phone || null, contractor_email: f.contractor_email || null,
       project_reference_no: f.project_reference_no || null, beneficiary_entity: f.beneficiary_entity || null,
@@ -94,34 +118,11 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       setBusy(false); if (!error) onClose()
       return
     }
+    // Creation writes the `projects` row and nothing else. Buildings arrive
+    // with the TARSHID file after the card exists; item pairs are scope, and
+    // scope is decided by the survey — neither is captured here any more, so
+    // there are no child inserts left to fail after the row lands.
     const { data, error } = await bgInsert('projects', payload, { okMsg: 'Project created' })
-    // Child inserts after the project row: the project already exists, so a
-    // failure here can't roll back — but it must be EXPLICIT about what was
-    // lost (the modal closes and the typed drafts are gone), never a generic
-    // toast the user can't act on. (Persistence audit P5)
-    if (!error && data?.[0] && buildings.length) {
-      const pid = data[0].id
-      const valid = buildings.filter((b) => b.code && b.name)
-      if (valid.length) await bgInsert('buildings', valid.map((b) => ({
-        project_id: pid, code: b.code.trim(), name: b.name.trim(), region: b.region || f.region || null,
-        location_lat: num(b.location_lat), location_lng: num(b.location_lng),
-        contractor: b.contractor_name || null, contractor_name: b.contractor_name || null,
-        contractor_phone: b.contractor_phone || null, status_override: 'pending',
-      })), { errMsg: `Project created, but the ${valid.length} building${valid.length === 1 ? '' : 's'} couldn't be saved — add them again from the project page` })
-    }
-    // optional Items & Replacements captured at creation (fill-once)
-    if (!error && data?.[0] && items.length) {
-      const pid = data[0].id
-      let pairFails = 0
-      for (const it of items.filter((x) => x.esm_code && (x.iDesc || x.rDesc))) {
-        let iId = null, rId = null, failed = false
-        if (it.iDesc || it.iQty) { const { data: di, error: ie } = await bgInsert('project_installed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.iDesc || null, model_code: it.iModel || null, capacity_value: num(it.iCap), capacity_unit: it.iCapU || 'kBTU', efficiency_value: num(it.iEff), efficiency_unit: it.iEffU || 'SEER', total_quantity: num(it.iQty) }); iId = di?.[0]?.id; failed = failed || !!ie }
-        if (it.rDesc || it.rQty) { const { data: dr, error: re } = await bgInsert('project_removed_items', { project_id: pid, esm_code: it.esm_code, item_description: it.rDesc || null, capacity_value: num(it.rCap), capacity_unit: it.rCapU || 'kBTU', efficiency_value: num(it.rEff), efficiency_unit: it.rEffU || 'SEER', total_quantity: num(it.rQty), returned_to_facility: it.rRet !== false }); rId = dr?.[0]?.id; failed = failed || !!re }
-        if (iId && rId) { const { error: pe } = await bgInsert('project_item_pairs', { project_id: pid, esm_code: it.esm_code, installed_item_id: iId, removed_item_id: rId, notes: it.note || null }); failed = failed || !!pe }
-        if (failed) pairFails++
-      }
-      if (pairFails) toast(`Project created, but ${pairFails} item pair${pairFails === 1 ? '' : 's'} couldn't be fully saved — check the Items & Replacements tab`, 'err')
-    }
     setBusy(false)
     if (!error) { onClose(); if (data?.[0]) navigate(`/projects/${data[0].id}`) }
   }
@@ -166,7 +167,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       )}
       {mode === 'add' && (
         <div style={{ background: 'var(--accent-tint)', border: '1px solid var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '10px 12px', fontSize: 12, color: 'var(--accent-hover)', marginBottom: 16 }}>
-          After you save, you'll be able to: add more buildings, assign engineers, edit any field, upload documents, and log daily progress. You can add buildings now (below) or any time later. Add a cover photo here once the project exists.
+          This is the project card — identity, schedule and contacts. After you save, you'll be able to: add buildings, assign engineers, edit any field, upload documents, and log daily progress. Add a cover photo here once the project exists.
         </div>
       )}
       <Row>
@@ -178,36 +179,45 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Entity A" /></Field>
         <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
       </Row>
+      {/* Client is the PAYING party, Beneficiary Entity is whose buildings are
+          retrofitted — two concepts, not duplicates. Neither derives from the
+          other and neither falls back to the other at save. */}
+      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-8px 0 12px' }}>Client is the paying client — MIR / WIR prints Tarshid when blank.</div>
       <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>DOCUMENT DEFAULTS (TARSHID FORMS)</div>
       <Row>
         <Field label="Project Reference No"><input lang="en" style={inputStyle} value={f.project_reference_no} onChange={(e) => set('project_reference_no', e.target.value)} placeholder="2022005" /></Field>
-        <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Defaults to Client" /></Field>
+        <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Entity A" /></Field>
       </Row>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-4px 0 4px' }}>These auto-fill on every generated MIR / WIR / COC so they're entered once, not per document. Contractor comes from the Contractor section below.</div>
-      <Field label="COC Layout">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
-            <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
-              <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
-              <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
-            </label>
-          ))}
-        </div>
-      </Field>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-4px 0 4px' }}>These auto-fill on every generated MIR / WIR / COC so they're entered once, not per document. Beneficiary Entity is the entity whose buildings are retrofitted — entered here, never derived. Contractor comes from the Contractor section below.</div>
+      {/* COC Layout is an edit-mode control: COC is its own workstream, and
+          nothing reads the column at creation time, so a new project simply
+          takes the DB default. Existing projects keep their stored value
+          visible and editable here. */}
+      {mode === 'edit' && (
+        <Field label="COC Layout">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
+              <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
+                <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
+                <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
+              </label>
+            ))}
+          </div>
+        </Field>
+      )}
       {mode === 'edit' && <EsmBundles projectId={project.id} />}
-      <Row>
-        <Field label="Start date"><DateInput style={inputStyle} value={f.start_date || ''} onChange={(e) => set('start_date', e.target.value)} /></Field>
-        <Field label="End date"><DateInput style={inputStyle} value={f.end_date || ''} onChange={(e) => set('end_date', e.target.value)} /></Field>
-        <Field label="Total weeks"><input lang="en" style={inputStyle} type="text" inputMode="numeric" min="1" value={f.total_weeks || ''} onChange={(e) => set('total_weeks', e.target.value)} /></Field>
-      </Row>
       {/* 8T/8U — contract + works-completion dates print in the COC project-info
           box. The COC signing date is NOT set here: signing happens later by
-          TARSHID, on paper, and the approval date cell is left blank. */}
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 -4px' }}>CERTIFICATE DATES</div>
+          TARSHID, on paper, and the approval date cell is left blank.
+          These two are also THE project schedule: the clock starts at
+          signature, when the contractor may mobilise for the survey. */}
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 -4px' }}>SCHEDULE (CONTRACT DATES)</div>
       <Row>
         <Field label="Contract signature date"><DateInput style={inputStyle} value={f.contract_sign_date || ''} onChange={(e) => set('contract_sign_date', e.target.value)} /></Field>
         <Field label="Works completion date"><DateInput style={inputStyle} value={f.works_end_date || ''} onChange={(e) => set('works_end_date', e.target.value)} /></Field>
+        <Field label="Total weeks"><input lang="en" readOnly tabIndex={-1} aria-readonly="true" style={{ ...inputStyle, background: 'var(--hover)', color: 'var(--text-3)', cursor: 'default' }} value={derivedWeeks == null ? '' : String(derivedWeeks)} /></Field>
       </Row>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-4px 0 10px' }}>Total weeks is computed from the two dates and cannot be typed — it stays empty until both are set.</div>
       <Row>
         <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
         <Field label="Project engineer"><select style={inputStyle} value={f.engineer_id || ''} onChange={(e) => set('engineer_id', e.target.value)}><option value="">Unassigned</option>{people.filter((p) => p.role === 'proje').map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
@@ -220,14 +230,18 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       <Field label="Contractor email"><input lang="en" style={inputStyle} value={f.contractor_email} onChange={(e) => set('contractor_email', e.target.value)} /></Field>
       {/* 9D-1 — TARSHID Info: fills the saving sheet's Project_Info tab at
           generation time. Buildings count / lat-lng / entity EN stay derived or
-          owned by their existing fields (zero double work). */}
-      <div style={{ margin: '6px 0 8px' }}>
-        <button type="button" onClick={() => setShowTarshid((s) => !s)}
-          style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          TARSHID INFO (SAVING SHEET) {showTarshid ? '▲' : '▼'}
-        </button>
-      </div>
-      {showTarshid && (
+          owned by their existing fields (zero double work). Edit-mode only:
+          the saving sheet is parked, the ten columns stay in the DB and stay
+          editable here, but they are not asked for when the card is created. */}
+      {mode === 'edit' && (
+        <div style={{ margin: '6px 0 8px' }}>
+          <button type="button" onClick={() => setShowTarshid((s) => !s)}
+            style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            TARSHID INFO (SAVING SHEET) {showTarshid ? '▲' : '▼'}
+          </button>
+        </div>
+      )}
+      {mode === 'edit' && showTarshid && (
         <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12, marginBottom: 10, background: 'var(--hover)' }}>
           <Field label="Entity name (Arabic)">
             <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
@@ -256,77 +270,9 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
       <Row>
         <Field label="Address"><input lang="en" style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
-        <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} placeholder="18.2164" /></Field>
-        <Field label="Longitude"><input lang="en" style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} placeholder="42.5053" /></Field>
+        <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} /></Field>
+        <Field label="Longitude"><input lang="en" style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} /></Field>
       </Row>
-
-      {mode === 'add' && (
-        <div style={{ marginTop: 8, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>Buildings (you can add now or later)</div>
-            <button onClick={() => setBuildings((b) => [...b, { code: '', name: '', region: '', location_lat: '', location_lng: '', contractor_name: '', contractor_phone: '' }])} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add building</button>
-          </div>
-          {buildings.length === 0 && <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 4 }}>No buildings added yet — you can add them here, or any time later from the project page.</div>}
-          {buildings.map((b, i) => {
-            const upd = (k, v) => setBuildings((arr) => arr.map((x, j) => (j === i ? { ...x, [k]: v } : x)))
-            return (
-              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 10, marginBottom: 8, background: 'var(--hover)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>BUILDING {i + 1}</span>
-                  <button onClick={() => setBuildings((arr) => arr.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginBottom: 8 }}>
-                  <input lang="en" style={inputStyle} value={b.code} placeholder="Code (MOI-004)" onChange={(e) => upd('code', e.target.value)} />
-                  <input lang="en" style={inputStyle} value={b.name} placeholder="Building name (English)" onChange={(e) => upd('name', e.target.value)} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                  <input lang="en" style={inputStyle} value={b.location_lat} placeholder="Latitude" onChange={(e) => upd('location_lat', e.target.value)} />
-                  <input lang="en" style={inputStyle} value={b.location_lng} placeholder="Longitude" onChange={(e) => upd('location_lng', e.target.value)} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <input lang="en" style={inputStyle} value={b.contractor_name} placeholder="Contractor name" onChange={(e) => upd('contractor_name', e.target.value)} />
-                  <input lang="en" style={inputStyle} value={b.contractor_phone} placeholder="Contractor phone" onChange={(e) => upd('contractor_phone', e.target.value)} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {mode === 'add' && (
-        <div style={{ marginTop: 8, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <button type="button" onClick={() => setShowItems((s) => !s)} style={{ fontWeight: 700, fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}>Items &amp; Replacements (optional) {showItems ? '▲' : '▼'}</button>
-            {showItems && <button onClick={() => setItems((a) => [...a, { esm_code: allEsms[0]?.code || '', iCapU: 'kBTU', iEffU: 'SEER', rCapU: 'kBTU', rEffU: 'SEER', rRet: true }])} style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>+ Add pair</button>}
-          </div>
-          {showItems && <>
-            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 6 }}>Fill once at creation — installed ↔ removed pairs are persisted with the project. You can refine later in the Items &amp; Replacements tab.</div>
-            {items.map((it, i) => (
-              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 10, marginBottom: 8, background: 'var(--hover)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
-                  <select style={{ ...inputStyle, width: 130, padding: '6px 8px' }} value={it.esm_code} onChange={(e) => setItem(i, 'esm_code', e.target.value)}>{allEsms.map((e) => <option key={e.code} value={e.code}>{e.code}</option>)}</select>
-                  <button onClick={() => setItems((a) => a.filter((_, j) => j !== i))} style={{ color: 'var(--bad)', fontSize: 11.5, fontWeight: 700 }}>Remove</button>
-                </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--ok)', marginBottom: 3 }}>INSTALLED</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 0.8fr', gap: 6, marginBottom: 6 }}>
-                  <input lang="en" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Description" value={it.iDesc || ''} onChange={(e) => setItem(i, 'iDesc', e.target.value)} />
-                  <input lang="en" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Model" value={it.iModel || ''} onChange={(e) => setItem(i, 'iModel', e.target.value)} />
-                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Cap (kBTU)" value={it.iCap || ''} onChange={(e) => setItem(i, 'iCap', e.target.value)} />
-                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="SEER" value={it.iEff || ''} onChange={(e) => setItem(i, 'iEff', e.target.value)} />
-                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Qty" value={it.iQty || ''} onChange={(e) => setItem(i, 'iQty', e.target.value)} />
-                </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--bad)', marginBottom: 3 }}>REMOVED</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 0.8fr', gap: 6 }}>
-                  <input lang="en" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Description" value={it.rDesc || ''} onChange={(e) => setItem(i, 'rDesc', e.target.value)} />
-                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Cap (kBTU)" value={it.rCap || ''} onChange={(e) => setItem(i, 'rCap', e.target.value)} />
-                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="SEER" value={it.rEff || ''} onChange={(e) => setItem(i, 'rEff', e.target.value)} />
-                  <input lang="en" inputMode="numeric" style={{ ...inputStyle, padding: '6px 8px' }} placeholder="Qty" value={it.rQty || ''} onChange={(e) => setItem(i, 'rQty', e.target.value)} />
-                </div>
-              </div>
-            ))}
-          </>}
-        </div>
-      )}
     </Modal>
   )
 }
