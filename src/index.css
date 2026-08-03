@@ -60,6 +60,31 @@
      which disappears against it. */
   --on-navy:#F0EDE3;--on-navy-2:rgba(240,237,227,.62);
 
+  /* Project Detail's dark header band, and text ON it. Same idea as --on-navy
+     above, and it exists for the same reason that one does: the band was
+     painted with `linear-gradient(120deg,var(--text),var(--text-2))` — INK
+     tokens used as a SURFACE — and then labelled with --text-3, an ink token
+     used as a foreground on top of it. --text-3 is rgba(28,28,28,.40) and the
+     left end of the band is #1C1C1C, so the metadata row was drawn in exactly
+     the colour it sat on: 1.00:1, literally invisible. The only way the owner
+     could prove the text was there was to select it.
+
+     The band values are OPAQUE on purpose. --text-2 is rgba(28,28,28,.62), so
+     the right-hand end of the old band was an alpha composite over whatever
+     happened to be behind the card (the page --bg, #EDEDF1, giving #6B6B6D) —
+     a background colour that changes if the card is ever moved onto another
+     surface, which is what made the contrast unpredictable rather than merely
+     low. #3A3A3A is that same end tone, pinned.
+
+     Measured, WCAG 2.1, sampled at both ends and the middle of the gradient,
+     with and without the brass radial overlay (rgba(160,118,43,.45) at .4
+     opacity, which lightens the band and is therefore the worst case):
+       --on-band    worst 11.37:1 plain, 9.49:1 under the brass   AA / AAA
+       --on-band-2  worst  7.64:1 plain, 6.54:1 under the brass   AA / AAA
+     against 1.00:1 - 1.65:1 for every --text-3 label the band used to carry. */
+  --band-from:#1C1C1C;--band-to:#3A3A3A;
+  --on-band:#FFFFFF;--on-band-2:rgba(255,255,255,.78);
+
   /* ---- semantic colours keep their IES hues; only their containers soften -- */
   --ok:#217A54;--ok-bg:#E6F2EC;--ok-deep:#1D6A49;
   --warn:#B45309;--warn-bg:#FBF1E3;--warn-deep:#854D0E;

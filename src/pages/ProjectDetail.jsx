@@ -217,19 +217,27 @@ export default function ProjectDetail() {
         )}
       </div>
 
-      {/* header card */}
+      {/* header card. The dark band and everything written on it use the
+          --band-* / --on-band* tokens (see src/index.css): the ink scale is
+          for ink, and using --text/--text-2 as a SURFACE and --text-3 as a
+          foreground on top of it is what made the metadata row 1.00:1 — the
+          same colour as the band it sat on. The brass radial below is
+          unchanged; it is decoration, and the tokens were measured under it.
+          There is exactly ONE header state to look at: `photo_url` is never
+          read on this page, the cover photo renders on the Projects list card
+          only, so the band is always this gradient. */}
       <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', marginBottom: 14, overflow: 'hidden', boxShadow: '0 1px 3px rgba(16,26,36,.06)' }}>
-        <div style={{ position: 'relative', background: 'linear-gradient(120deg,var(--text),var(--text-2))', padding: '20px 22px', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', background: 'linear-gradient(120deg,var(--band-from),var(--band-to))', padding: '20px 22px', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, opacity: .4, background: 'radial-gradient(420px 220px at 88% -20%,rgba(160,118,43,.45),transparent 60%)' }} />
           <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{project.code}</span>
+                <span style={{ fontSize: 12, color: 'var(--on-band-2)' }}>{project.code}</span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 999, color: pillColor, background: pillBg }}>{pillLabel}</span>
                 {anyShortage && <span title="One or more material categories are below their remaining planned quantity — open the Warehouse tab" onClick={() => setTab('warehouse')} style={{ cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 999, color: 'var(--surface-1)', background: 'var(--bad)' }}>⚠ LOW STOCK</span>}
               </div>
-              <h1 style={{ fontSize: 23, fontWeight: 800, margin: '8px 0 8px', color: 'var(--surface-1)', letterSpacing: '-.3px' }}>{project.name}</h1>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 12.5, color: 'var(--text-3)' }}>
+              <h1 style={{ fontSize: 23, fontWeight: 800, margin: '8px 0 8px', color: 'var(--on-band)', letterSpacing: '-.3px' }}>{project.name}</h1>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 12.5, color: 'var(--on-band-2)' }}>
                 <span>🏛 {project.client || '—'}</span>
                 <span>📍 {project.region || '—'}</span>
                 <span>👷 PM {project.pm_name || project.pm?.full_name || '—'}</span>
@@ -237,12 +245,12 @@ export default function ProjectDetail() {
                   🛠 Eng {project.engineer_name || project.engineer?.full_name || 'Unassigned'}
                   {canManage && (
                     <button title="Change project engineer" onClick={() => setEngOpen(true)} className="ies-hover"
-                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 'var(--radius-s)', color: 'var(--text-3)', background: 'rgba(255,255,255,.08)' }}>
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 'var(--radius-s)', color: 'var(--on-band-2)', background: 'rgba(255,255,255,.08)' }}>
                       <Icon name="edit" size={11} />
                     </button>
                   )}
                 </span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--surface-1)' }}>⏱ {timeline}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--on-band)' }}>⏱ {timeline}</span>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 18, flex: 'none' }}>
@@ -252,8 +260,8 @@ export default function ProjectDetail() {
                   <circle cx="32" cy="32" r="26" fill="none" stroke="var(--brass-bright)" strokeWidth="7" strokeLinecap="round" strokeDasharray={ringDash} transform="rotate(-90 32 32)" />
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 19, fontWeight: 700, color: 'var(--surface-1)', lineHeight: 1 }}>{overall}%</span>
-                  <span style={{ fontSize: 8, color: 'var(--text-3)', letterSpacing: '.5px' }}>DONE</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 19, fontWeight: 700, color: 'var(--on-band)', lineHeight: 1 }}>{overall}%</span>
+                  <span style={{ fontSize: 8, color: 'var(--on-band-2)', letterSpacing: '.5px' }}>DONE</span>
                 </div>
               </div>
             </div>
