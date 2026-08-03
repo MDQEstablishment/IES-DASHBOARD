@@ -709,7 +709,10 @@ const pctColor = (p) => (p >= 80 ? 'var(--ok)' : p >= 50 ? 'var(--warn)' : p >= 
 // strip averages, and appear ONLY as the "trashed · 30d" counter in the header.
 // If they counted toward anything else, trashing an overdue task would improve
 // the numbers, which is precisely the behaviour amendment C exists to expose.
-function TeamPerformance({ rows, subtree, fetchTotal }) {
+// Exported so scripts/perf can mount the REAL component with a seeded dataset
+// and measure it. Re-implementing it in a harness would measure a copy and
+// prove nothing about what ships.
+export function TeamPerformance({ rows, subtree, fetchTotal }) {
   // Exact, not a guess about having hit the ceiling: fetchTotal runs the same
   // filter as the fetch without the limit.
   const truncated = fetchTotal != null && fetchTotal > rows.length
