@@ -68,7 +68,19 @@ jobs:
             fi
           done
           echo "chunks fetched: $n"
-          echo "searched bytes: $(wc -c < all.js) (entry $(wc -c < entry.js) + chunks)"
+
+          # CSS is a separate asset linked from index.html, not reachable from
+          # the entry JS. Token DEFINITIONS live there while their USES compile
+          # into JS, so a JS-only search proves half a theming change and would
+          # pass a deploy that shipped the uses without the tokens.
+          c=0
+          for s in $(printf '%s' "$idx" | grep -o 'assets/[A-Za-z0-9_.-]*\.css' | sort -u); do
+            if curl -fsSL "$BASE/$s" -o sheet.css 2>/dev/null; then
+              cat sheet.css >> all.js; c=$((c+1))
+            fi
+          done
+          echo "stylesheets fetched: $c"
+          echo "searched bytes: $(wc -c < all.js) (entry $(wc -c < entry.js) + chunks + css)"
           mv all.js bundle.js
           echo
 
