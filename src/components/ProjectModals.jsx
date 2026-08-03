@@ -165,114 +165,132 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           )}
         </div>
       )}
-      {mode === 'add' && (
-        <div style={{ background: 'var(--accent-tint)', border: '1px solid var(--warn-bg)', borderRadius: 'var(--radius-s)', padding: '10px 12px', fontSize: 12, color: 'var(--accent-hover)', marginBottom: 16 }}>
-          This is the project card — identity, schedule and contacts. After you save, you'll be able to: add buildings, assign engineers, edit any field, upload documents, and log daily progress. Add a cover photo here once the project exists.
-        </div>
-      )}
-      <Row>
-        <Field label="Project code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="PROJECT-A" /></Field>
-        <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
-      </Row>
-      <Field label="Project name"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Project A" /></Field>
-      <Row>
-        <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Entity A" /></Field>
-        <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
-      </Row>
+      <Group first>
+        <Row>
+          <Field label="Project code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="PROJECT-A" /></Field>
+          <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
+        </Row>
+        <Field label="Project name"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Project A" /></Field>
+      </Group>
       {/* Client is the PAYING party, Beneficiary Entity is whose buildings are
           retrofitted — two concepts, not duplicates. Neither derives from the
-          other and neither falls back to the other at save. */}
-      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-8px 0 12px' }}>Client is the paying client — MIR / WIR prints Tarshid when blank.</div>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>DOCUMENT DEFAULTS (TARSHID FORMS)</div>
-      <Row>
-        <Field label="Project Reference No"><input lang="en" style={inputStyle} value={f.project_reference_no} onChange={(e) => set('project_reference_no', e.target.value)} placeholder="2022005" /></Field>
-        <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Entity A" /></Field>
-      </Row>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-4px 0 4px' }}>These auto-fill on every generated MIR / WIR / COC so they're entered once, not per document. Beneficiary Entity is the entity whose buildings are retrofitted — entered here, never derived. Contractor comes from the Contractor section below.</div>
+          other and neither falls back to the other at save. The sentence that
+          used to say so is gone: the distinction now lives in the label
+          ("paying party") and in the beneficiary's placeholder, because a
+          field that needs a sentence under it is a field not named well
+          enough. The client placeholder is Tarshid — the party that actually
+          pays, and the value MIR / WIR fall back to when this is blank.
+          "Entity A" was there before and was simply wrong: that
+          is the beneficiary. */}
+      <Group>
+        <Row>
+          <Field label="Client (paying party)"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Tarshid" /></Field>
+          <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
+        </Row>
+        <Row>
+          <Field label="Project Reference No"><input lang="en" style={inputStyle} value={f.project_reference_no} onChange={(e) => set('project_reference_no', e.target.value)} placeholder="2022005" /></Field>
+          <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Entity whose buildings are retrofitted" /></Field>
+        </Row>
+      </Group>
       {/* COC Layout is an edit-mode control: COC is its own workstream, and
           nothing reads the column at creation time, so a new project simply
           takes the DB default. Existing projects keep their stored value
           visible and editable here. */}
       {mode === 'edit' && (
-        <Field label="COC Layout">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
-              <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
-                <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
-                <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
-              </label>
-            ))}
-          </div>
-        </Field>
+        <Group>
+          <Field label="COC Layout">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
+                <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
+                  <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
+                  <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
+                </label>
+              ))}
+            </div>
+          </Field>
+          <EsmBundles projectId={project.id} />
+        </Group>
       )}
-      {mode === 'edit' && <EsmBundles projectId={project.id} />}
       {/* 8T/8U — contract + works-completion dates print in the COC project-info
           box. The COC signing date is NOT set here: signing happens later by
           TARSHID, on paper, and the approval date cell is left blank.
           These two are also THE project schedule: the clock starts at
           signature, when the contractor may mobilise for the survey. */}
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 -4px' }}>SCHEDULE (CONTRACT DATES)</div>
-      <Row>
-        <Field label="Contract signature date"><DateInput style={inputStyle} value={f.contract_sign_date || ''} onChange={(e) => set('contract_sign_date', e.target.value)} /></Field>
-        <Field label="Works completion date"><DateInput style={inputStyle} value={f.works_end_date || ''} onChange={(e) => set('works_end_date', e.target.value)} /></Field>
-        <Field label="Total weeks"><input lang="en" readOnly tabIndex={-1} aria-readonly="true" style={{ ...inputStyle, background: 'var(--hover)', color: 'var(--text-3)', cursor: 'default' }} value={derivedWeeks == null ? '' : String(derivedWeeks)} /></Field>
-      </Row>
-      <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '-4px 0 10px' }}>Total weeks is computed from the two dates and cannot be typed — it stays empty until both are set.</div>
-      <Row>
-        <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
-        <Field label="Project engineer"><select style={inputStyle} value={f.engineer_id || ''} onChange={(e) => set('engineer_id', e.target.value)}><option value="">Unassigned</option>{people.filter((p) => p.role === 'proje').map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
-      </Row>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
-      <Row>
-        <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} /></Field>
-        <Field label="Phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
-      </Row>
-      <Field label="Contractor email"><input lang="en" style={inputStyle} value={f.contractor_email} onChange={(e) => set('contractor_email', e.target.value)} /></Field>
+      {/* "(computed)" in the label replaces the sentence that used to sit under
+          this row. The rest of what it said — that the field cannot be typed
+          and stays empty until both dates are set — is already carried by the
+          control: it is readOnly, greyed and out of the tab order. */}
+      <Group>
+        <Row>
+          <Field label="Contract signature date"><DateInput style={inputStyle} value={f.contract_sign_date || ''} onChange={(e) => set('contract_sign_date', e.target.value)} /></Field>
+          <Field label="Works completion date"><DateInput style={inputStyle} value={f.works_end_date || ''} onChange={(e) => set('works_end_date', e.target.value)} /></Field>
+          <Field label="Total weeks (computed)"><input lang="en" readOnly tabIndex={-1} aria-readonly="true" style={{ ...inputStyle, background: 'var(--hover)', color: 'var(--text-3)', cursor: 'default' }} value={derivedWeeks == null ? '' : String(derivedWeeks)} /></Field>
+        </Row>
+      </Group>
+      <Group>
+        <Row>
+          <Field label="Project manager"><select style={inputStyle} value={f.pm_id || ''} onChange={(e) => set('pm_id', e.target.value)}><option value="">Unassigned</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
+          <Field label="Project engineer"><select style={inputStyle} value={f.engineer_id || ''} onChange={(e) => set('engineer_id', e.target.value)}><option value="">Unassigned</option>{people.filter((p) => p.role === 'proje').map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></Field>
+        </Row>
+      </Group>
+      {/* The phone field is named in full because it no longer sits under a
+          CONTRACTOR caption — a bare "Phone" beside a project manager and a
+          project engineer would read as theirs. */}
+      <Group>
+        <Row>
+          <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} /></Field>
+          <Field label="Contractor phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
+        </Row>
+        <Field label="Contractor email"><input lang="en" style={inputStyle} value={f.contractor_email} onChange={(e) => set('contractor_email', e.target.value)} /></Field>
+      </Group>
       {/* 9D-1 — TARSHID Info: fills the saving sheet's Project_Info tab at
           generation time. Buildings count / lat-lng / entity EN stay derived or
           owned by their existing fields (zero double work). Edit-mode only:
           the saving sheet is parked, the ten columns stay in the DB and stay
           editable here, but they are not asked for when the card is created. */}
       {mode === 'edit' && (
-        <div style={{ margin: '6px 0 8px' }}>
-          <button type="button" onClick={() => setShowTarshid((s) => !s)}
-            style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-            TARSHID INFO (SAVING SHEET) {showTarshid ? '▲' : '▼'}
-          </button>
-        </div>
+        <Group>
+          <div style={{ margin: '0 0 8px' }}>
+            <button type="button" onClick={() => setShowTarshid((s) => !s)}
+              style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              TARSHID INFO (SAVING SHEET) {showTarshid ? '▲' : '▼'}
+            </button>
+          </div>
+          {showTarshid && (
+            <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12, marginBottom: 10, background: 'var(--hover)' }}>
+              <Field label="Entity name (Arabic)">
+                <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
+              </Field>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>ENTITY POINT OF CONTACT</div>
+              <Row>
+                <Field label="Name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
+                <Field label="Position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
+              </Row>
+              <Row>
+                <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
+                <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
+              </Row>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>TARSHID POINT OF CONTACT</div>
+              <Row>
+                <Field label="Name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
+                <Field label="Position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
+              </Row>
+              <Row>
+                <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_mobile} onChange={(e) => set('tarshid_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
+                <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_email} onChange={(e) => set('tarshid_poc_email', e.target.value)} /></Field>
+              </Row>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Coordinates come from the Location section below; buildings count and entity (EN) / region are derived from existing data.</div>
+            </div>
+          )}
+        </Group>
       )}
-      {mode === 'edit' && showTarshid && (
-        <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12, marginBottom: 10, background: 'var(--hover)' }}>
-          <Field label="Entity name (Arabic)">
-            <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
-          </Field>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>ENTITY POINT OF CONTACT</div>
-          <Row>
-            <Field label="Name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
-            <Field label="Position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
-          </Row>
-          <Row>
-            <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
-            <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
-          </Row>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>TARSHID POINT OF CONTACT</div>
-          <Row>
-            <Field label="Name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
-            <Field label="Position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
-          </Row>
-          <Row>
-            <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_mobile} onChange={(e) => set('tarshid_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
-            <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_email} onChange={(e) => set('tarshid_poc_email', e.target.value)} /></Field>
-          </Row>
-          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Coordinates come from the Location section below; buildings count and entity (EN) / region are derived from existing data.</div>
-        </div>
-      )}
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>LOCATION (FOR MAP)</div>
-      <Row>
-        <Field label="Address"><input lang="en" style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
-        <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} /></Field>
-        <Field label="Longitude"><input lang="en" style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} /></Field>
-      </Row>
+      <Group>
+        <Row>
+          <Field label="Address"><input lang="en" style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
+          <Field label="Latitude"><input lang="en" style={inputStyle} value={f.location_lat || ''} onChange={(e) => set('location_lat', e.target.value)} /></Field>
+          <Field label="Longitude"><input lang="en" style={inputStyle} value={f.location_lng || ''} onChange={(e) => set('location_lng', e.target.value)} /></Field>
+        </Row>
+      </Group>
     </Modal>
   )
 }
@@ -591,6 +609,20 @@ export function ProjectImportModal({ onClose }) {
 }
 
 function Row({ children }) { return <div style={{ display: 'grid', gridTemplateColumns: `repeat(${children.length || 2}, 1fr)`, gap: 12 }}>{children}</div> }
+
+// Grouping for the project form, said structurally instead of in words. The
+// grey section captions (DOCUMENT DEFAULTS / SCHEDULE / CONTRACTOR / LOCATION)
+// and their explanatory notes were removed on the owner's instruction; the
+// blocks they marked are real and still need separating, so each one is a
+// Group: a hairline plus breathing room. Dropping the captions without this
+// is what turns the card into the flat wall the owner complained about.
+// `first` suppresses the rule on the opening group so the card doesn't start
+// with a line under the modal header.
+function Group({ first, children }) {
+  return (
+    <div style={first ? undefined : { borderTop: '1px solid var(--line)', marginTop: 4, paddingTop: 18 }}>{children}</div>
+  )
+}
 
 // ESM bundle-key editor (Edit Project). ESMs sharing a key group onto one COC.
 function EsmBundles({ projectId }) {
