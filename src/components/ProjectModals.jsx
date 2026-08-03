@@ -184,7 +184,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           is the beneficiary. */}
       <Group>
         <Row>
-          <Field label="Client (paying party)"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Tarshid" /></Field>
+          <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Tarshid" /></Field>
           <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
         </Row>
         <Row>
@@ -224,7 +224,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Row>
           <Field label="Contract signature date"><DateInput style={inputStyle} value={f.contract_sign_date || ''} onChange={(e) => set('contract_sign_date', e.target.value)} /></Field>
           <Field label="Works completion date"><DateInput style={inputStyle} value={f.works_end_date || ''} onChange={(e) => set('works_end_date', e.target.value)} /></Field>
-          <Field label="Total weeks (computed)"><input lang="en" readOnly tabIndex={-1} aria-readonly="true" style={{ ...inputStyle, background: 'var(--hover)', color: 'var(--text-3)', cursor: 'default' }} value={derivedWeeks == null ? '' : String(derivedWeeks)} /></Field>
+          <Field label="Total weeks"><input lang="en" readOnly tabIndex={-1} aria-readonly="true" style={{ ...inputStyle, background: 'var(--hover)', color: 'var(--text-3)', cursor: 'default' }} value={derivedWeeks == null ? '' : String(derivedWeeks)} /></Field>
         </Row>
       </Group>
       <Group>
