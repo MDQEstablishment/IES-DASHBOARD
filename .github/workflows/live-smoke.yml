@@ -43,18 +43,33 @@ jobs:
           curl -fsSL "$BASE/version.json" || echo "(no version.json served)"
           echo
 
-          echo "── index.html → bundle name"
+          echo "── index.html → entry bundle"
           idx=$(curl -fsSL "$BASE/")
-          asset=$(printf '%s' "$idx" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
-          if [ -z "$asset" ]; then
+          entry=$(printf '%s' "$idx" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+          if [ -z "$entry" ]; then
             echo "FAIL: no hashed index bundle referenced by the served index.html"
             printf '%s\n' "$idx" | head -40
             exit 1
           fi
-          echo "bundle: $asset"
+          echo "entry: $entry"
+          curl -fsSL "$BASE/$entry" -o entry.js
 
-          curl -fsSL "$BASE/$asset" -o bundle.js
-          echo "bundle bytes: $(wc -c < bundle.js)"
+          # The app is code-split: a page's strings live in its own lazy chunk,
+          # NOT in the entry bundle. Grepping only the entry proves nothing and
+          # will report a correct deploy as missing — this check did exactly
+          # that on its first run. Vite names every chunk inside the entry, so
+          # discover them there and search the whole served graph.
+          echo "── discovering lazy chunks named by the entry"
+          cp entry.js all.js
+          n=0
+          for c in $(grep -oE '[A-Za-z0-9_.-]+-[A-Za-z0-9_-]{8,}\.js' entry.js | sort -u); do
+            if curl -fsSL "$BASE/assets/$c" -o chunk.js 2>/dev/null; then
+              cat chunk.js >> all.js; n=$((n+1))
+            fi
+          done
+          echo "chunks fetched: $n"
+          echo "searched bytes: $(wc -c < all.js) (entry $(wc -c < entry.js) + chunks)"
+          mv all.js bundle.js
           echo
 
           rc=0
