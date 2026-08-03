@@ -27,12 +27,15 @@ that turns out to be consumed by a frozen generator is a **stop-and-ask**.
 
 ## Unit 1 — The purge (verified scope, runs first)
 
+**The purge is total.** Owner's final ruling: Khobbar (`MDQ-K`) was only a
+card-test project and goes too. **All nine projects and every child row —
+true zero, no survivors on the project side.** Reference data is unchanged.
+
 **Scope, verified on the live DB (2026-08-03):** all 815 buildings belong to
-the eight soft-deleted projects; zero belong to Khobbar (`MDQ-K`,
-`9e89023c-c561-43b7-8576-2c6be2a41e0c`), which is kept. Khobbar owns **zero
-rows in every child table** — verified per table, not assumed. Delete the
-eight projects and every dependent row; keep all reference data and
-`audit_log`.
+the eight soft-deleted projects; Khobbar owns zero rows in every child table
+— verified per table, not assumed — so adding it to the deletion changes only
+the `projects` count and one storage file. Migration file: next free slot is
+**0126**.
 
 **There is no undo.** No soft-delete, no recycle bin. Once run, the demo
 content is gone permanently. The owner has instructed this directly; the
@@ -42,7 +45,7 @@ migration text states it again.
 
 | Table | Before | After | | Table | Before | After |
 |---|---|---|---|---|---|---|
-| projects | 9 | **1** (Khobbar) | | material_deliveries | 410 | 0 |
+| projects | 9 | **0** | | material_deliveries | 410 | 0 |
 | buildings | 815 | 0 | | project_installed_items | 169 | 0 |
 | building_item_scope | 298 | 0 | | project_removed_items | 129 | 0 |
 | project_item_pairs | 102 | 0 | | stock_ledger | 42 | 0 |
@@ -91,8 +94,8 @@ Every one of the 58 public tables appears in exactly one of the two lists.
   coc_project_settings → project_documents → material_movements/stock_ledger →
   material_deliveries → building_item_scope/building_engineers/
   building_chat_messages/building_photos → operating_hours →
-  escalations/tasks → the project_* children → buildings → the 8 projects
-  (`where deleted_at is not null`).
+  escalations/tasks → the project_* children → buildings → **all 9 projects**
+  (no `deleted_at` filter — the purge is total and the migration says so).
 - **Before-count assertions abort the transaction on any mismatch** with the
   table above; after-count assertions verify the After column and the keep
   list inside the same transaction. Orphan sweep: zero rows referencing any
@@ -103,13 +106,14 @@ Every one of the 58 public tables appears in exactly one of the two lists.
   trigger inside the transaction and re-enable it, and say so in the
   migration comments.
 - **Storage (SQL does not touch it):** 53 files exist across six content
-  buckets. **52 are deleted; 1 is kept** — Khobbar's project cover photo
-  (`project-photos/9e89023c-…/76cc6e5e-….jpg`), verified by path attribution.
-  Deleted: project-docs 28, daily-progress-photos 11 (incl. `survey/…`
-  paths), delivery-notes 8, project-photos 2 of 3, coc-pdfs 2,
-  building-photos 1. Buckets `report-templates`, `saving-sheet-templates`,
-  `project-templates` untouched. Run as a script immediately after the SQL,
-  with its own before/after listing.
+  buckets and **all 53 are deleted** — including Khobbar's cover photo
+  (`project-photos/9e89023c-…/76cc6e5e-….jpg`), which the total-purge ruling
+  covers explicitly. Per bucket: project-docs 28, daily-progress-photos 11
+  (incl. `survey/…` paths), delivery-notes 8, project-photos 3, coc-pdfs 2,
+  building-photos 1 → all content buckets read **0 after**. Buckets
+  `report-templates`, `saving-sheet-templates`, `project-templates`
+  untouched. Run as a script immediately after the SQL, with its own
+  before/after listing.
 - Proof in the PR: per-table before/after table, orphan-sweep output, storage
   listing, census green.
 
@@ -236,11 +240,20 @@ date, computed weeks) · People (PM, engineer) · Contractor (name/phone/email)
 
 ---
 
-## Report 1 — is `client` now the redundant one, and who still reads it
+## Report 1 — `client` and `beneficiary_entity`: payer and beneficiary, not duplicates
 
-Data fact: in all five live rows where both are set, `client` and
-`beneficiary_entity` are **identical**; the remaining rows have
-`beneficiary_entity` NULL. So in practice the pair carries one value today.
+**Corrected framing (pending the owner's confirmation of the semantics — do
+not build on the redundancy reading):** on this programme the two fields are
+different concepts. **`client` is the paying party** — for TARSHID work,
+Tarshid itself — and **`beneficiary_entity` is the entity whose buildings are
+retrofitted** (a ministry or authority). The code is the evidence: the
+MIR/WIR generator defaults `client` to literally `'Tarshid'` when blank
+(`inspectionDocs.js:20`) — a default that only makes sense if client means
+payer. The columns look identical in the current rows because every live
+project happens to be a Tarshid contract, **not** because they duplicate each
+other. Both stay; neither derives from the other; the moment a non-Tarshid
+contract arrives the distinction carries real data. Nobody should read
+"identical in every row" as grounds to delete either field.
 
 Who still reads `projects.client`:
 
@@ -254,20 +267,17 @@ Who still reads `projects.client`:
 | Photo annex 🔒 | `reportPhotoAnnex.js:93` via meta.client | follows progress report meta |
 | UI | `ProjectDetail.jsx:233` header chip, `Projects.jsx:168` list meta | shows "—" / omits |
 
-Conclusion: with Beneficiary Entity authoritative, `client` is **redundant as
-data** (always equal when present) but **not removable and not blankable
-without consequence**: two frozen generators prefer it, and the MIR/WIR
-"Client" line semantically means the paying client (its own default is
-literally `'Tarshid'`), which is not always the beneficiary ministry.
-
-**Ruled: keep `client` as the optional commercial-client field**, beneficiary
-authoritative, captioned "commercial client — MIR/WIR prints Tarshid when
-blank". No reader changes this sprint. The places that read `client` where,
-under the new authority, they arguably *should* read beneficiary — the
-progress-report cover (`progressReport.js:284` 🔒, prefers client) and the
-two UI surfaces (`ProjectDetail.jsx:233` header, `Projects.jsx:168` list) —
-are recorded here for the later documents/COC workstream, not changed now;
-the frozen one is a stop-and-ask whenever that workstream reaches it.
+Conclusion under the corrected semantics: **both fields stay, both explicit.**
+Beneficiary Entity is authoritative for "whose buildings"; `client` is the
+payer, kept on the card as the optional field captioned **"paying client —
+MIR/WIR prints Tarshid when blank"**. No reader changes this sprint. The
+places where a reader's choice deserves review under these semantics — the
+progress-report cover (`progressReport.js:284` 🔒 prefers client, i.e. prints
+the payer where a beneficiary may be expected) and the two UI surfaces
+(`ProjectDetail.jsx:233` header, `Projects.jsx:168` list, both showing payer
+not beneficiary) — are recorded for the later documents/COC workstream, not
+changed now; the frozen one is a stop-and-ask whenever that workstream
+reaches it.
 
 ## Report 2 — numeric S-curve impact of repointing to contract dates
 
@@ -275,6 +285,28 @@ the frozen one is a stop-and-ask whenever that workstream reaches it.
 contract values by construction, the numbers below describe the **intended
 new behaviour**, not a risk — no consumer, frozen or not, sees a blank or a
 divergent value.)*
+
+**The business grounding, from the owner:** after contract signature the
+contractor is permitted to begin the survey for an agreed period — signature
+is when the project clock starts, the moment the contractor may mobilise, not
+a paperwork date. Repointing the curve to the contract pair is correct on the
+process, not merely convenient. **Honest consequence, recorded:** the opening
+stretch of the repointed curve is the survey window, during which zero
+installation progress is the expected and correct state, not a delay. Nothing
+is built for that now — no survey-period concept exists and the template is
+complete — but this is a standing observation for the survey stage: a curve
+that reads "behind schedule" during a contractually agreed survey window
+would be lying, and whatever the survey sprint builds must account for it.
+
+**Does repointing materially change any live project's curve? No — because
+after Unit 1 there are no live projects.** The purge is total; every row
+below is deleted before Unit 2 ships, so repointing changes **zero** live
+curves. The Khobbar row is retained in the table as the record of how large
+the effect *would* have been on a project whose pairs disagreed (denominator
+64 → 22 weeks, planned % nearly tripling) — it was card-test data and is
+purged, but it is exactly the shape of divergence the write-through now
+prevents from ever arising, since both pairs are equal by construction on
+every row created after this sprint.
 
 What consumes the old pair: `ProjectDetail.jsx:157-162` (header: weeks
 elapsed = ⌊(today − start_date)/7⌋, timeline % = elapsed/total_weeks, "days
@@ -289,7 +321,7 @@ On the live projects that carry both pairs, as of 2026-08-03:
 
 | Project | Today (start/end/weeks) | Contract pair | Numeric change |
 |---|---|---|---|
-| **MDQ-K (Khobbar — the real one)** | 2026-08-03 → 2026-11-01, total_weeks **64** (already self-contradictory: the date span is 12.9 weeks) | 2026-08-01 → 2026-12-31 = 152 days = **21.7 → 22 weeks** | Planned-progress denominator 64 → 22: on 2026-10-01 the header timeline reads **12.5 %** today vs **36.4 %** repointed (8 elapsed weeks ÷ 64 vs ÷ 22). Estimated completion 🔒: 2026-08-03 + 448 d = **2027-10-25** today vs 2026-08-01 + 154 d = **2027-01-02** repointed (rounding to whole weeks lands 2 days past works-end — display the date pair, use weeks only for the %). "Days to end" alert: 90 → 150 days. |
+| **MDQ-K (Khobbar — card-test data, purged by Unit 1)** | 2026-08-03 → 2026-11-01, total_weeks **64** (already self-contradictory: the date span is 12.9 weeks) | 2026-08-01 → 2026-12-31 = 152 days = **21.7 → 22 weeks** | Planned-progress denominator 64 → 22: on 2026-10-01 the header timeline reads **12.5 %** today vs **36.4 %** repointed (8 elapsed weeks ÷ 64 vs ÷ 22). Estimated completion 🔒: 2026-08-03 + 448 d = **2027-10-25** today vs 2026-08-01 + 154 d = **2027-01-02** repointed (rounding to whole weeks lands 2 days past works-end — display the date pair, use weeks only for the %). "Days to end" alert: 90 → 150 days. |
 | PROJECT-A-DIP-50 / -FULL | 2026-09-01 → 2028-09-01, 104 w | 2026-08-15 → 2028-08-31 = 747 d = 106.7 w | start 17 days earlier, +2.7 weeks denominator: mid-project planned % shifts ≈ +1.5 points at any given date. Purged anyway — shown as the "pairs nearly agree" case. |
 | PROJECT-A-DIP-709 | all NULL | 2025-10-01 → 2026-06-30 | today: **no timeline at all** (header shows nothing, estimated completion empty). Repointed it would have had one — the current split-brain in one row. Purged anyway. |
 
@@ -319,8 +351,9 @@ construction on new/edited rows.
 ## Review checklist (what I check when Opus hands back)
 
 - [ ] Purge migration asserts the exact before-counts and fails loudly;
-      after-counts + orphan sweep + storage listing in the PR; Khobbar row,
-      its cover photo, all reference tables and `audit_log` intact.
+      after-counts + orphan sweep + storage listing in the record; projects
+      and all content tables at true zero, all reference tables and
+      `audit_log` intact, content buckets empty.
 - [ ] Census 19/19; build clean on branch; `main` green after each merge.
 - [ ] Add modal: no Buildings section, no Items & Replacements, no TARSHID
       block, no COC Layout, no start/end inputs, no coordinate placeholders.
