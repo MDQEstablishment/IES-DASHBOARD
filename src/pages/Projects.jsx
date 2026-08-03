@@ -173,7 +173,24 @@ const PILL = {
   closed:  ['var(--on-band)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
   deleted: ['var(--on-band)', 'rgba(60,80,95,0.38)', 'rgba(159,176,189,0.32)'],
 }
-const SCRIM = 'linear-gradient(180deg, rgba(16,39,59,0.88) 0%, rgba(16,39,59,0.35) 22%, rgba(16,39,59,0) 45%, rgba(16,39,59,0.55) 68%, rgba(16,39,59,0.95) 100%)'
+// Recolouring the ink was not enough on its own: this scrim used to fall to
+// alpha 0 at 45% and only climb back to 0.55 by 68%, so the name / meta / ring
+// block at y 274-324 sat in the trough at alpha 0.48-0.67, and the code + pill
+// + edit row at y 19-40 sat on the tail of the top ramp at 0.65-0.76. White ink
+// needs 0.62 and 78% white ink needs 0.72 to clear 4.5:1 over a pure-white
+// photo, so four elements stayed under AA no matter which token they used.
+//
+// Every stop below is placed against a measured y, not by eye. Two ramps moved
+// and one stop was added:
+//   0.78 @ 10%  — NEW. Caps the top row (deepest text pixel y=39.5, t=0.094).
+//                 The lower ramp alone could not reach it; it is a different
+//                 ramp. Ends above the window, so the window is unaffected.
+//   0 @ 42%, 0.78 @ 62%  — was 0 @ 45%, 0.55 @ 68%. Lifts the bottom block.
+// The transparent window (0.35 @ 22% -> 0 @ 42%) is deliberately preserved:
+// that is the part of the cover photo the panorama exists to show.
+// Worst alpha per text zone after this: code .788, pill .799, edit .786,
+// name .794, ring .812, meta .829, stat values .894, stat labels .917.
+const SCRIM = 'linear-gradient(180deg, rgba(16,39,59,0.88) 0%, rgba(16,39,59,0.78) 10%, rgba(16,39,59,0.35) 22%, rgba(16,39,59,0) 42%, rgba(16,39,59,0.78) 62%, rgba(16,39,59,0.95) 100%)'
 
 function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen, onEdit }) {
   const [pillC, pillBg, pillBd] = PILL[p.status] || PILL.draft
