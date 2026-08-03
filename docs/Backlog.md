@@ -9,6 +9,66 @@ commitment to build; some of these should stay unbuilt.
 
 ---
 
+## CARD_NEGATIVE_WEEKS — a works-end before the signature computes negative weeks
+
+**Status:** open · logged, not built · owner decision · raised by the Add Project
+card reduction (Unit 2)
+
+**Measurement.** `weeksBetween()` in `src/components/ProjectModals.jsx` returns
+`Math.round(ms / (7 * 86400000))` over the contract pair, and the schedule
+write-through copies that value into `total_weeks` along with
+`start_date`/`end_date`. Enter a works completion date earlier than the contract
+signature date and the read-only Total weeks field displays a negative number,
+which is then stored. Downstream, `ProjectDetail.jsx:157` divides by
+`total_weeks` for the timeline percentage and the frozen
+`progressReport.js:48-56` guards with `weeks <= 0` and returns an empty
+estimated completion — so nothing crashes, but the header maths goes
+meaningless.
+
+**Why it was not built.** The sprint spec defined no behaviour for an inverted
+pair, and inventing validation is exactly the kind of unrequested addition the
+owner's "the template is complete" instruction rules out. There is also more
+than one honest fix and they are not equivalent: block the save, clamp the
+display to blank, or accept the value and let a later review catch it. The
+first two change what the form will accept.
+
+**Cost of deciding.** Any variant is a few lines in one file — a guard in
+`weeksBetween` or a validation branch in `save()`. Deciding whether an inverted
+pair is a data-entry error worth refusing, or a legitimate intermediate state
+while someone fills the form, is the owner's judgement about how the card is
+used.
+
+---
+
+## TARSHID_PANEL_ARABIC_PLACEHOLDER — an Arabic placeholder outside the sanctioned list
+
+**Status:** open · logged, not changed · pre-existing · surfaced by Unit 2
+
+**Measurement.** The edit-mode TARSHID INFO panel carries
+`placeholder="اسم الجهة"` on the Entity name (Arabic) input in
+`src/components/ProjectModals.jsx`. `docs/Constraints.md` #1 requires zero
+Arabic in component source and names exactly two sanctioned exceptions —
+`src/lib/docPdf.js` (COC bilingual labels) and `public.buildings.name_ar` (a
+data identifier). A UI placeholder is neither, so this reads as a standing
+violation of the repo's first constraint.
+
+**Provenance — it is inherited, not introduced.** `git log -S` places it in
+`97afc96` (9J(4), 2026-08-01), before this sprint. Unit 2 only gated the panel
+to edit mode; it did not add, move or edit the string.
+
+**Why it was not changed.** It is outside the sprint's scope (the card
+reduction touched add-mode gating, not the panel's contents), and the fix is
+not purely mechanical: the field's whole purpose is to capture the Arabic
+entity name, so the honest options are an English instruction ("entity name in
+Arabic"), a Latin-script example, or adding this input to the sanctioned
+exceptions with a reason. That is a constraints decision, not a typo fix.
+
+**Cost of deciding.** One string, or one line in `docs/Constraints.md`. What is
+not cheap is discovering later that the exception list and the source disagree
+and having to re-derive which is authoritative.
+
+---
+
 ## ROLE_AVATAR_CONTRAST — role-coloured avatar initials fall short of AA
 
 **Status:** open · logged, not changed · owner decision
