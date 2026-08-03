@@ -251,3 +251,40 @@ migration, verifiable the same way 9R verifies everything else. What is not
 cheap is deciding whether visibility implies any authority, and reversing it
 afterwards: a widened read that people have started relying on is politically
 hard to narrow again, even when narrowing is correct.
+
+---
+
+## MYTASKS_DEMO_CREDENTIAL_ROTATION — a shared password that three proofs now depend on
+
+**Status:** open, owed. Raised 9R(7e), and deliberately raised *after* the thing
+that made it urgent went away.
+
+**What happened.** Three proofs in sprint 9R — realtime propagation under two
+seconds, the full-page screenshot rig, and the truncation banner rendering —
+were recorded as blocked because no user password was available to sign in with.
+The refusal to mint one was correct on the information held at the time, but it
+rested on a factual premise that was wrong: the objection assumed a production
+project holding real client programme data. The owner corrected it. This is a
+demo instance, the accounts are the `ies.demo.local` set, and the content is
+demo data. On that basis the owner authorised using the existing shared demo
+credential to unblock the three proofs, with rotation to follow.
+
+**The obligation.** The credential is rotated after 9R. It has not stopped being
+worth doing merely because it stopped being urgent — a shared password that
+several people know, that now has a written record of being used to unblock a
+test, is exactly the kind of item that survives on a backlog precisely because
+nothing is currently failing because of it.
+
+**What rotation touches.** The credential lives only in a git-ignored env
+(`.env.local`, matched by `*.local`) and in whoever holds it. It is not in the
+repository, not in `.env.production`, and not injected by `deploy.yml` — so
+rotation is changing the password on the demo accounts and redistributing it,
+not a code change. The scripts that consume it (`scripts/ui-shots.mjs`,
+`scripts/tasks-governance-test.mjs`, `scripts/tasks-realtime.mjs`) read it from
+the environment and need no edit.
+
+**Why it is named rather than assumed.** If this instance ever stops being a
+demo — real buildings, real people, real programme data — the risk calculus that
+made using a shared credential reasonable inverts, and the rotation stops being
+hygiene and becomes a prerequisite. Naming it keeps that reversal visible
+instead of leaving it to be rediscovered.
