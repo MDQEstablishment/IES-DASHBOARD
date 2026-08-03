@@ -5,8 +5,9 @@ import { Avatar, Chip, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle 
 import DateInput from '../components/DateInput'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import { fmtDate, daysUntil, initials } from '../lib/format'
-import { roleColor, statusMeta, CAN_RAISE_TASK } from '../lib/constants'
+import { roleColor, roleTitle, statusMeta, CAN_RAISE_TASK } from '../lib/constants'
 
 const PAGE_SIZE = 100
 const NOBODY = '00000000-0000-0000-0000-000000000000'
@@ -83,6 +84,81 @@ const mayManage = (t, me, subtree) =>
 
 const dayAge = (d) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 86400000)) : 0)
 
+// The subtitle is a claim about reach, so it is written against tasks_read and
+// nothing else. Each branch below names the policy clause that makes it true:
+//
+//   ceo / pmo  → auth_role() = any (array['ceo','pmo'])   — the carve-out, so
+//                "all tasks" is literally what the policy grants.
+//   subtree    → is_in_subtree(auth.uid(), assigned_to_id | created_by_id)
+//   otherwise  → assigned_to_id = auth.uid() OR created_by_id = auth.uid()
+//
+// It takes hasTeam rather than deciding for itself, so the label and the Team
+// fetch cannot disagree: both read the same subtree the page already walked.
+// A label that overclaims is the exact defect this sprint exists to prevent —
+// it is a promise the database will refuse to keep.
+//
+// Note what is deliberately NOT claimed: amendment D's pm_id branch widens the
+// policy, but only for tasks on a project you manage. There is no honest
+// one-line label for "plus anything on my projects", and inventing one would
+// overclaim for every user who is not a pm. It stays unsaid.
+const scopeLabel = (role, hasTeam) => (
+  role === 'ceo' || role === 'pmo' ? 'All tasks across the program'
+    : hasTeam ? "My team's tasks"
+      : 'My tasks'
+)
+
+const LIVE_STATUSES = ['open', 'in_progress', 'blocked']
+
+// Page-level head counts. These are COUNT-only round trips (head: true), not
+// row fetches, because the four cards need five numbers and none of the rows.
+//
+// They are deliberately independent of the active tab: the cards describe your
+// whole queue, the table below them describes one slice of it, and the two will
+// legitimately disagree the moment you switch to Delegated. That is not a bug
+// to be reconciled — reconciling it would mean the cards changed meaning every
+// time a tab was clicked.
+//
+// Every count filters deleted_at is null: a trashed task is withdrawn and must
+// not go on counting against anybody.
+function useTaskCounts(me, teamIdList, refreshKey) {
+  const [counts, setCounts] = useState(null)
+  const isManager = teamIdList.length > 1
+  const teamKey = teamIdList.join(',')
+
+  useEffect(() => {
+    if (!me) return undefined
+    let alive = true
+    const base = () => supabase.from('tasks').select('id', { count: 'exact', head: true }).is('deleted_at', null)
+    const today = new Date().toISOString().slice(0, 10)
+    Promise.all([
+      base().eq('assigned_to_id', me).in('status', LIVE_STATUSES),
+      base().eq('assigned_to_id', me).in('status', LIVE_STATUSES).lt('due_date', today),
+      isManager
+        ? base().in('assigned_to_id', teamIdList).in('status', LIVE_STATUSES)
+        : base().eq('assigned_to_id', me).eq('status', 'in_progress'),
+      base().eq('assigned_to_id', me).eq('status', 'done'),
+      // Drives the Delegated tab: the tab appears when you manage someone OR
+      // when you already hold delegated rows, so an ex-manager chasing work he
+      // handed out before the org chart changed does not lose the only view
+      // that shows it.
+      base().eq('created_by_id', me).neq('assigned_to_id', me),
+    ]).then((res) => {
+      if (!alive) return
+      setCounts({
+        mine: res[0].count ?? 0,
+        overdue: res[1].count ?? 0,
+        third: res[2].count ?? 0,
+        done: res[3].count ?? 0,
+        delegated: res[4].count ?? 0,
+      })
+    })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me, teamKey, isManager, refreshKey])
+
+  return counts
+}
+
 const rowBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
   padding: '4px 9px', borderRadius: 'var(--radius-s)', cursor: 'pointer',
@@ -135,9 +211,10 @@ export default function Tasks() {
     return out
   }, [people, user?.id])
 
-  const teamIds = useMemo(
-    () => (subtree.length ? [user.id, ...subtree.map((p) => p.id)].join(',') : NOBODY),
+  const teamIdList = useMemo(
+    () => (subtree.length ? [user.id, ...subtree.map((p) => p.id)] : [NOBODY]),
     [subtree, user?.id])
+  const teamIds = useMemo(() => teamIdList.join(','), [teamIdList])
 
   // Do you actually manage anyone? That — not a role list — is what a "Team"
   // view means. This used to be `can(role, MANAGERS)` against a hard-coded
@@ -196,6 +273,10 @@ export default function Tasks() {
   const pageSafe = Math.min(page, pageCount - 1)
   const pageRows = filtered.slice(pageSafe * PAGE_SIZE, pageSafe * PAGE_SIZE + PAGE_SIZE)
 
+  // Recomputed whenever the live query refetches (realtime included), because
+  // `rows` takes a new identity on every fetch.
+  const counts = useTaskCounts(user?.id, teamIdList, rows)
+
   const setTabAndReset = (k) => { setTab(k); setPage(0) }
   const setFilterAndReset = (v) => { setStatusFilter(v); setPage(0) }
 
@@ -234,7 +315,12 @@ export default function Tasks() {
     state: { fromTask: { id: t.id, title: t.title, project_id: t.project_id, building_id: t.building_id } },
   })
 
-  const tabs = ['mine', 'delegated', ...(isManager ? ['team'] : [])]
+  // Gate on DATA, not on inference. A non-empty subtree means you can delegate;
+  // a non-zero delegated count means you already have, whatever the org chart
+  // says today. Either one earns the tab — otherwise an ex-manager loses the
+  // only view that shows the work he handed out.
+  const showDelegated = isManager || (counts?.delegated ?? 0) > 0
+  const tabs = ['mine', ...(showDelegated ? ['delegated'] : []), ...(isManager ? ['team'] : [])]
 
   return (
     <div data-screen-label="My Tasks">
@@ -242,7 +328,11 @@ export default function Tasks() {
         right={can(role, CAN_RAISE_TASK) && (
           <Btn variant="primary" icon="plus" onClick={() => setShowNew(true)}>New Task</Btn>
         )} />
-      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: -12, marginBottom: 16 }}>{scope.blurb}</div>
+      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: -12, marginBottom: 16 }}>
+        {scopeLabel(role, isManager)} · {scope.blurb}
+      </div>
+
+      <KpiCards counts={counts} isManager={isManager} />
 
       {/* Tabs + status filter pills */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -273,8 +363,11 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* Team Performance — Team tab only, computed from the team's own rows */}
-      {scopeKey === 'team' && <TeamPerformance rows={rows} />}
+      {/* Team Performance — Team tab only, computed from the team's own rows.
+          `rows` here still carries the trashed ones (see the fetch split): the
+          widget needs them for its trashed counter and drops them everywhere
+          else. */}
+      {scopeKey === 'team' && <TeamPerformance rows={rows} subtree={subtree} />}
 
       {/* Task table */}
       <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', overflow: 'hidden' }}>
@@ -510,58 +603,227 @@ function EditTask({ task, onClose }) {
   )
 }
 
-// Open-queue health for the actor's own team. Cycle time is the trailing 30 days
-// measured on done_at (added in 0102) — updated_at used to stand in for it and
-// drifted every time a closed task was touched again.
-function TeamPerformance({ rows }) {
-  const openTasks = rows.filter((t) => t.status !== 'done' && t.status !== 'cancelled')
-  const cutoff = Date.now() - 30 * 86400000
-  const recentlyDone = rows.filter((t) => t.status === 'done' && t.done_at && new Date(t.done_at).getTime() >= cutoff)
-  const avgAge = openTasks.length
-    ? Math.round(openTasks.reduce((s, t) => s + dayAge(t.created_at), 0) / openTasks.length) : 0
-  const avgCycle = recentlyDone.length
-    ? Math.round(recentlyDone.reduce((s, t) => s + Math.max(0, (new Date(t.done_at) - new Date(t.created_at)) / 86400000), 0) / recentlyDone.length)
-    : null
-  const topOldest = [...openTasks].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(0, 3)
-
+// Four numbers about YOUR queue, not about the tab you happen to be on.
+function KpiCards({ counts, isManager }) {
+  const cards = [
+    { k: 'mine', label: 'Assigned to me', v: counts?.mine },
+    { k: 'overdue', label: 'My overdue', v: counts?.overdue, danger: true },
+    { k: 'third', label: isManager ? 'Team tasks' : 'In progress', v: counts?.third },
+    { k: 'done', label: 'Completed', v: counts?.done, ok: true },
+  ]
+  // ies-kpis is the established KPI grid class: it carries the <767px collapse
+  // and the min-width:0 guard that keeps a long number from forcing the row
+  // wider than its container. auto-fit handles the in-between widths without
+  // inventing a new breakpoint.
   return (
-    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>Team Performance</div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)' }}>Open queue health</div>
-      </div>
-      <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: '120px 150px 1fr', gap: 18, alignItems: 'start' }}>
-        <Perf label="AVG AGE" value={`${avgAge}d`} />
-        {avgCycle == null
-          ? (
-            <div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Avg cycle · 30d</div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.4 }}>No tasks closed in the last 30 days.</div>
-            </div>
-          )
-          : <Perf label="AVG CYCLE · 30D" value={`${avgCycle}d`} color="var(--ok)" />}
-        <div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>Top 3 oldest open</div>
-          {topOldest.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-3)' }}>None open.</div> : topOldest.map((t) => (
-            <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 0', borderTop: '1px solid var(--line)' }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {t.title}
-                <span style={{ color: 'var(--text-3)', fontWeight: 500 }}> · {t.assignee?.full_name || 'Unassigned'}</span>
-              </span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--warn)', flex: 'none' }}>{dayAge(t.created_at)}d</span>
-            </div>
-          ))}
+    <div className="ies-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+      {cards.map((c) => (
+        <div key={c.k} style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: '14px 16px' }}>
+          <div style={{ fontSize: 11.5, color: 'var(--text-3)', fontWeight: 600 }}>{c.label}</div>
+          <div style={{
+            fontFamily: 'var(--mono)', fontSize: 26, fontWeight: 700, marginTop: 4,
+            // A count of zero is a real answer and prints as 0. Only a count we
+            // do not have yet prints as a placeholder.
+            color: c.v == null ? 'var(--text-3)' : c.danger && c.v > 0 ? 'var(--bad)' : c.ok ? 'var(--ok)' : 'var(--text)',
+          }}>{c.v == null ? '·' : c.v}</div>
         </div>
-      </div>
+      ))}
     </div>
   )
 }
 
-function Perf({ label, value, color }) {
+// Returns null rather than 0 for an empty set. The distinction is the whole
+// point: "nobody has closed anything" and "everything closes instantly" are
+// opposite facts and must never render the same.
+const avg = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null)
+const cycleDays = (t) => (t.done_at && t.created_at
+  ? Math.max(0, (new Date(t.done_at) - new Date(t.created_at)) / 86400000) : null)
+const isOpenStatus = (s) => s === 'open' || s === 'in_progress' || s === 'blocked'
+
+const ageColor = (d) => (d == null ? 'var(--text-3)' : d > 14 ? 'var(--bad)' : d > 7 ? 'var(--warn)' : 'var(--text)')
+const pctColor = (p) => (p >= 80 ? 'var(--ok)' : p >= 50 ? 'var(--warn)' : p >= 25 ? '#C2410C' : 'var(--bad)')
+
+// Spec §6. Every number here comes from the SAME fetch that backs the Team tab
+// — there is no second query — which is why the tab deliberately does not
+// filter deleted_at server-side.
+//
+// THE TRASH ASYMMETRY, which is the anti-gaming design and not an oversight:
+// trashed rows are excluded from every per-employee statistic and from both
+// strip averages, and appear ONLY as the "trashed · 30d" counter in the header.
+// If they counted toward anything else, trashing an overdue task would improve
+// the numbers, which is precisely the behaviour amendment C exists to expose.
+function TeamPerformance({ rows, subtree }) {
+  const s = useMemo(() => {
+    const cutoff = Date.now() - 30 * 86400000
+
+    // ONE POPULATION for the whole card: tasks held by someone strictly below
+    // me. The Team FETCH is deliberately wider than this — it also returns rows
+    // I or my reports merely created, including ones assigned outside the
+    // subtree — but a widget titled Team Performance measures the team's work,
+    // and letting the strip count a population the table below it does not
+    // would make the two halves of one card disagree. Scoping both to the same
+    // set is what keeps "5 open" from sitting above four rows totalling 4.
+    const held = new Set(subtree.map((p) => p.id))
+    const inTeam = rows.filter((t) => held.has(t.assigned_to_id))
+    const live = inTeam.filter((t) => !t.deleted_at)
+    const trashed30 = inTeam.filter((t) => t.deleted_at && new Date(t.deleted_at).getTime() >= cutoff).length
+
+    const openTasks = live.filter((t) => isOpenStatus(t.status))
+    const stripAge = avg(openTasks.map((t) => dayAge(t.created_at)))
+    // 30-day window: this metric ONLY. Per-employee cycle below is all-time.
+    const done30 = live.filter((t) => t.status === 'done' && t.done_at && new Date(t.done_at).getTime() >= cutoff)
+    const stripCycle = avg(done30.map(cycleDays).filter((c) => c != null))
+
+    // One row per STRICTLY-JUNIOR subordinate. Keying off `subtree` — which
+    // never contains me — is what keeps my own tasks and my peers' out of the
+    // table without a second filter to get wrong.
+    const byId = new Map(subtree.map((p) => [p.id, {
+      id: p.id, full_name: p.full_name, role: p.role,
+      total: 0, done: 0, inprog: 0, overdue: 0, ages: [], cycles: [],
+    }]))
+    live.forEach((t) => {
+      const e = byId.get(t.assigned_to_id)
+      if (!e) return
+      e.total += 1
+      if (t.status === 'done') {
+        e.done += 1
+        const c = cycleDays(t)
+        if (c != null) e.cycles.push(c)   // ALL their completed work, no window
+      } else if (t.status === 'in_progress') {
+        e.inprog += 1
+      }
+      if (isOpenStatus(t.status)) {
+        e.ages.push(dayAge(t.created_at))
+        const du = daysUntil(t.due_date)
+        if (du != null && du < 0) e.overdue += 1
+      }
+    })
+
+    const people = [...byId.values()]
+      .filter((e) => e.total > 0)
+      .map((e) => ({
+        ...e,
+        avgAge: avg(e.ages),
+        avgCycle: avg(e.cycles),
+        pct: e.total ? Math.round((e.done / e.total) * 100) : null,
+      }))
+      .sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1))
+
+    const totals = people.reduce((acc, e) => ({
+      total: acc.total + e.total, done: acc.done + e.done, overdue: acc.overdue + e.overdue,
+    }), { total: 0, done: 0, overdue: 0 })
+
+    return {
+      trashed30,
+      openCount: openTasks.length,
+      stripAge,
+      stripCycle,
+      people,
+      orgPct: totals.total ? Math.round((totals.done / totals.total) * 100) : null,
+      orgAge: avg(people.flatMap((e) => e.ages)),
+      orgCycle: avg(people.flatMap((e) => e.cycles)),
+      orgTotal: totals.total,
+      orgOverdue: totals.overdue,
+    }
+  }, [rows, subtree])
+
+  const th = { padding: '9px 8px', fontWeight: 600, whiteSpace: 'nowrap' }
+  const td = { padding: '9px 8px', whiteSpace: 'nowrap' }
+
   return (
-    <div>
-      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6, color: color || 'var(--text)' }}>{value}</div>
+    <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>Team Performance</div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>
+          <span>{s.people.length} people</span>
+          <span>{s.orgTotal} tasks</span>
+          {s.orgPct != null && <span>{s.orgPct}% complete</span>}
+          {s.orgAge != null && <span>avg age {s.orgAge}d</span>}
+          {s.orgCycle != null && <span>avg cycle {s.orgCycle}d</span>}
+          {s.orgOverdue > 0 && <span style={{ color: 'var(--bad)', fontWeight: 700 }}>{s.orgOverdue} overdue</span>}
+          <span title="Tasks moved to the trash in the last 30 days. Shown so that withdrawing work is visible rather than silent.">
+            {s.trashed30} trashed · 30d
+          </span>
+        </div>
+      </div>
+
+      {/* Part 1 — the strip */}
+      <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, 1fr))', gap: 18, alignItems: 'start', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Avg age of open tasks</div>
+          {s.openCount === 0
+            ? <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.4 }}>No open tasks.</div>
+            : <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6, color: ageColor(s.stripAge) }}>{s.stripAge}d</div>}
+        </div>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Avg cycle · 30d</div>
+          {s.stripCycle == null
+            ? <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.4 }}>No tasks closed in the last 30 days.</div>
+            : <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6, color: 'var(--ok)' }}>{s.stripCycle}d</div>}
+        </div>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Open tasks</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, marginTop: 6 }}>{s.openCount}</div>
+        </div>
+      </div>
+
+      {/* Part 2 — per employee. The card is always rendered, never hidden. */}
+      {s.people.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: 'var(--text-3)', borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+          No subordinate tasks visible yet.
+        </div>
+      ) : (
+        <div className="ies-table-wrap" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)', background: 'var(--raised)' }}>
+                <th style={th}>Employee</th>
+                <th style={th}>Role</th>
+                <th style={th}>Total</th>
+                <th style={th}>Done</th>
+                <th style={th}>In Progress</th>
+                <th style={th}>Overdue</th>
+                <th style={th}>Avg open age</th>
+                <th style={th}>Avg cycle</th>
+                <th style={{ ...th, minWidth: 130 }}>Completion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {s.people.map((e) => (
+                <tr key={e.id} style={{ borderTop: '1px solid var(--line)' }}>
+                  <td style={td}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Avatar name={e.full_name} color={roleColor(e.role)} size={22} />
+                      <span style={{ fontWeight: 600 }}>{e.full_name}</span>
+                    </div>
+                  </td>
+                  <td style={{ ...td, color: 'var(--text-3)' }}>{roleTitle(e.role)}</td>
+                  <td style={{ ...td, fontFamily: 'var(--mono)' }}>{e.total}</td>
+                  <td style={{ ...td, fontFamily: 'var(--mono)' }}>{e.done}</td>
+                  <td style={{ ...td, fontFamily: 'var(--mono)' }}>{e.inprog}</td>
+                  <td style={{
+                    ...td, fontFamily: 'var(--mono)',
+                    color: e.overdue > 0 ? 'var(--bad)' : 'var(--text-3)', fontWeight: e.overdue > 0 ? 700 : 400,
+                  }}>{e.overdue}</td>
+                  <td style={{
+                    ...td, fontFamily: 'var(--mono)',
+                    color: ageColor(e.avgAge), fontWeight: e.avgAge != null && e.avgAge > 14 ? 700 : 400,
+                  }}>{e.avgAge == null ? '—' : `${e.avgAge}d`}</td>
+                  <td style={{ ...td, fontFamily: 'var(--mono)' }}>{e.avgCycle == null ? '—' : `${e.avgCycle}d`}</td>
+                  <td style={td}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ flex: 1, minWidth: 60, height: 6, borderRadius: 999, background: 'var(--line)', overflow: 'hidden' }}>
+                        <div style={{ width: `${e.pct}%`, height: '100%', background: pctColor(e.pct) }} />
+                      </div>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: pctColor(e.pct), fontWeight: 700 }}>{e.pct}%</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
