@@ -484,6 +484,40 @@ handed them cancel rights over someone else's task. Every rule 0124 adds hangs
 off that column, so it is now immutable outside service contexts. This was not
 on the sprint brief; it was found by asking what the new rules depend on.
 
+Stated plainly, because it should not have to be read out of a migration:
+**`tasks.created_by_id` is immutable.** Any statement that changes it raises
+`42501 — Who raised a task cannot be changed`. The single carve-out is the
+service context — `auth.uid() is null`, or `app.chain_rewire` set — which exists
+so that `profiles_archive_cascade()` (0105) can rewire work when a person is
+archived, and for no other reason. A signed-in user has no path to that carve-out:
+both conditions are server-side, and neither can be reached from the client.
+The wider lesson is the one worth carrying: this hole sat inside a governance
+layer the sprint had just finished calling sound, which is why "the backend is
+fine, this is a frontend sprint" is a framing that must keep being tested rather
+than assumed.
+
+**A widget told a different story than its own data, and review caught it.** An
+earlier revision of 9R(5) scoped the KPI strip to the whole Team fetch, which is
+wider than the team — that fetch also returns rows merely *created* by a subtree
+member, not held by one. Against live data it printed **"5 open" above a table
+whose rows totalled 4**. Both halves are now computed from one population: tasks
+*held* by someone strictly below the viewer. Nothing was broken in the database,
+nothing would have errored, and no user would have been refused anything — the
+page would simply have been quietly wrong about the team it was measuring. That
+is the defect class this sprint was reviewed for, it occurred twice (see also the
+`restricted`-versus-`—` distinction in the Project column, §5), and it was found
+by review rather than by a user, which is the entire point of the gate.
+
+**Two process notes, recorded because the behaviour is the standard.** A third
+viewport at 1040 was added after 1366 and 1280 had already passed, on the
+reasoning that two comfortable widths passing is not evidence the mechanism
+works — and 1040 is the assertion that actually exercises `.ies-table-wrap`
+(the wrapper scrolls internally while the card holds). And the wrong "blocked"
+call below is recorded as a correction rather than quietly fixed. Asserting
+blocked without exhausting the check is the same species of error as asserting a
+number that was never measured; both put something in the record that was not
+observed.
+
 **Chromium was present all along.** An earlier revision of this document
 reported the render and card-fit proofs as blocked on a missing browser. That
 was wrong: this environment ships Chromium **1194** under
