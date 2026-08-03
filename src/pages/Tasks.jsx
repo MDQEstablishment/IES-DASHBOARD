@@ -40,6 +40,10 @@ const STATUS_FILTERS = [
   { v: 'done', l: 'Done' },
   { v: 'cancelled', l: 'Cancelled' },
   { v: 'all', l: 'All' },
+  // Not a status — the trash is the deleted_at axis, and it is offered here
+  // because to the person looking for a task "where did it go?" is one question,
+  // not two. Cancelled and trashed are different answers to it (amendment C).
+  { v: 'trash', l: 'Trash' },
 ]
 
 // The legal status graph, mirrored from tasks_status_guard() in migration 0102.
@@ -62,7 +66,28 @@ function nextStates(t, me, canTouch) {
   ))
 }
 
+// The ONE place the UI expresses the edit/trash right, mirroring may_manage in
+// tasks_edit_guard() (migration 0124):
+//
+//     may_manage := (me = OLD.created_by_id) or is_in_subtree(me, OLD.assigned_to_id)
+//
+// Edit, Trash and Restore all gate on this and nothing else. Writing it once
+// matters more than it looks: the same rule expressed at three call sites is
+// how the MANAGERS-list bug 9R(2) fixed came to exist in the first place.
+//
+// Note it is strictly NARROWER than canTouch (tasks_upd's USING clause), which
+// also admits the bare assignee. That gap is the point of amendment B: holding
+// a task lets you report on it, not rewrite the brief you are judged against.
+const mayManage = (t, me, subtree) =>
+  t.created_by_id === me || subtree.some((p) => p.id === t.assigned_to_id)
+
 const dayAge = (d) => (d ? Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 86400000)) : 0)
+
+const rowBtn = {
+  display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
+  padding: '4px 9px', borderRadius: 'var(--radius-s)', cursor: 'pointer',
+  background: 'var(--surface-1)', color: 'var(--text-3)', border: '1px solid var(--line)',
+}
 
 export default function Tasks() {
   const { user, profile, role } = useAuth()
@@ -72,6 +97,7 @@ export default function Tasks() {
   const [statusFilter, setStatusFilter] = useState('active')
   const [page, setPage] = useState(0)
   const [showNew, setShowNew] = useState(false)
+  const [editing, setEditing] = useState(null)
   const [focusId, setFocusId] = useState(null)
 
   // Arriving from the notification bell: land on the tab that actually holds
@@ -134,14 +160,34 @@ export default function Tasks() {
 
   const scopeKey = tab === 'team' && !isManager ? 'mine' : tab
   const scope = SCOPES[scopeKey]
+  const trashView = statusFilter === 'trash'
 
-  const { rows, loading } = useLiveQuery('tasks', (q) => scope.apply(
-    q.select('*,assignee:profiles!tasks_assigned_to_id_fkey(full_name,role),creator:profiles!tasks_created_by_id_fkey(full_name)' +
-      ',building:buildings(code)').order('due_date', { ascending: true }).limit(500),
-    { me: user?.id || NOBODY, ids: teamIds },
-  ), [scopeKey, user?.id, teamIds])
+  // THE DELETED_AT SPLIT — three cases, and the third is deliberate.
+  //
+  //   Trash view      → only trashed rows.
+  //   Team tab        → NO deleted_at filter at all. 9R(5)'s Team Performance
+  //                     widget has to report how many tasks were trashed in the
+  //                     last 30 days (amendment C's anti-gaming counter), and
+  //                     the spec requires it to compute from the SAME fetch that
+  //                     backs the tab — no second query. So the rows must be
+  //                     present here, and the TABLE drops them client-side just
+  //                     below. This is intentional: do not "fix" it by adding a
+  //                     server filter, or the widget silently reports zero.
+  //   everything else → live rows only, filtered server-side.
+  const { rows, loading } = useLiveQuery('tasks', (q) => {
+    let base = q.select('*,assignee:profiles!tasks_assigned_to_id_fkey(full_name,role),creator:profiles!tasks_created_by_id_fkey(full_name)' +
+      ',building:buildings(code)').order('due_date', { ascending: true }).limit(500)
+    if (trashView) base = base.not('deleted_at', 'is', null)
+    else if (scopeKey !== 'team') base = base.is('deleted_at', null)
+    return scope.apply(base, { me: user?.id || NOBODY, ids: teamIds })
+  }, [scopeKey, user?.id, teamIds, trashView])
 
   const filtered = rows.filter((t) => {
+    const trashed = !!t.deleted_at
+    // The Team tab fetches trashed rows for the widget; the table never shows
+    // them outside the trash view.
+    if (trashView) return trashed
+    if (trashed) return false
     if (statusFilter === 'all') return true
     if (statusFilter === 'active') return t.status !== 'done' && t.status !== 'cancelled'
     return t.status === statusFilter
@@ -166,6 +212,22 @@ export default function Tasks() {
     bgUpdate('tasks', t.id, { assigned_to_id: next },
       { okMsg: `Reassigned to ${who?.full_name.replace(' (me)', '') || 'them'}` })
   }
+
+  // Trash and restore write deleted_at and NOTHING else. deleted_by_id is
+  // stamped by tasks_edit_guard() from auth.uid() on the way in and cleared by
+  // it on the way out, so sending it from here would at best be ignored and at
+  // worst be a claim about who did it that the client has no business making.
+  //
+  // None of these writes passes errMsg, and that is deliberate: bgUpdate falls
+  // back to `Couldn't update — ${error.message}`, which surfaces the guard's own
+  // sentence. Those sentences were written to be read by the person who hit
+  // them, so overriding them with a generic failure toast would throw away the
+  // only explanation the user gets.
+  const onTrash = (t) => bgUpdate('tasks', t.id, { deleted_at: new Date().toISOString() },
+    { okMsg: 'Moved to trash' })
+
+  const onRestore = (t) => bgUpdate('tasks', t.id, { deleted_at: null },
+    { okMsg: 'Restored from trash' })
 
   // "Raise an escalation about this task" — the blocked-task bridge.
   const escalate = (t) => navigate('/escalations', {
@@ -216,7 +278,9 @@ export default function Tasks() {
 
       {/* Task table */}
       <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', overflow: 'hidden' }}>
-        {loading ? <Loading /> : filtered.length === 0 ? <Empty icon="tasks">No tasks in this view.</Empty> : (
+        {loading ? <Loading /> : filtered.length === 0 ? (
+          <Empty icon="tasks">{trashView ? 'Nothing in the trash.' : 'No tasks in this view.'}</Empty>
+        ) : (
           <div className="ies-table-wrap" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 880 }}>
               <thead>
@@ -235,7 +299,14 @@ export default function Tasks() {
                   const overdue = du != null && du < 0 && t.status !== 'done' && t.status !== 'cancelled'
                   const canTouch = t.assigned_to_id === user?.id || t.created_by_id === user?.id
                     || subtree.some((p) => p.id === t.assigned_to_id)
-                  const moves = nextStates(t, user?.id, canTouch)
+                  // A trashed row is withdrawn. tasks_edit_guard refuses every
+                  // write on it except the restore — "restore it before changing
+                  // anything else" — so the row offers exactly one control and
+                  // no other. Rendering a status select here would be offering a
+                  // move the trigger is certain to reject.
+                  const trashed = !!t.deleted_at
+                  const iManage = mayManage(t, user?.id, subtree)
+                  const moves = trashed ? [] : nextStates(t, user?.id, canTouch)
                   const [sc, sb] = statusMeta(t.status)
                   const terminal = t.status === 'done' || t.status === 'cancelled'
                   // Three conditions, each mapping to a real fence. canTouch is
@@ -247,7 +318,7 @@ export default function Tasks() {
                   // STRICTER than the database: the trigger would allow moving
                   // a finished task, but doing so means nothing and would fire
                   // a task_assigned notification for work already closed.
-                  const canReassign = canTouch && !terminal && subtree.length > 0
+                  const canReassign = canTouch && !terminal && !trashed && subtree.length > 0
                   // Whoever holds it now may sit outside the offer set (a row
                   // seeded or assigned before the guards landed), so carry them
                   // as the selected option or the select would misreport who
@@ -260,16 +331,43 @@ export default function Tasks() {
                       boxShadow: t.id === focusId ? 'inset 3px 0 0 var(--accent)' : undefined,
                     }}>
                       <td style={{ padding: '12px 14px', maxWidth: 320 }}>
-                        <div style={{ fontWeight: 600 }}>{t.title}</div>
+                        <div style={{ fontWeight: 600, textDecoration: trashed ? 'line-through' : undefined, color: trashed ? 'var(--text-3)' : undefined }}>{t.title}</div>
                         {t.description && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{t.description}</div>}
-                        {t.status === 'blocked' && (
-                          <button onClick={() => escalate(t)} style={{
-                            marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
-                            padding: '4px 9px', borderRadius: 'var(--radius-s)', background: 'var(--bad-bg)', color: 'var(--bad-deep)', border: '1px solid var(--bad-bg)', cursor: 'pointer',
-                          }}>
-                            <Icon name="escalation" size={12} />Raise an escalation about this
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: trashed || t.status === 'blocked' || iManage ? 6 : 0 }}>
+                          {t.status === 'blocked' && !trashed && (
+                            <button onClick={() => escalate(t)} style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
+                              padding: '4px 9px', borderRadius: 'var(--radius-s)', background: 'var(--bad-bg)', color: 'var(--bad-deep)', border: '1px solid var(--bad-bg)', cursor: 'pointer',
+                            }}>
+                              <Icon name="escalation" size={12} />Raise an escalation about this
+                            </button>
+                          )}
+                          {/* Edit and Trash both gate on iManage — the single
+                              mirror of tasks_edit_guard's may_manage. */}
+                          {iManage && !trashed && (
+                            <button onClick={() => setEditing(t)} style={rowBtn}
+                              title="Edit this task's details. Only the person who raised it, or a manager above whoever holds it, can.">
+                              <Icon name="edit" size={12} />Edit
+                            </button>
+                          )}
+                          {iManage && !trashed && (
+                            <button onClick={() => onTrash(t)} style={rowBtn}
+                              title="Trash: this task should never have existed. It leaves the working lists, keeps its history, and can be restored. To close work that was real but is no longer needed, set the status to Cancelled instead.">
+                              <Icon name="box" size={12} />Trash
+                            </button>
+                          )}
+                          {iManage && trashed && (
+                            <button onClick={() => onRestore(t)} style={{ ...rowBtn, color: 'var(--ok)', borderColor: 'var(--ok)' }}
+                              title="Put this task back into the working lists.">
+                              <Icon name="check" size={12} />Restore
+                            </button>
+                          )}
+                          {trashed && t.deleted_at && (
+                            <span style={{ fontSize: 11, color: 'var(--text-3)', alignSelf: 'center' }}>
+                              trashed {fmtDate(t.deleted_at)}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '12px 8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -298,6 +396,7 @@ export default function Tasks() {
                       <td style={{ padding: '12px 8px' }}>
                         {moves.length ? (
                           <select value={t.status} onChange={(e) => onStatusChange(t, e.target.value)}
+                            title="Cancelled means the work was real but is no longer needed — the task stays in the lists and in history. To withdraw a task that should never have been raised, use Trash."
                             style={{
                               fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '3px 7px', borderRadius: 999,
                               color: sc, background: sb, border: `1px solid ${sc}33`, cursor: 'pointer',
@@ -338,7 +437,76 @@ export default function Tasks() {
       {/* tasks_ins accepts the same set tasks_reassign_guard does, so create and
           reassign share one list rather than two that can drift apart. */}
       {showNew && <NewTask onClose={() => setShowNew(false)} user={user} assignable={assignTargets} />}
+      {editing && <EditTask task={editing} onClose={() => setEditing(null)} />}
     </div>
+  )
+}
+
+// Amendment B. Only the four fields tasks_edit_guard classes as content and
+// that this commit is responsible for: Project, Building and ESM are targeting,
+// they need filtered pickers that re-filter on project change, and they arrive
+// in 9R(6) for the create and edit modals together rather than half-built here.
+//
+// Assignee is deliberately absent too — reassignment is its own control on the
+// row, governed by a different trigger with a different accepted set.
+function EditTask({ task, onClose }) {
+  const [title, setTitle] = useState(task.title || '')
+  const [desc, setDesc] = useState(task.description || '')
+  const [priority, setPriority] = useState(task.priority || 'medium')
+  const [due, setDue] = useState(task.due_date || '')
+  const [busy, setBusy] = useState(false)
+
+  const valid = title.trim().length > 0
+  const dirty = title.trim() !== (task.title || '')
+    || (desc || '') !== (task.description || '')
+    || priority !== (task.priority || 'medium')
+    || (due || '') !== (task.due_date || '')
+
+  const save = async () => {
+    if (!valid || !dirty) return
+    setBusy(true)
+    // Send only what changed, so the audit sentence names the real edit rather
+    // than every field the form happens to hold.
+    const patch = {}
+    if (title.trim() !== (task.title || '')) patch.title = title.trim()
+    if ((desc || '') !== (task.description || '')) patch.description = desc || null
+    if (priority !== (task.priority || 'medium')) patch.priority = priority
+    if ((due || '') !== (task.due_date || '')) patch.due_date = due || null
+    const { error } = await bgUpdate('tasks', task.id, patch, { okMsg: 'Task updated' })
+    setBusy(false)
+    if (!error) onClose()
+  }
+
+  return (
+    <Modal open title="Edit task" onClose={onClose}
+      footer={<>
+        <Btn onClick={onClose}>Cancel</Btn>
+        <Btn variant="primary" onClick={save} disabled={busy || !valid || !dirty}>{busy ? 'Saving…' : 'Save changes'}</Btn>
+      </>}>
+      <Field label="Title">
+        <input lang="en" style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
+      </Field>
+      <Field label="Description">
+        <textarea style={{ ...inputStyle, resize: 'vertical' }} rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} />
+      </Field>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1 }}>
+          <Field label="Priority">
+            <select style={inputStyle} value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </Field>
+        </div>
+        <div style={{ flex: 1 }}>
+          <Field label="Due date">
+            <DateInput style={inputStyle} value={due} onChange={(e) => setDue(e.target.value)} />
+          </Field>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
