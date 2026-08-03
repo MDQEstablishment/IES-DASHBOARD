@@ -137,7 +137,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       </>}>
       {mode === 'edit' && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 8px' }}>PROJECT PHOTO</div>
           {project.photo_url && curPhoto && !removePhoto && !replacing && !photoFile ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <img src={curPhoto} alt="" style={{ width: 104, height: 66, objectFit: 'cover', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)' }} />
@@ -160,7 +159,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
                   Choose a replacement, or <button type="button" onClick={() => setReplacing(false)} style={{ color: 'var(--accent)', fontWeight: 700 }}>keep current</button>.
                 </div>
               )}
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>JPG, PNG, WebP or HEIC · up to 5 MB · large images are compressed automatically.</div>
             </>
           )}
         </div>
@@ -203,7 +201,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
               {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
                 <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
                   <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
-                  <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span><span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-3)' }}>{help}</span></span>
+                  <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span></span>
                 </label>
               ))}
             </div>
@@ -261,16 +259,14 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
               <Field label="Entity name (Arabic)">
                 <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
               </Field>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>ENTITY POINT OF CONTACT</div>
               <Row>
-                <Field label="Name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
-                <Field label="Position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
+                <Field label="TARSHID contact name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
+                <Field label="TARSHID contact position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
               </Row>
               <Row>
-                <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
-                <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
+                <Field label="TARSHID contact mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
+                <Field label="TARSHID contact email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
               </Row>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>TARSHID POINT OF CONTACT</div>
               <Row>
                 <Field label="Name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
                 <Field label="Position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
@@ -279,7 +275,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
                 <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_mobile} onChange={(e) => set('tarshid_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
                 <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_email} onChange={(e) => set('tarshid_poc_email', e.target.value)} /></Field>
               </Row>
-              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Coordinates come from the Location section below; buildings count and entity (EN) / region are derived from existing data.</div>
             </div>
           )}
         </Group>
@@ -632,7 +627,6 @@ function EsmBundles({ projectId }) {
   return (
     <div style={{ marginTop: 4 }}>
       <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 6px' }}>ESM BUNDLES</div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 8 }}>ESMs sharing a bundle key go on one COC (e.g. ESM1+ESM2 = “lighting”). Empty = standalone.</div>
       {rows.map((pe) => (
         <div key={pe.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
           <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)', width: 48 }}>{pe.esm?.code}</span>
