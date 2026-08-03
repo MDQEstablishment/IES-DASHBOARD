@@ -1,0 +1,85 @@
+name: Live smoke
+
+# Constraints.md #6 requires a live-site smoke after deploy. Nothing automated
+# it, so the only evidence a deploy produced was "the deploy job went green" —
+# which says the artefact uploaded, not that the bundle Pages serves contains
+# the change. This job answers the second question by fetching the served
+# bundle and asserting against it.
+#
+# It exists because a sandbox cannot always reach the Pages domain, and because
+# "it must be a cache" is not an acceptable answer to "the change is missing".
+# Markers are inputs rather than hard-coded so this does not rot into a
+# sprint-specific script.
+#
+# Pick markers that are UNIQUE to the change. A string that also lives in
+# another component will be in the bundle either way and proves nothing —
+# worse, as a must-not-contain it fails a correct deploy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      must_contain:
+        description: 'Strings the served bundle MUST contain (one per line)'
+        required: false
+        type: string
+      must_not_contain:
+        description: 'Strings the served bundle MUST NOT contain (one per line)'
+        required: false
+        type: string
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch the served bundle and assert
+        env:
+          MUST: ${{ inputs.must_contain }}
+          MUST_NOT: ${{ inputs.must_not_contain }}
+        run: |
+          set -euo pipefail
+          BASE="https://mdqestablishment.github.io/IES-DASHBOARD"
+
+          echo "── version.json (unhashed, no-store — the build id the app reports)"
+          curl -fsSL "$BASE/version.json" || echo "(no version.json served)"
+          echo
+
+          echo "── index.html → bundle name"
+          idx=$(curl -fsSL "$BASE/")
+          asset=$(printf '%s' "$idx" | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+          if [ -z "$asset" ]; then
+            echo "FAIL: no hashed index bundle referenced by the served index.html"
+            printf '%s\n' "$idx" | head -40
+            exit 1
+          fi
+          echo "bundle: $asset"
+
+          curl -fsSL "$BASE/$asset" -o bundle.js
+          echo "bundle bytes: $(wc -c < bundle.js)"
+          echo
+
+          rc=0
+          if [ -n "${MUST:-}" ]; then
+            echo "── MUST contain"
+            while IFS= read -r s; do
+              [ -z "$s" ] && continue
+              n=$(grep -cF -- "$s" bundle.js || true)
+              if [ "$n" -gt 0 ]; then echo "  PASS  ($n) $s"
+              else echo "  FAIL  (0) $s"; rc=1; fi
+            done <<< "$MUST"
+            echo
+          fi
+
+          if [ -n "${MUST_NOT:-}" ]; then
+            echo "── MUST NOT contain"
+            while IFS= read -r s; do
+              [ -z "$s" ] && continue
+              n=$(grep -cF -- "$s" bundle.js || true)
+              if [ "$n" -eq 0 ]; then echo "  PASS  (0) $s"
+              else echo "  FAIL  ($n) $s"; rc=1; fi
+            done <<< "$MUST_NOT"
+            echo
+          fi
+
+          [ "$rc" -eq 0 ] && echo "live smoke clean — the served bundle matches the assertions" \
+                          || echo "live smoke FAILED — the served bundle does not match"
+          exit "$rc"
