@@ -9,6 +9,77 @@ commitment to build; some of these should stay unbuilt.
 
 ---
 
+## BRANCH_WORK_READS_AS_DONE — green on a branch is not visible to the owner
+
+**Status:** open · **process defect, not a one-off** · owner decision on the
+remedy · raised after it cost three round-trips on the Add Project sprint
+
+**The defect.** Work that lands on a feature branch is reported as complete —
+truthfully, by every measure a report has — while being invisible in
+production. Build green, census clean, commits pushed, proof documents
+written: all real, none of it in front of the owner. The gap is silent because
+nothing in the branch's own signals is wrong.
+
+**The three instances, as evidence.**
+
+1. Sprint 9Q(3) — `40d67ab4`, *"a deployed build that no open tab ever
+   receives"*. A deploy that had genuinely landed was invisible because
+   HashRouter fetches `index.html` once per tab. Cost, per the comment now in
+   `src/components/BuildWatcher.jsx`: four hours and an accusation that the
+   deploy had lied.
+2. The `deploy` job guard — the comment in `.github/workflows/deploy.yml`
+   records that every `claude/**` push produced a deploy job that failed in
+   about two seconds, and that this *"was invisible for months"* because
+   `concurrency: cancel-in-progress` cancelled the branch run whenever a main
+   push followed it.
+3. The Add Project card, this sprint. Purge and card reduction were both
+   implemented, reviewed and reported complete across three exchanges. All
+   four commits sat on `claude/fable-5-plan-mode-design-fa5ipe`. The owner
+   opened Add Project, screenshotted an unchanged card, and was right. Worse
+   than a no-op: migration 0126 had already been applied to the **live**
+   database, so he was looking at an emptied dashboard wearing the old form.
+
+**Correction to the proposed remedy — the guard already exists.** It was
+recorded as *"proposed and never built"*; it is built and live.
+`.github/workflows/deploy.yml` carries `if: github.ref == 'refs/heads/main'`
+on the `deploy` job. So gating deploy on main is not the missing piece, and
+building it again would fix nothing.
+
+**Why that guard cannot fix this, and mildly makes it worse.** It was written
+to stop branch pushes producing *failing* deploy jobs, and it succeeds: branch
+runs are now build-only and **green**. A green check is exactly what reads as
+"done" in a report and in a glance at the branch. The guard removed a false
+red and left a true-but-misleading green. The deploy comment even says so —
+*"a red X on a branch means the BUILD is broken"* — which is correct and is
+also the whole trap: green means the build passed, never that anything
+shipped.
+
+**What would actually close it.** Two candidates, not equivalent:
+
+- **A standing reporting rule** — no sprint, unit or commit is described as
+  complete until it is on `main` and the deploy run is green, quoted by run
+  number. Costs nothing to adopt, catches every instance above, and is the
+  only one of the two that addresses the reporting behaviour rather than the
+  tooling. Weakness: it is a discipline, and disciplines are what failed here.
+- **Mechanical enforcement** — for example a branch run that ends by printing
+  that it deployed nothing, or a required post-merge live smoke. Partly built
+  as of this sprint: `.github/workflows/live-smoke.yml` now fetches the served
+  bundle and asserts markers against it, which is what finally proved the card
+  reduction reached production. It is dispatch-only, so it is available rather
+  than automatic.
+
+**Recommendation:** adopt the standing rule, and make the live smoke a
+post-deploy step on `main` rather than a manual dispatch. The rule is the fix;
+the smoke is the proof that the rule was honoured.
+
+**Cost of deciding.** The rule is free. Wiring the smoke to run automatically
+after a `main` deploy is a few lines in `deploy.yml`, plus a decision about
+whether a failed smoke should mark the deploy red — which is the part worth
+thinking about, since a smoke with no teeth becomes another green that means
+nothing.
+
+---
+
 ## CARD_NEGATIVE_WEEKS — a works-end before the signature computes negative weeks
 
 **Status:** open · logged, not built · owner decision · raised by the Add Project
