@@ -10,6 +10,9 @@ import { fmtDate, daysUntil, initials } from '../lib/format'
 import { roleColor, roleTitle, statusMeta, CAN_RAISE_TASK } from '../lib/constants'
 
 const PAGE_SIZE = 100
+// The ceiling on a single tasks fetch. Named rather than inlined because the
+// Team widget's accuracy is bounded by it and has to be able to say so.
+const FETCH_LIMIT = 500
 const NOBODY = '00000000-0000-0000-0000-000000000000'
 
 // One place defines a tab: its label, the sentence under the page title, and
@@ -159,6 +162,29 @@ function useTaskCounts(me, teamIdList, refreshKey) {
   return counts
 }
 
+// How many rows the Team tab's filter ACTUALLY matches, regardless of the
+// FETCH_LIMIT the fetch stops at. Only issued while the Team tab is open.
+//
+// Without this the widget degrades silently and, worse, flatteringly. The fetch
+// orders by due_date ascending, so a truncated set keeps the earliest-due work
+// — which skews old, and old work is disproportionately DONE. Completion rates
+// would drift upward, overdue counts downward, and the trashed counter could
+// miss trashed rows entirely, with nothing on screen to say the numbers were
+// computed over part of the data. The count is the same filter as the fetch, so
+// comparing the two is exact rather than a heuristic about hitting the limit.
+function useTeamFetchTotal(teamIds, enabled, refreshKey) {
+  const [total, setTotal] = useState(null)
+  useEffect(() => {
+    if (!enabled) { setTotal(null); return undefined }
+    let alive = true
+    supabase.from('tasks').select('id', { count: 'exact', head: true })
+      .or(`assigned_to_id.in.(${teamIds}),created_by_id.in.(${teamIds})`)
+      .then(({ count }) => { if (alive) setTotal(count ?? null) })
+    return () => { alive = false }
+  }, [teamIds, enabled, refreshKey])
+  return total
+}
+
 const rowBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
   padding: '4px 9px', borderRadius: 'var(--radius-s)', cursor: 'pointer',
@@ -254,7 +280,7 @@ export default function Tasks() {
   const { rows, loading } = useLiveQuery('tasks', (q) => {
     let base = q.select('*,assignee:profiles!tasks_assigned_to_id_fkey(full_name,role),creator:profiles!tasks_created_by_id_fkey(full_name)' +
       ',building:buildings(code),project:projects(code),esm:esms(code,name)')
-      .order('due_date', { ascending: true }).limit(500)
+      .order('due_date', { ascending: true }).limit(FETCH_LIMIT)
     if (trashView) base = base.not('deleted_at', 'is', null)
     else if (scopeKey !== 'team') base = base.is('deleted_at', null)
     return scope.apply(base, { me: user?.id || NOBODY, ids: teamIds })
@@ -277,6 +303,7 @@ export default function Tasks() {
   // Recomputed whenever the live query refetches (realtime included), because
   // `rows` takes a new identity on every fetch.
   const counts = useTaskCounts(user?.id, teamIdList, rows)
+  const teamFetchTotal = useTeamFetchTotal(teamIds, scopeKey === 'team', rows)
 
   const setTabAndReset = (k) => { setTab(k); setPage(0) }
   const setFilterAndReset = (v) => { setStatusFilter(v); setPage(0) }
@@ -368,7 +395,9 @@ export default function Tasks() {
           `rows` here still carries the trashed ones (see the fetch split): the
           widget needs them for its trashed counter and drops them everywhere
           else. */}
-      {scopeKey === 'team' && <TeamPerformance rows={rows} subtree={subtree} />}
+      {scopeKey === 'team' && (
+        <TeamPerformance rows={rows} subtree={subtree} fetchTotal={teamFetchTotal} />
+      )}
 
       {/* Task table */}
       <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', overflow: 'hidden' }}>
@@ -680,7 +709,10 @@ const pctColor = (p) => (p >= 80 ? 'var(--ok)' : p >= 50 ? 'var(--warn)' : p >= 
 // strip averages, and appear ONLY as the "trashed · 30d" counter in the header.
 // If they counted toward anything else, trashing an overdue task would improve
 // the numbers, which is precisely the behaviour amendment C exists to expose.
-function TeamPerformance({ rows, subtree }) {
+function TeamPerformance({ rows, subtree, fetchTotal }) {
+  // Exact, not a guess about having hit the ceiling: fetchTotal runs the same
+  // filter as the fetch without the limit.
+  const truncated = fetchTotal != null && fetchTotal > rows.length
   const s = useMemo(() => {
     const cutoff = Date.now() - 30 * 86400000
 
@@ -774,6 +806,23 @@ function TeamPerformance({ rows, subtree }) {
           </span>
         </div>
       </div>
+
+      {truncated && (
+        <div style={{
+          display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 12, padding: '9px 11px',
+          borderRadius: 'var(--radius-s)', background: 'var(--warn-bg)', border: '1px solid var(--warn)',
+          fontSize: 12, lineHeight: 1.45, color: 'var(--text)',
+        }}>
+          <Icon name="alert" size={14} />
+          <span>
+            <strong>These figures cover part of the team&apos;s work.</strong>{' '}
+            This view loads at most {FETCH_LIMIT} tasks and your team has {fetchTotal}, so every
+            number on this card — completion, averages, overdue and the trashed count — is computed
+            over {rows.length} of them, chosen by earliest due date. Treat them as indicative, not
+            as a total.
+          </span>
+        </div>
+      )}
 
       {/* Part 1 — the strip */}
       <div className="ies-3col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, 1fr))', gap: 18, alignItems: 'start', marginBottom: 16 }}>
