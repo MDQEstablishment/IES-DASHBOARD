@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 544 interactive controls · 275 database touches.**
+**Totals: 57 files · 533 interactive controls · 275 database touches.**
 
 ## Per-file summary
 
@@ -41,7 +41,7 @@ that commit message.
 | `src/components/ProgressReportCard.jsx` | 6 | 14 | — | ☐ |
 | `src/components/ProjectDocuments.jsx` | 25 | 11 | — | ☐ |
 | `src/components/ProjectItems.jsx` | 21 | 28 | — | ☐ |
-| `src/components/ProjectModals.jsx` | 51 | 13 | — | ☐ |
+| `src/components/ProjectModals.jsx` | 40 | 13 | — | ☐ |
 | `src/components/ProjectUnitSelection.jsx` | 15 | 6 | — | ☐ |
 | `src/components/ProjectWarehouse.jsx` | 2 | 2 | — | ☐ |
 | `src/components/ReportTemplate.jsx` | 4 | 6 | — | ☐ |
@@ -658,7 +658,7 @@ shared primitives: Btn×2, Empty×1
 | --- | --- |
 | `onBlur:bgUpdate+trim` | 1 |
 | `onChange:onFile` | 1 |
-| `onChange:set` | 27 |
+| `onChange:set` | 17 |
 | `onChange:setConfirm` | 1 |
 | `onChange:setEngineerId` | 1 |
 | `onChange:setReason` | 1 |
@@ -673,7 +673,6 @@ shared primitives: Btn×2, Empty×1
 | `onClick:setRemovePhoto` | 1 |
 | `onClick:setReplacing` | 2 |
 | `onClick:setShowDelete` | 1 |
-| `onClick:setShowTarshid` | 1 |
 
 | database effect | count |
 | --- | --- |
@@ -687,7 +686,7 @@ shared primitives: Btn×2, Empty×1
 | `read:project_esms` | 1 |
 | `rpc:import_project_bundle` | 1 |
 
-shared primitives: Btn×15, Field×32, FileDropZone×1, Modal×5
+shared primitives: Btn×15, Field×22, FileDropZone×1, Modal×5
 
 ### `src/components/ProjectUnitSelection.jsx`
 

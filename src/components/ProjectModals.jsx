@@ -56,7 +56,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     tarshid_poc_name: init('tarshid_poc_name'), tarshid_poc_position: init('tarshid_poc_position'),
     tarshid_poc_mobile: init('tarshid_poc_mobile'), tarshid_poc_email: init('tarshid_poc_email'),
   })
-  const [showTarshid, setShowTarshid] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   // Project cover photo (edit mode). photoFile = new selection; removePhoto = drop
@@ -190,22 +189,13 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Entity whose buildings are retrofitted" /></Field>
         </Row>
       </Group>
-      {/* COC Layout is an edit-mode control: COC is its own workstream, and
-          nothing reads the column at creation time, so a new project simply
-          takes the DB default. Existing projects keep their stored value
-          visible and editable here. */}
+      {/* COC Layout and the TARSHID / saving-sheet block are no longer edited
+          here — both are their own workstream. Neither column loses data:
+          coc_layout still round-trips in the edit payload and new projects take
+          the DB default, and the ten saving-sheet columns are still written
+          back untouched on every save. */}
       {mode === 'edit' && (
         <Group>
-          <Field label="COC Layout">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[['concatenated', 'Concatenated'], ['scattered', 'Scattered']].map(([v, lab]) => (
-                <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
-                  <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
-                  <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span></span>
-                </label>
-              ))}
-            </div>
-          </Field>
           <EsmBundles projectId={project.id} />
         </Group>
       )}
@@ -246,39 +236,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           owned by their existing fields (zero double work). Edit-mode only:
           the saving sheet is parked, the ten columns stay in the DB and stay
           editable here, but they are not asked for when the card is created. */}
-      {mode === 'edit' && (
-        <Group>
-          <div style={{ margin: '0 0 8px' }}>
-            <button type="button" onClick={() => setShowTarshid((s) => !s)}
-              style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              TARSHID INFO (SAVING SHEET) {showTarshid ? '▲' : '▼'}
-            </button>
-          </div>
-          {showTarshid && (
-            <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12, marginBottom: 10, background: 'var(--hover)' }}>
-              <Field label="Entity name (Arabic)">
-                <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
-              </Field>
-              <Row>
-                <Field label="Entity contact name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
-                <Field label="Entity contact position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
-              </Row>
-              <Row>
-                <Field label="Entity contact mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
-                <Field label="Entity contact email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
-              </Row>
-              <Row>
-                <Field label="TARSHID contact name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
-                <Field label="TARSHID contact position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
-              </Row>
-              <Row>
-                <Field label="TARSHID contact mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_mobile} onChange={(e) => set('tarshid_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
-                <Field label="TARSHID contact email"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_email} onChange={(e) => set('tarshid_poc_email', e.target.value)} /></Field>
-              </Row>
-            </div>
-          )}
-        </Group>
-      )}
       <Group>
         <Row>
           <Field label="Address"><input lang="en" style={inputStyle} value={f.location_address} onChange={(e) => set('location_address', e.target.value)} /></Field>
