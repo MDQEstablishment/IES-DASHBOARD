@@ -6,7 +6,7 @@ import DateInput from '../components/DateInput'
 import { useAuth, can } from '../rbac'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { fmtDate, daysUntil, initials } from '../lib/format'
-import { roleColor, statusMeta, MANAGERS, CAN_RAISE_TASK } from '../lib/constants'
+import { roleColor, statusMeta, CAN_RAISE_TASK } from '../lib/constants'
 
 const PAGE_SIZE = 100
 const NOBODY = '00000000-0000-0000-0000-000000000000'
@@ -68,7 +68,6 @@ export default function Tasks() {
   const { user, profile, role } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const isManager = can(role, MANAGERS)
   const [tab, setTab] = useState('mine')
   const [statusFilter, setStatusFilter] = useState('active')
   const [page, setPage] = useState(0)
@@ -114,6 +113,25 @@ export default function Tasks() {
     () => (subtree.length ? [user.id, ...subtree.map((p) => p.id)].join(',') : NOBODY),
     [subtree, user?.id])
 
+  // Do you actually manage anyone? That — not a role list — is what a "Team"
+  // view means. This used to be `can(role, MANAGERS)` against a hard-coded
+  // ['projm','progm','pmo','ceo'], which silently excluded procm: Adnan has
+  // Shakkel reporting to him and could not see his own team. Escalations.jsx
+  // has always asked the truthful question ("does anyone report to me?") and
+  // that divergence between two pages is what let the bug live. One test now.
+  const isManager = subtree.length > 0
+
+  // Who this actor may hand a task to, and the ONLY set the reassign control is
+  // ever allowed to offer. It is the UI half of tasks_reassign_guard's test —
+  //   NEW.assigned_to_id = auth.uid() OR is_in_subtree(auth.uid(), NEW.assigned_to_id)
+  // — so every option here is one the trigger will accept. The same set also
+  // satisfies tasks_upd's WITH CHECK on the updated row (branch 1 for me,
+  // branch 3 for anyone below me), so nothing offered can fail either fence.
+  const assignTargets = useMemo(() => ([
+    ...(profile ? [{ id: user.id, full_name: `${profile.full_name} (me)` }] : []),
+    ...subtree,
+  ]), [profile, user?.id, subtree])
+
   const scopeKey = tab === 'team' && !isManager ? 'mine' : tab
   const scope = SCOPES[scopeKey]
 
@@ -138,6 +156,15 @@ export default function Tasks() {
   const onStatusChange = (t, next) => {
     if (next === t.status) return
     bgUpdate('tasks', t.id, { status: next }, { okMsg: `Marked ${statusMeta(next)[2]}` })
+  }
+
+  // The new assignee is notified by tasks_notify() server-side, so there is
+  // nothing to write here beyond the column itself.
+  const onReassign = (t, next) => {
+    if (!next || next === t.assigned_to_id) return
+    const who = assignTargets.find((p) => p.id === next)
+    bgUpdate('tasks', t.id, { assigned_to_id: next },
+      { okMsg: `Reassigned to ${who?.full_name.replace(' (me)', '') || 'them'}` })
   }
 
   // "Raise an escalation about this task" — the blocked-task bridge.
@@ -210,6 +237,22 @@ export default function Tasks() {
                     || subtree.some((p) => p.id === t.assigned_to_id)
                   const moves = nextStates(t, user?.id, canTouch)
                   const [sc, sb] = statusMeta(t.status)
+                  const terminal = t.status === 'done' || t.status === 'cancelled'
+                  // Three conditions, each mapping to a real fence. canTouch is
+                  // tasks_upd's USING clause, so without it the write is a
+                  // silent 0-row no-op. assignTargets is tasks_reassign_guard's
+                  // accepted set, so an empty subtree means there is no legal
+                  // target but yourself and the control would be a dead button.
+                  // Terminal rows are the one place the UI is deliberately
+                  // STRICTER than the database: the trigger would allow moving
+                  // a finished task, but doing so means nothing and would fire
+                  // a task_assigned notification for work already closed.
+                  const canReassign = canTouch && !terminal && subtree.length > 0
+                  // Whoever holds it now may sit outside the offer set (a row
+                  // seeded or assigned before the guards landed), so carry them
+                  // as the selected option or the select would misreport who
+                  // owns the task.
+                  const holderListed = assignTargets.some((p) => p.id === t.assigned_to_id)
                   return (
                     <tr key={t.id} style={{
                       borderTop: '1px solid var(--line)',
@@ -233,7 +276,19 @@ export default function Tasks() {
                           {t.assignee
                             ? <Avatar name={t.assignee.full_name} color={roleColor(t.assignee.role)} size={24} />
                             : <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--line)', color: 'var(--surface-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700 }}>{initials(null)}</span>}
-                          <span style={{ whiteSpace: 'nowrap' }}>{t.assignee?.full_name || 'Unassigned'}</span>
+                          {canReassign ? (
+                            <select value={t.assigned_to_id || ''} onChange={(e) => onReassign(t, e.target.value)}
+                              title="Reassign to yourself or someone who reports to you"
+                              style={{
+                                fontSize: 12.5, padding: '3px 6px', borderRadius: 'var(--radius-s)', maxWidth: 190,
+                                color: 'var(--text)', background: 'var(--surface-1)', border: '1px solid var(--line)', cursor: 'pointer',
+                              }}>
+                              {!holderListed && (
+                                <option value={t.assigned_to_id || ''}>{t.assignee?.full_name || 'Unassigned'}</option>
+                              )}
+                              {assignTargets.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                            </select>
+                          ) : <span style={{ whiteSpace: 'nowrap' }}>{t.assignee?.full_name || 'Unassigned'}</span>}
                         </div>
                       </td>
                       <td style={{ padding: '12px 8px' }}>
@@ -280,9 +335,9 @@ export default function Tasks() {
         </div>
       )}
 
-      {showNew && <NewTask onClose={() => setShowNew(false)} user={user} assignable={[
-        ...(profile ? [{ id: user.id, full_name: `${profile.full_name} (me)` }] : []), ...subtree,
-      ]} />}
+      {/* tasks_ins accepts the same set tasks_reassign_guard does, so create and
+          reassign share one list rather than two that can drift apart. */}
+      {showNew && <NewTask onClose={() => setShowNew(false)} user={user} assignable={assignTargets} />}
     </div>
   )
 }
