@@ -198,7 +198,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Group>
           <Field label="COC Layout">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[['concatenated', 'Concatenated', 'one site, single in-charge → project-wide COCs'], ['scattered', 'Scattered', 'buildings far apart, per-building managers → per-building COCs']].map(([v, lab, help]) => (
+              {[['concatenated', 'Concatenated'], ['scattered', 'Scattered']].map(([v, lab]) => (
                 <label key={v} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', border: '1px solid ' + (f.coc_layout === v ? 'var(--accent)' : 'var(--line)'), borderRadius: 'var(--radius-s)', padding: '8px 10px', background: f.coc_layout === v ? 'var(--accent-tint)' : 'var(--surface-1)' }}>
                   <input type="radio" name="coc_layout" checked={f.coc_layout === v} onChange={() => set('coc_layout', v)} style={{ marginTop: 2 }} />
                   <span><span style={{ fontWeight: 700, fontSize: 13 }}>{lab}</span></span>
@@ -260,20 +260,20 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
                 <input dir="rtl" style={inputStyle} value={f.entity_name_ar} onChange={(e) => set('entity_name_ar', e.target.value)} placeholder="اسم الجهة" />
               </Field>
               <Row>
-                <Field label="TARSHID contact name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
-                <Field label="TARSHID contact position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
+                <Field label="Entity contact name"><input lang="en" style={inputStyle} value={f.entity_poc_name} onChange={(e) => set('entity_poc_name', e.target.value)} /></Field>
+                <Field label="Entity contact position"><input lang="en" style={inputStyle} value={f.entity_poc_position} onChange={(e) => set('entity_poc_position', e.target.value)} /></Field>
               </Row>
               <Row>
-                <Field label="TARSHID contact mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
-                <Field label="TARSHID contact email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
+                <Field label="Entity contact mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_mobile} onChange={(e) => set('entity_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
+                <Field label="Entity contact email"><input lang="en" dir="ltr" style={inputStyle} value={f.entity_poc_email} onChange={(e) => set('entity_poc_email', e.target.value)} /></Field>
               </Row>
               <Row>
-                <Field label="Name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
-                <Field label="Position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
+                <Field label="TARSHID contact name"><input lang="en" style={inputStyle} value={f.tarshid_poc_name} onChange={(e) => set('tarshid_poc_name', e.target.value)} /></Field>
+                <Field label="TARSHID contact position"><input lang="en" style={inputStyle} value={f.tarshid_poc_position} onChange={(e) => set('tarshid_poc_position', e.target.value)} /></Field>
               </Row>
               <Row>
-                <Field label="Mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_mobile} onChange={(e) => set('tarshid_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
-                <Field label="Email"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_email} onChange={(e) => set('tarshid_poc_email', e.target.value)} /></Field>
+                <Field label="TARSHID contact mobile"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_mobile} onChange={(e) => set('tarshid_poc_mobile', e.target.value)} placeholder="+966 5x xxx xxxx" /></Field>
+                <Field label="TARSHID contact email"><input lang="en" dir="ltr" style={inputStyle} value={f.tarshid_poc_email} onChange={(e) => set('tarshid_poc_email', e.target.value)} /></Field>
               </Row>
             </div>
           )}
