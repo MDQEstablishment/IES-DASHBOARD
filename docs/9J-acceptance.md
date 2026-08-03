@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 56 files · 555 interactive controls · 272 database touches.**
+**Totals: 57 files · 556 interactive controls · 272 database touches.**
 
 ## Per-file summary
 
@@ -17,6 +17,7 @@ that commit message.
 | --- | ---: | ---: | --- | :---: |
 | `src/components/AiAssistPanel.jsx` | 11 | 5 | — | ☐ |
 | `src/components/AiUsageMeter.jsx` | 1 | 4 | — | ☐ |
+| `src/components/BuildWatcher.jsx` | 1 | 0 | — | ☐ |
 | `src/components/BuildingChat.jsx` | 9 | 5 | — | ☐ |
 | `src/components/BuildingMaterialsPlan.jsx` | 0 | 3 | — | ☐ |
 | `src/components/BuildingModals.jsx` | 24 | 6 | — | ☐ |
@@ -170,6 +171,12 @@ shared primitives: Btn×7, Empty×1, Modal×1
 | `read:ai_settings` | 1 |
 
 shared primitives: Empty×1
+
+### `src/components/BuildWatcher.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onClick:reload` | 1 |
 
 ### `src/components/BuildingChat.jsx`
 
