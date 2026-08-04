@@ -146,9 +146,8 @@ export default function Dashboard() {
     .map((m) => {
       const stock = m.received || 0, t = m.threshold || 0
       const ratio = t ? stock / t : 9
-      const color = stock < t ? 'var(--bad)' : stock < t * 1.5 ? 'var(--warn)' : 'var(--ok)'
       const status = stock < t ? 'CRITICAL' : stock < t * 1.5 ? 'LOW' : 'OK'
-      return { esm: m.esm?.code || '—', name: m.name, stock, threshold: t, color, status, ratio, w: Math.min(100, Math.round((stock / (t * 2 || 1)) * 100)) + '%' }
+      return { esm: m.esm?.code || '—', name: m.name, stock, threshold: t, status, ratio, w: Math.min(100, Math.round((stock / (t * 2 || 1)) * 100)) + '%' }
     })
     .filter((m) => m.status !== 'OK')
     .sort((a, b) => a.ratio - b.ratio)
@@ -379,13 +378,13 @@ export default function Dashboard() {
         {criticalMaterials.length === 0 ? <Empty icon="check">All materials above threshold.</Empty> : (
           <div className="ies-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
             {criticalMaterials.map((m, i) => (
-              <div key={i} style={{ border: '1px solid var(--line)', borderLeft: `3px solid ${m.color}`, borderRadius: 'var(--radius-m)', padding: 12 }}>
+              <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)' }}>{m.esm}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: m.color }}>{m.status}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)' }}>{m.status}</span>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13, margin: '6px 0 8px' }}>{m.name}</div>
-                <div style={{ height: 6, borderRadius: 4, background: 'var(--track)', overflow: 'hidden' }}><div style={{ height: '100%', width: m.w, background: m.color }} /></div>
+                <div style={{ height: 6, borderRadius: 4, background: 'var(--track)', overflow: 'hidden' }}><div style={{ height: '100%', width: m.w, background: 'linear-gradient(90deg,var(--accent),var(--brass-bright))' }} /></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 6 }}>
                   <span>{m.stock} in stock</span><span>min {m.threshold}</span>
                 </div>
