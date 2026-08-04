@@ -247,51 +247,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
   )
 }
 
-// ── Change status (with reason → history) ───────────────────────────────────
-export function StatusChangeModal({ project, onClose }) {
-  const { user } = useAuth()
-  const [status, setStatus] = useState(project.status)
-  const [reason, setReason] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
-  const reasonRequired = status === 'on_hold' || status === 'closed'
-
-  const save = async () => {
-    if (status === project.status) { onClose(); return }
-    if (reasonRequired && !reason.trim()) { toast('A reason is required for on-hold / closed', 'err'); return }
-    setErr('')
-    setBusy(true)
-    const { data, error } = await bgUpdate('projects', project.id, {
-      status, status_changed_by: user.id, status_changed_at: new Date().toISOString(), status_change_reason: reason || null,
-    }, { okMsg: `Status → ${statusLabel(status)}` })
-    setBusy(false)
-    if (error) { setErr(error.message); return }
-    // RLS can match 0 rows and return no error — that's a silent no-op, not success.
-    if (!data || !data.length) {
-      setErr('Status did not persist — you may not have permission to change this project (PMO only).')
-      console.warn('[IES] status change affected 0 rows (RLS?)', project.id)
-      return
-    }
-    onClose()
-  }
-
-  return (
-    <Modal open title={`Change status · ${project.code}`} onClose={onClose}
-      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Apply'}</Btn></>}>
-      <Field label="New status">
-        <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value)}>
-          {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-        </select>
-      </Field>
-      <Field label={`Reason${reasonRequired ? ' (required)' : ' (optional)'}`}>
-        <textarea style={{ ...inputStyle, minHeight: 70, resize: 'vertical' }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is the status changing?" />
-      </Field>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Recorded in the project status history with your name and the time.</div>
-      {err && <div style={{ background: 'var(--bad-bg)', border: '1px solid var(--bad-bg)', borderRadius: 'var(--radius-s)', padding: 10, fontSize: 12.5, color: 'var(--bad-deep)', marginTop: 10 }}>{err}</div>}
-    </Modal>
-  )
-}
-
 // ── Delete (soft) — type-to-confirm, admin only ─────────────────────────────
 export function DeleteProjectModal({ project, onClose }) {
   const { user } = useAuth()

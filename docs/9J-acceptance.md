@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 533 interactive controls · 275 database touches.**
+**Totals: 57 files · 528 interactive controls · 274 database touches.**
 
 ## Per-file summary
 
@@ -41,7 +41,7 @@ that commit message.
 | `src/components/ProgressReportCard.jsx` | 6 | 14 | — | ☐ |
 | `src/components/ProjectDocuments.jsx` | 25 | 11 | — | ☐ |
 | `src/components/ProjectItems.jsx` | 21 | 28 | — | ☐ |
-| `src/components/ProjectModals.jsx` | 40 | 13 | — | ☐ |
+| `src/components/ProjectModals.jsx` | 36 | 12 | — | ☐ |
 | `src/components/ProjectUnitSelection.jsx` | 15 | 6 | — | ☐ |
 | `src/components/ProjectWarehouse.jsx` | 2 | 2 | — | ☐ |
 | `src/components/ReportTemplate.jsx` | 4 | 6 | — | ☐ |
@@ -67,7 +67,7 @@ that commit message.
 | `src/pages/DesignSystem.jsx` | 0 | 0 | Design System | ☐ |
 | `src/pages/Escalations.jsx` | 16 | 8 | Escalations | ☐ |
 | `src/pages/ManageEsms.jsx` | 20 | 9 | Materials | ☐ |
-| `src/pages/ProjectDetail.jsx` | 25 | 10 | Project Detail | ☐ |
+| `src/pages/ProjectDetail.jsx` | 24 | 10 | Project Detail | ☐ |
 | `src/pages/Projects.jsx` | 7 | 6 | Projects | ☐ |
 | `src/pages/Reports.jsx` | 1 | 6 | Reports | ☐ |
 | `src/pages/Settings.jsx` | 11 | 7 | Settings | ☐ |
@@ -661,14 +661,12 @@ shared primitives: Btn×2, Empty×1
 | `onChange:set` | 17 |
 | `onChange:setConfirm` | 1 |
 | `onChange:setEngineerId` | 1 |
-| `onChange:setReason` | 1 |
-| `onChange:setStatus` | 1 |
 | `onClick:click` | 1 |
 | `onClick:del` | 1 |
 | `onClick:doImport` | 1 |
 | `onClick:downloadTemplate` | 1 |
-| `onClick:onClose` | 5 |
-| `onClick:save` | 3 |
+| `onClick:onClose` | 4 |
+| `onClick:save` | 2 |
 | `onClick:setPhotoFile+setRemovePhoto+setReplacing` | 1 |
 | `onClick:setRemovePhoto` | 1 |
 | `onClick:setReplacing` | 2 |
@@ -678,7 +676,7 @@ shared primitives: Btn×2, Empty×1
 | --- | --- |
 | `bgInsert:projects` | 1 |
 | `bgUpdate:project_esms` | 1 |
-| `bgUpdate:projects` | 4 |
+| `bgUpdate:projects` | 3 |
 | `io:downloadBlob` | 1 |
 | `io:signedUrlFor` | 1 |
 | `io:uploadToBucket` | 1 |
@@ -686,7 +684,7 @@ shared primitives: Btn×2, Empty×1
 | `read:project_esms` | 1 |
 | `rpc:import_project_bundle` | 1 |
 
-shared primitives: Btn×15, Field×22, FileDropZone×1, Modal×5
+shared primitives: Btn×13, Field×20, FileDropZone×1, Modal×4
 
 ### `src/components/ProjectUnitSelection.jsx`
 
@@ -1157,7 +1155,6 @@ screen label: **Project Detail**
 | `onClick:setEsmPanel` | 2 |
 | `onClick:setScopeBldg` | 1 |
 | `onClick:setStatusBldg` | 1 |
-| `onClick:setStatusOpen` | 1 |
 | `onClick:setTab` | 2 |
 | `onClick:stopPropagation` | 4 |
 
@@ -1174,7 +1171,7 @@ screen label: **Project Detail**
 | `read:survey_entries` | 1 |
 | `read:v_project_doc_progress` | 1 |
 
-shared primitives: Btn×6, Chip×7, Empty×6, Loading×1
+shared primitives: Btn×5, Chip×7, Empty×6, Loading×1
 
 ### `src/pages/Projects.jsx`
 screen label: **Projects**

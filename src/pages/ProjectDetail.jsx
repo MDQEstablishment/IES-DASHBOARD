@@ -8,7 +8,7 @@ import { toast } from '../lib/toast'
 import { num, fmtDate } from '../lib/format'
 import { statusMeta, MANAGERS, SCOPE_STATUS_META, FEATURES } from '../lib/constants'
 import { useBreadcrumb } from '../breadcrumbs'
-import { ProjectFormModal, StatusChangeModal, AssignEngineerModal } from '../components/ProjectModals'
+import { ProjectFormModal, AssignEngineerModal } from '../components/ProjectModals'
 import SurveyTab from '../components/SurveyTab'
 import SavingSheetTab from '../components/SavingSheetTab'
 import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal, ScopeChangeModal } from '../components/BuildingModals'
@@ -50,7 +50,6 @@ export default function ProjectDetail() {
   const landedRef = useRef(false)
   const [esmPanel, setEsmPanel] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [statusOpen, setStatusOpen] = useState(false)
   const [engOpen, setEngOpen] = useState(false)
   const [addBldgOpen, setAddBldgOpen] = useState(false)
   const [editBldg, setEditBldg] = useState(null)
@@ -212,7 +211,6 @@ export default function ProjectDetail() {
           <div style={{ display: 'flex', gap: 8 }}>
             <Btn icon="plus" variant="primary" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setAddBldgOpen(true)}>Add building</Btn>
             <Btn icon="edit" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setEditOpen(true)}>Edit project</Btn>
-            <Btn icon="settings" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setStatusOpen(true)}>Change status</Btn>
           </div>
         )}
       </div>
@@ -561,7 +559,6 @@ export default function ProjectDetail() {
       </Drawer>
 
       {editOpen && <ProjectFormModal mode="edit" project={project} onClose={() => setEditOpen(false)} />}
-      {statusOpen && <StatusChangeModal project={project} onClose={() => setStatusOpen(false)} />}
       {engOpen && <AssignEngineerModal project={project} onClose={() => setEngOpen(false)} />}
       {scopeBldg && <ScopeChangeModal building={scopeBldg} frozen={!!project.scope_frozen_at} onClose={() => setScopeBldg(null)} />}
       {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
