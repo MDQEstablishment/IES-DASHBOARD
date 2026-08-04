@@ -245,6 +245,84 @@ const jwts = {}
 for (const role of Object.keys(ROLES)) jwts[role] = await jwtFor(role)
 console.log(`signed in as all ${Object.keys(ROLES).length} roles\n`)
 
+// ---- B0a: conversation history is per-account, and the database says so ---
+//
+// Runs BEFORE the flag check on purpose. History isolation is a property of
+// 0128's policies, not of the model, so it is measurable with murshid_enabled
+// false — which is how the platform actually sits today, and the only state in
+// which this case would otherwise never run. It touches the REST API directly
+// and never calls the Edge Function, so it costs nothing and reaches nothing.
+//
+// A writes a thread; B then tries every retrieval path there is: list both
+// tables, filter messages by conversation_id, fetch each row by primary key.
+// A's own read is asserted first — without it, "B saw nothing" would pass just
+// as happily against an insert that silently failed.
+console.log('B0a — conversation history: A writes, B must see nothing')
+const rest = (jwt, path, init = {}) => fetch(`${SB}/rest/v1/${path}`, {
+  ...init,
+  headers: {
+    apikey: AK, Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json',
+    Prefer: 'return=representation', ...(init.headers || {}),
+  },
+})
+const subOf = (jwt) => JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString()).sub
+{
+  const A = jwts.pmo, B = jwts.proje
+  const cRes = await rest(A, 'murshid_conversations', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: subOf(A), title: 'red-team B0a thread' }),
+  })
+  const conv = (await cRes.json())?.[0]?.id
+  if (!conv) { rec('history-setup', `A could not create a conversation (http ${cRes.status})`, 'FAIL') }
+  else {
+    const mRes = await rest(A, 'murshid_messages', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conv, role: 'user', content: 'red-team: which buildings are behind?' }),
+    })
+    const msg = (await mRes.json())?.[0]?.id
+    const rows = async (jwt, path) => {
+      const r = await rest(jwt, path, { method: 'GET' })
+      const j = await r.json()
+      return Array.isArray(j) ? j : []
+    }
+
+    // A must see its own thread, or nothing below means anything.
+    const aConvs = await rows(A, `murshid_conversations?select=id&id=eq.${conv}`)
+    const aMsgs = await rows(A, `murshid_messages?select=id&conversation_id=eq.${conv}`)
+    rec('history-owner-reads-back', `A sees ${aConvs.length} conversation, ${aMsgs.length} message`,
+      aConvs.length === 1 && aMsgs.length === 1 ? 'PASS' : 'FAIL')
+
+    // Every path B has to the same rows. Any one of them returning a row is a leak.
+    const probes = [
+      ['history-list-convs', 'murshid_conversations?select=id', (rs) => rs.some((x) => x.id === conv)],
+      ['history-conv-by-id', `murshid_conversations?select=id&id=eq.${conv}`, (rs) => rs.length > 0],
+      ['history-list-msgs', 'murshid_messages?select=id', (rs) => rs.some((x) => x.id === msg)],
+      ['history-msgs-by-conv', `murshid_messages?select=id&conversation_id=eq.${conv}`, (rs) => rs.length > 0],
+      ['history-msg-by-id', `murshid_messages?select=id&id=eq.${msg}`, (rs) => rs.length > 0],
+    ]
+    for (const [id, path, leaked] of probes) {
+      const rs = await rows(B, path)
+      rec(id, leaked(rs) ? `*** B RETRIEVED A'S ROW via ${path}` : `B got nothing via ${path} (${rs.length} row(s))`,
+        leaked(rs) ? 'FAIL' : 'PASS')
+    }
+
+    // And B must not be able to write into A's thread either.
+    const wRes = await rest(B, 'murshid_messages', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conv, role: 'user', content: 'injected by B' }),
+    })
+    rec('history-b-cannot-write', `B insert into A's conversation returned http ${wRes.status}`,
+      wRes.status === 401 || wRes.status === 403 ? 'PASS' : 'FAIL')
+
+    // A cleans up its own thread; messages follow by cascade.
+    const dRes = await rest(A, `murshid_conversations?id=eq.${conv}`, { method: 'DELETE' })
+    const left = await rows(A, `murshid_conversations?select=id&id=eq.${conv}`)
+    rec('history-cleanup', `delete http ${dRes.status}, ${left.length} row(s) left`,
+      left.length === 0 ? 'PASS' : 'FAIL')
+  }
+}
+console.log('')
+
 // ---- B0: the flag must actually be on, or nothing below means anything ----
 const probe0 = await ask(jwts.pmo, 'ما حالة مشاريعي الحالية؟')
 if (probe0.body?.kind === 'disabled') {
