@@ -43,7 +43,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     code: init('code'), name: init('name'), client: init('client'), region: init('region'),
     status: init('status', 'draft'),
     contract_sign_date: init('contract_sign_date'), works_end_date: init('works_end_date'),
-    coc_layout: init('coc_layout', 'concatenated'),
     pm_id: init('pm_id'), engineer_id: init('engineer_id'),
     location_address: init('location_address'), location_lat: init('location_lat'), location_lng: init('location_lng'),
     contractor_name: init('contractor_name'), contractor_phone: init('contractor_phone'), contractor_email: init('contractor_email'),
@@ -85,9 +84,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       // save paths re-derive them, so an edit can never leave a stale triple.
       start_date: f.contract_sign_date || null, end_date: f.works_end_date || null,
       total_weeks: derivedWeeks,
-      // coc_layout is only sent from edit mode — new projects take the DB
-      // default 'concatenated' (0044) and the COC workstream sets it later.
-      ...(mode === 'edit' ? { coc_layout: f.coc_layout || 'concatenated' } : {}),
       pm_id: f.pm_id || null, engineer_id: f.engineer_id || null,
       location_address: f.location_address || null, location_lat: num(f.location_lat), location_lng: num(f.location_lng),
       contractor_name: f.contractor_name || null, contractor_phone: f.contractor_phone || null, contractor_email: f.contractor_email || null,
@@ -189,11 +185,10 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           <Field label="Beneficiary Entity"><input lang="en" style={inputStyle} value={f.beneficiary_entity} onChange={(e) => set('beneficiary_entity', e.target.value)} placeholder="Entity whose buildings are retrofitted" /></Field>
         </Row>
       </Group>
-      {/* COC Layout and the TARSHID / saving-sheet block are no longer edited
-          here — both are their own workstream. Neither column loses data:
-          coc_layout still round-trips in the edit payload and new projects take
-          the DB default, and the ten saving-sheet columns are still written
-          back untouched on every save. */}
+      {/* The TARSHID / saving-sheet block is not edited here — it is its own
+          workstream, and its ten columns are still written back untouched on
+          every save. The COC layout setting is gone entirely: migration 0132
+          dropped the column, because the builder is the layout decision now. */}
       {/* 8T/8U — contract + works-completion dates print in the COC project-info
           box. The COC signing date is NOT set here: signing happens later by
           TARSHID, on paper, and the approval date cell is left blank.
@@ -421,7 +416,7 @@ export function ProjectImportModal({ onClose }) {
         contractor_name: s(p.contractor_name), contractor_phone: s(p.contractor_phone), contractor_email: s(p.contractor_email),
         project_reference_no: s(p.project_reference_no), beneficiary_entity: s(p.beneficiary_entity),
         doc_rev: s(p.doc_rev), contract_sign_date: toIso(p.contract_sign_date), works_end_date: toIso(p.works_end_date),
-        energy_services_company: s(p.energy_services_company), subcontractor: s(p.subcontractor), coc_layout: s(p.coc_layout),
+        energy_services_company: s(p.energy_services_company), subcontractor: s(p.subcontractor),
         pm_name: s(p.pm_name), engineer_name: s(p.engineer_name), coc_bundle_key: s(p.coc_bundle_key),
       },
       buildings: parsed.buildings.map((b) => ({

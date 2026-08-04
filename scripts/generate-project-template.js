@@ -186,17 +186,16 @@ async function build() {
     // Document defaults (MIR/WIR/COC)
     ['project_reference_no', 20, 'opt', 'defaults'], ['beneficiary_entity', 22, 'opt', 'defaults'], ['doc_rev', 10, 'opt', 'defaults'],
     ['contract_sign_date', 16, 'opt', 'defaults'], ['works_end_date', 16, 'opt', 'defaults'], ['energy_services_company', 22, 'opt', 'defaults'],
-    ['subcontractor', 20, 'opt', 'defaults'], ['coc_layout', 16, 'opt', 'defaults'], ['coc_bundle_key', 16, 'opt', 'defaults'], ['remarks', 22, 'opt', 'id'],
+    ['subcontractor', 20, 'opt', 'defaults'], ['coc_bundle_key', 16, 'opt', 'defaults'], ['remarks', 22, 'opt', 'id'],
   ])
   exampleRow(proj, 2, ['PROJECT-A', 'Project A', 'Entity A', 'Asir',
     '2025-09-01', '2027-01-01', 64, 'active',
     'majed.alqahtani@ies.demo.local', 'yousef.almaliki@ies.demo.local', '', '',
     'Al-Faisal HVAC', '+966 50 000 0000', 'ops@alfaisal.example',
     'Abha, Asir', 18.2164, 42.5053,
-    'PROJECT-A-2025', 'Entity A', '00', '2025-08-15', '2027-01-15', 'Tarshid', '', 'concatenated', '',
+    'PROJECT-A-2025', 'Entity A', '00', '2025-08-15', '2027-01-15', 'Tarshid', '', '',
     'DELETE-BEFORE-UPLOAD'])
   addDropdown(proj, 'H', ['active', 'draft', 'on_hold', 'closed']) // status (col 8)
-  addDropdown(proj, 'Z', ['concatenated', 'scattered'])            // coc_layout (col 26)
   proj.getColumn('lat').numFmt = '0.000000'
   proj.getColumn('lng').numFmt = '0.000000'
 

@@ -203,14 +203,11 @@ export default function ProjectItems({ projectId, project }) {
   if (esms.length === 0) return <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}><Empty icon="materials">Add ESMs to capture installed & removed items.</Empty></div>
 
   const th = (t) => <th style={{ padding: '6px 7px', fontWeight: 600, fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{t}</th>
-  const layout = project?.coc_layout
-
   return (
     <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Items &amp; Replacements</div>
-          {layout && <span title={layout === 'scattered' ? 'Scattered: buildings far apart → per-building COCs' : 'Concatenated: one site → project-wide COCs'} style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-s)', color: 'var(--accent)', background: 'var(--accent-tint)', cursor: 'help' }}>Layout: {layout === 'scattered' ? 'Scattered' : 'Concatenated'} ⓘ</span>}
         </div>
         {canEdit && <div style={{ display: 'flex', gap: 8 }}>
           <Btn style={{ padding: '6px 10px', fontSize: 12 }} onClick={downloadTemplate}>Download template</Btn>

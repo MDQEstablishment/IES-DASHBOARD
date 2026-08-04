@@ -1,6 +1,20 @@
 # COC Builder — concept and plan
 
-**Status: CONCEPT — awaiting owner approval. Nothing here is built, no migration applied.**
+**Status: BUILT AND APPLIED.** Approved by the owner, then shipped as the five
+commits below. This document has been updated to as-built: §0–§9 describe the
+design as approved and are unchanged; §12 records what actually happened, every
+deviation, and the defects the design's own self-review caught.
+
+| # | Unit | Commit |
+|---|---|---|
+| 1 | `coc_claims` — the claims ledger | `7c75962` |
+| 2 | `coc_pool()` — the eligibility RPC | `2b1e20e` |
+| 3 | `generate_cocs` v2 + the DELETE and coverage fences | `7fdee3a` |
+| 4 | The builder, the coverage view, the dead drivers removed | `f86bccf` |
+| 5 | Legacy drops, the reconnected Dashboard card, this document | *(this commit)* |
+
+Migrations `0129`–`0132`. Unit 5's own hash cannot appear inside the commit it
+names; the branch history is the reference.
 
 Owner's goal, verbatim: *"a flexible system so the client can generate the certificates
 easily."* And the composition model, verbatim: *"design it like a pool — he selects the
@@ -341,6 +355,11 @@ three steps + coverage view + empty state, build + live smoke on main.
 Each commit lands alone, provable alone; the feature is inert until commit 4 (nothing
 calls the new surface before the UI does).
 
+**As built, this plan held.** All five units landed in order, each with its proofs
+inside its own migration, and the risk estimates were accurate: units 1 and 2 were
+uneventful, unit 3 needed the most care, unit 4 was the largest diff, and unit 5
+was the only one to abort on first attempt (§12.3).
+
 ---
 
 ## 11. Self-review (per the brief, before handover)
@@ -378,3 +397,206 @@ none does, the warning suffices); eligibility equals *installed*, not *delivered
 inspected*, because installation is the only completeness the schema records (§2).
 
 **Stop.** The owner approves this concept before anything is built.
+
+*(He did. What follows was written after the build.)*
+
+---
+
+## 12. As-built
+
+### 12.1 What changed against the design, and why
+
+Every item here was found during implementation, decided deliberately, and
+accepted in review. Nothing was changed silently.
+
+**Unit 1 — `coc_claims`**
+
+1. **`revoke all`, not `revoke insert, update, delete`.** Supabase's default
+   privileges hand `anon` and `authenticated` the full set on every new table in
+   `public` — including **TRUNCATE, which row-level security does not gate at
+   all**. A ledger whose entire purpose is that its rows cannot be forged or
+   removed by a client cannot leave the one verb that empties it in a client
+   role's hands. The table is revoked to a bare `SELECT` for `authenticated`,
+   and the proof asserts zero grants beyond it. Found by checking the grants
+   after the first apply rather than assuming the policy was the only gate.
+
+**Unit 2 — `coc_pool`**
+
+2. **`installed` sums only over lines with `planned_qty > 0`.** §2 fixes how
+   zero-planned lines affect *eligibility* but not what the reported totals sum
+   over. Excluding them makes T7 hold unconditionally instead of only when the
+   zero line happens to carry no installs, and stops a pair reading "12 of 10".
+   Quantities installed against a line that planned nothing are out-of-scope
+   work and already have their own table (`other_installed_items`, 0106).
+3. **Lineage-head tie-break.** §3.3 says the head is "the row with no
+   `superseded_by` successor". `restore_prior_coc_revision` can transiently
+   leave two such rows in one lineage — it clears the prior row's pointer while
+   the superseding revision still exists, in the window before the client
+   deletes it. `order by revision desc limit 1` makes `claim_coc` deterministic.
+4. **`coalesce(root_coc_id, id)` in the head walk and the backfill**, because
+   `cocs.root_coc_id` is nullable in the live schema even though both writers
+   always populate it.
+
+**Unit 3 — `generate_cocs` v2 and the fences**
+
+5. **`ok` stays `true` when some rows fail.** The shipped wizard aborted its
+   whole run on `!data.ok`, so returning `false` on a partial failure would have
+   abandoned certificates the call had just created, leaving numbered orphan
+   drafts with no PDFs. `ok` means "the call was authorised and processed";
+   per-row outcomes live in the new `errors` array and `coc_ids` holds exactly
+   the rows that succeeded.
+6. **The GUC is transaction-local, not function-local.** Once any COC RPC runs,
+   both fences are open for the rest of that transaction. Harmless through
+   PostgREST — one transaction per request — but it means the in-migration
+   proofs must clear the flag by hand before every fence assertion or they would
+   be testing nothing, and any future server-side function that calls an RPC and
+   then writes `cocs` or coverage directly would find the fences already open.
+   No such function exists today. Named so it is a known property, not a
+   surprise.
+7. **The coverage fence's DELETE branch carries a cascade exemption.**
+   `coc_covered_buildings` hangs off `cocs` and `buildings` by
+   `ON DELETE CASCADE`, and a `BEFORE DELETE` trigger on the child *does* fire
+   when the parent cascade runs — measured against this database, not assumed.
+   Fencing DELETE naively would have broken the one client path §5 says must
+   keep working: CocHome deleting a draft. Referential integrity fires the child
+   delete *after* the parent row is gone, so an invisible parent means "cascade"
+   and a visible one means "a client is narrowing a live certificate's
+   coverage". Measured: parent visible in the direct case, invisible in the
+   cascade case.
+8. **Non-unique exceptions are deliberately not caught per row**, and the
+   unique-violation handler discriminates on `CONSTRAINT_NAME` rather than
+   assuming every collision is a claims collision.
+
+**Unit 4 — the UI**
+
+9. **Attachment labels are English-only.** The wizard's eight labels mirrored
+   the Arabic set the certificate prints. The ids are unchanged, so
+   `attachments_checked` and the PDF are unaffected; what is lost is the
+   label-to-print mirror. `docPdf.js` still prints the Arabic labels and was not
+   touched.
+10. **Step 3 does not use the `Modal` primitive.** §7.3 requires
+    `position: fixed; inset: 16px`, which `Modal`'s centred `maxWidth` box
+    cannot express, so step 3 renders its own portal with the same tokens,
+    header and footer shape. Measured: preview pane 1033 × ~632 at 1366×768 and
+    947 × ~664 at 1280×800, so an A4 page (794px at 96dpi) shows in full at
+    100% width. Zero overflow at both widths.
+11. **Step 2's percentage is the minimum across the selected pairs**, not an
+    aggregate: with two ESMs at 100% and 20%, an aggregate would read 60% and
+    overstate. The minimum is the thing actually blocking the row.
+12. **Per-ESM counts are *offerable* (ready **and** unclaimed)**, not merely
+    ready — it is the number of buildings ticking that ESM would actually admit
+    in step 2, which is what §1 says the count is for.
+13. **CocHome's first KPI is now `pairs ready`**, not `planned`. The old number
+    was a `coc_plan_preview` row count and that RPC has no callers; the pair
+    counts live in the coverage summary line above it.
+14. **The coverage view paginates at 50 buildings rather than virtualizing.**
+    Pagination is a dozen lines against the existing `.ies-table-wrap` idiom; a
+    virtualizer would be a new dependency for a matrix a few columns wide.
+15. **Scenario 8 collapses on "exactly one option in the pool", not "exactly
+    one good option"** — a forced choice, not a preference.
+
+**Unit 5 — the drops**
+
+16. **The reconnected card is pair-grained on both sides.** The brief said to
+    count non-superseded lineages by status. The numerator can be; the
+    denominator cannot — once `default_coc_plan` is gone there is no
+    lineage-grained notion of "expected", because the builder lets one
+    certificate cover every building or one cover each. That is precisely why
+    the design retired the default plan. Both halves are therefore pairs, which
+    is what the card's own description already claimed to show. A ratio whose
+    numerator and denominator are different units is a broken card.
+17. **`generate_cocs` gained a `rows_required` refusal** in place of unit 3's
+    `coalesce(p_rows, coc_plan_preview(...))` fallback — see §12.3.
+18. **A third `coc_layout` reader was found and removed**: beyond the
+    ProjectModals round-trip, `ProjectItems.jsx` rendered a "Layout:
+    Scattered/Concatenated" badge from the column. It would have silently
+    vanished rather than crashed; removing it deliberately was approved.
+19. **The `coc_layout` ENUM TYPE is left standing.** The column is dropped; the
+    type is not on the owner's list and an unused enum costs nothing.
+20. **`import_project_bundle` accepts and ignores `coc_layout`.** The template
+    column and the client payload key are both removed, but templates already on
+    people's laptops still carry the column and a stale browser bundle still
+    sends the key. The import parser is header-name based, so an old template
+    keeps importing and simply stops setting a column that no longer exists.
+
+### 12.2 Provenance — the self-review caught two real defects
+
+§11 was written before any code existed, and it was not decoration. Two of the
+three questions it asks found defects in the design's own first draft, and both
+fixes shipped exactly as the self-review specified:
+
+1. **Eligibility lived only in the read path.** The first draft had the rule in
+   `coc_pool` and had `generate_cocs` trust the rows it was sent, so a stale tab
+   or a hostile client could have generated a certificate over a pair that was
+   not ready. §3.4 moved the same predicate inside the RPC. As built,
+   `generate_cocs` does not re-implement it either — it *calls* `coc_pool`, so
+   there is exactly one copy of the rule in the system.
+2. **Coverage could lie about the claims.** The adversarial walk in §11(b) found
+   that a direct insert into `coc_covered_buildings` would widen a draft's
+   rectangle without touching `coc_claims`: the claims invariant would hold
+   while coverage misrepresented it, and a second certificate could then
+   legitimately claim and print the same pair. The sentence "Closed by adding
+   the same GUC fence trigger to `coc_covered_buildings`" exists in §11 because
+   the review caught it; that fence shipped in unit 3.
+
+Recorded here because both were caught by asking the question, not by testing —
+and the transcript that found them is not a durable artefact.
+
+### 12.3 The one thing that went wrong, and what caught it
+
+Unit 5's first apply **aborted on its own pre-check**:
+
+```
+P0001: Still referenced by function(s): generate_cocs — resolve before dropping
+```
+
+Unit 3 had left a legacy fallback in `generate_cocs` —
+`v_rows := coalesce(p_rows, coc_plan_preview(p_project_id))` — so the function
+nobody calls without rows still *called* the planner nobody calls at all.
+
+Nothing was dropped: the pre-check is the first statement in the migration and
+the transaction rolled back whole. The check earned its place, because
+**Postgres records no dependency on function bodies for sql/plpgsql functions** —
+a plain `DROP FUNCTION` would have succeeded, and `generate_cocs` would have
+started failing at runtime the first time anyone called it with a null
+`p_rows`. `0132` now rewrites `generate_cocs` to refuse with `rows_required`
+instead, and re-runs the reference scan with no exclusions after the drops as a
+second assertion.
+
+Process note, for the record: the destructive apply was performed by the
+coordinating session under the owner's explicit sign-off, after the same call
+was refused by the permission system in the implementing subagent's context.
+
+### 12.4 Known issues, not fixed here
+
+- **Audit rows for id-less tables carry `record_id = NULL`.**
+  `audit_trigger_fn` derives `record_id` from the row's `id` column, and
+  `coc_beneficiary_assignments` is keyed `(project_id, building_id)` with no
+  `id`. Those audit rows therefore cannot be traced back to the row they
+  describe — 39 such rows exist today. Found when unit 3's cleanup assertion
+  failed on five stray rows it could not sweep by id. Pre-existing, wider than
+  this feature, and not this feature's to fix.
+- **`src/lib/xlsxPatch.js:5` has a stale comment** referring to
+  `CocGenerateWizard`, the file unit 4 deleted. `src/lib` is frozen by
+  assertion — every module's sha256 is identical across all five commits — so
+  the one-line fix rides the next sanctioned `src/lib` change rather than
+  breaking that guarantee for a comment.
+- **The mixed-beneficiary guard still protects a future with no data.**
+  `coc_beneficiary_assignments` has 0 rows and no writer (§0.6). The guard is
+  live and proven (T3); it simply cannot fire until TARSHID-side data arrives.
+- **Multi-building certificates still print blank meter and subscription
+  fields.** The generator is frozen; the builder warns at preview (§7.3) and
+  does not attempt a fix.
+
+### 12.5 The dead-object list, settled
+
+| Object | Decision | Where |
+|---|---|---|
+| `coc_plan_preview`, `coc_plan_row` | **dropped** | 0132 |
+| `default_coc_plan` | **dropped** | 0132 |
+| `projects.coc_layout` | **dropped** (3 src readers removed) | 0132 |
+| `coc_buildings`, `coc_esms` | **dropped** after the view rewrite | 0132 |
+| `coc_project_settings.layout_mode` | **kept** — no reader, but it holds data | §3.5 |
+| `project_esms.coc_bundle_key` | **kept** — still written by the importer | §3.5 |
+| `coc_layout` enum type | **kept** — not on the list, costs nothing | 0132 |
+| `esm_groupings` | **kept** — it is the builder's quick-pick chips | §3.5 |

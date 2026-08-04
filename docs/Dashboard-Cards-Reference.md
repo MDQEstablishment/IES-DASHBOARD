@@ -9,12 +9,19 @@ where the number comes from, and which action changes it. This mirrors the in-ap
 | **Total Projects** | Count of non-deleted projects. | `projects` table | Add Project / Delete Project actions |
 | **Portfolio Progress** | Weighted average of installed ÷ planned across active projects. | `install_log` ÷ `building_item_scope` | Engineer install entries |
 | **S-Curve** | Planned vs actual progress over time. | `install_log` aggregated by week | Daily Report submissions |
-| **COCs Signed** | Individual COCs **approved by the client** out of the expected total, at **building × ESM** granularity across active projects. | `v_project_doc_progress` — `approved_count ÷ expected_count` (`doc_type = 'coc'`) | Client COC approvals in Doc Tracker / COC Matrix |
+| **COCs Signed** | Certified **(building × ESM) pairs** out of every pair with planned scope, across active projects. A pair counts once the certificate claiming it is **approved** or **accepted with comments** by TARSHID. | `v_project_doc_progress` — `approved_count ÷ expected_count` (`doc_type = 'coc'`), pair-grained from `coc_pool` + `coc_claims` | Logging TARSHID feedback on a certificate (COCs screen). Scope and installation move the denominator. |
 | **Progress by Project** | Per-project weighted % complete. | `install_log` + `building_item_scope` | Engineer log entries |
 | **Progress by ESM** | Per-ESM aggregated % across the whole portfolio. | `install_log` grouped by ESM | Engineer log entries |
 | **Attention List** | Open escalations plus blocked/overdue tasks. | `escalations` + `tasks` | Auto-detected blockers + manually raised escalations |
 | **Recent Activity** | The most recent write actions across the programme (last 24h). | `audit_log` | Any write action (install, approval, material movement, etc.) |
 | **Critical Materials** | Materials at or below their reorder threshold. | `materials` — in-stock (`received` − consumed) vs `threshold` | Material receipts + install activity |
+
+> **COCs Signed changed provenance in migration 0132.** It previously divided
+> `default_coc_plan` (the legacy layout × bundle expansion) by a join of
+> `project_documents` to `coc_esms` — a table with no writer since migration
+> 0079. Both halves were therefore always zero and the card could never move,
+> whatever TARSHID approved. It now reads the certificate pool and the claims
+> ledger, and is pair-grained on both sides of the ratio.
 
 ## How progress is computed
 
