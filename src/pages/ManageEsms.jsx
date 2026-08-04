@@ -27,14 +27,15 @@ export default function ManageEsms() {
   const { rows: activeCats } = useLiveQuery('material_categories', (q) => q.select('id,code,name_en,esm_id,is_active').eq('is_active', true).order('code'))
   const { rows: materials, loading } = useLiveQuery('materials', (q) => q.select('*,esm:esms(code,name),category:material_categories(id,code,name_en,is_active)').order('code'))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,material_code'))
-  const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty'))
+  const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: moves } = useLiveQuery('material_movements', (q) =>
     q.select('*,material:materials(code),by:profiles!material_movements_moved_by_id_fkey(full_name)')
       .order('occurred_at', { ascending: false }).limit(20))
 
   // consumed per material code = Σ installed qty over scopes that consume that code
   const scopeMat = {}; scopes.forEach((s) => { scopeMat[s.id] = s.material_code })
-  const consumedByCode = {}; install.forEach((r) => { const c = scopeMat[r.scope_id]; if (c) consumedByCode[c] = (consumedByCode[c] || 0) + (r.qty || 0) })
+  // 0100's rule, as the other call sites apply it: everything not rejected counts.
+  const consumedByCode = {}; install.forEach((r) => { const c = scopeMat[r.scope_id]; if (c && r.qa_status !== 'rejected') consumedByCode[c] = (consumedByCode[c] || 0) + (r.qty || 0) })
 
   const decorate = (m) => {
     const requested = m.requested || 0, received = m.received || 0, planned = m.planned || 0, threshold = m.threshold || 0

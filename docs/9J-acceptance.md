@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 56 files · 525 interactive controls · 278 database touches.**
+**Totals: 57 files · 536 interactive controls · 275 database touches.**
 
 ## Per-file summary
 
@@ -23,10 +23,11 @@ that commit message.
 | `src/components/BuildingModals.jsx` | 24 | 6 | — | ☐ |
 | `src/components/BuildingPhotos.jsx` | 3 | 4 | — | ☐ |
 | `src/components/BuildingsMap.jsx` | 0 | 0 | — | ☐ |
+| `src/components/CocBuilder.jsx` | 16 | 7 | — | ☐ |
+| `src/components/CocCoverage.jsx` | 4 | 0 | — | ☐ |
 | `src/components/CocDetailDrawer.jsx` | 1 | 2 | — | ☐ |
 | `src/components/CocFeedbackModal.jsx` | 7 | 3 | — | ☐ |
-| `src/components/CocGenerateWizard.jsx` | 7 | 6 | — | ☐ |
-| `src/components/CocHome.jsx` | 12 | 9 | — | ☐ |
+| `src/components/CocHome.jsx` | 11 | 7 | — | ☐ |
 | `src/components/DailyProgress.jsx` | 10 | 8 | — | ☐ |
 | `src/components/DateInput.jsx` | 10 | 0 | — | ☐ |
 | `src/components/EquipmentCatalogs.jsx` | 17 | 3 | — | ☐ |
@@ -41,7 +42,7 @@ that commit message.
 | `src/components/ProgressReportCard.jsx` | 6 | 14 | — | ☐ |
 | `src/components/ProjectDocuments.jsx` | 25 | 11 | — | ☐ |
 | `src/components/ProjectItems.jsx` | 21 | 28 | — | ☐ |
-| `src/components/ProjectModals.jsx` | 36 | 12 | — | ☐ |
+| `src/components/ProjectModals.jsx` | 35 | 10 | — | ☐ |
 | `src/components/ProjectUnitSelection.jsx` | 15 | 6 | — | ☐ |
 | `src/components/ProjectWarehouse.jsx` | 2 | 2 | — | ☐ |
 | `src/components/ReportTemplate.jsx` | 4 | 6 | — | ☐ |
@@ -254,6 +255,44 @@ shared primitives: Empty×1
 | --- | --- |
 | _(no interactive controls)_ | 0 |
 
+### `src/components/CocBuilder.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onChange:filter+includes+setAttach` | 1 |
+| `onChange:setQuery` | 1 |
+| `onChange:setSaveDefault` | 1 |
+| `onChange:toggleBuilding` | 1 |
+| `onChange:toggleEsm` | 1 |
+| `onClick:applyChip` | 1 |
+| `onClick:downloadZip` | 1 |
+| `onClick:generate` | 1 |
+| `onClick:onClose` | 3 |
+| `onClick:setStep` | 4 |
+| `onClick:toggleAllInView` | 1 |
+
+| database effect | count |
+| --- | --- |
+| `from:coc_covered_buildings` | 1 |
+| `from:coc_project_settings` | 1 |
+| `from:cocs` | 2 |
+| `io:downloadBlob` | 1 |
+| `read:coc_beneficiary_assignments` | 1 |
+| `rpc:generate_cocs` | 1 |
+
+shared primitives: Btn×8, Empty×3, Modal×1
+
+### `src/components/CocCoverage.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onClick:max+setPage` | 1 |
+| `onClick:min+setPage` | 1 |
+| `onClick:openCoc` | 1 |
+| `onClick:setOpen` | 1 |
+
+shared primitives: Btn×2, Empty×1
+
 ### `src/components/CocDetailDrawer.jsx`
 
 | control → handler | count |
@@ -287,27 +326,6 @@ shared primitives: Empty×1
 
 shared primitives: Btn×4, Field×2, FileDropZone×1, Modal×2
 
-### `src/components/CocGenerateWizard.jsx`
-
-| control → handler | count |
-| --- | --- |
-| `onChange:filter+includes+setAttach` | 1 |
-| `onChange:toggle` | 1 |
-| `onClick:downloadZip` | 1 |
-| `onClick:generate` | 1 |
-| `onClick:onClose` | 1 |
-| `onMouseEnter:setPreviewKey` | 2 |
-
-| database effect | count |
-| --- | --- |
-| `from:coc_covered_buildings` | 1 |
-| `from:coc_project_settings` | 1 |
-| `from:cocs` | 2 |
-| `io:downloadBlob` | 1 |
-| `rpc:generate_cocs` | 1 |
-
-shared primitives: Btn×3, Empty×1, Modal×1
-
 ### `src/components/CocHome.jsx`
 
 | control → handler | count |
@@ -317,20 +335,17 @@ shared primitives: Btn×3, Empty×1, Modal×1
 | `onClick:generateOne` | 2 |
 | `onClick:markSent` | 1 |
 | `onClick:openPdf` | 1 |
-| `onClick:saveLayout` | 1 |
+| `onClick:setBuilderOpen` | 1 |
 | `onClick:setDelCoc` | 2 |
 | `onClick:setDetailCoc` | 1 |
 | `onClick:setFeedbackCoc` | 1 |
-| `onClick:setWizardOpen` | 1 |
 
 | database effect | count |
 | --- | --- |
-| `from:coc_project_settings` | 1 |
 | `from:cocs` | 1 |
 | `read:coc_covered_buildings` | 1 |
-| `read:coc_project_settings` | 1 |
 | `read:cocs` | 1 |
-| `rpc:coc_plan_preview` | 1 |
+| `rpc:coc_pool` | 1 |
 | `rpc:create_coc_revision` | 1 |
 | `rpc:mark_coc_sent` | 1 |
 | `rpc:restore_prior_coc_revision` | 1 |
@@ -655,7 +670,6 @@ shared primitives: Btn×2, Empty×1
 
 | control → handler | count |
 | --- | --- |
-| `onBlur:bgUpdate+trim` | 1 |
 | `onChange:onFile` | 1 |
 | `onChange:set` | 17 |
 | `onChange:setConfirm` | 1 |
@@ -674,13 +688,11 @@ shared primitives: Btn×2, Empty×1
 | database effect | count |
 | --- | --- |
 | `bgInsert:projects` | 1 |
-| `bgUpdate:project_esms` | 1 |
 | `bgUpdate:projects` | 3 |
 | `io:downloadBlob` | 1 |
 | `io:signedUrlFor` | 1 |
 | `io:uploadToBucket` | 1 |
 | `read:profiles` | 2 |
-| `read:project_esms` | 1 |
 | `rpc:import_project_bundle` | 1 |
 
 shared primitives: Btn×13, Field×20, FileDropZone×1, Modal×4

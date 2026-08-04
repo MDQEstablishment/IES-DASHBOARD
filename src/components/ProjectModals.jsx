@@ -194,11 +194,6 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
           coc_layout still round-trips in the edit payload and new projects take
           the DB default, and the ten saving-sheet columns are still written
           back untouched on every save. */}
-      {mode === 'edit' && (
-        <Group>
-          <EsmBundles projectId={project.id} />
-        </Group>
-      )}
       {/* 8T/8U — contract + works-completion dates print in the COC project-info
           box. The COC signing date is NOT set here: signing happens later by
           TARSHID, on paper, and the approval date cell is left blank.
@@ -531,24 +526,4 @@ function Group({ first, children }) {
   )
 }
 
-// ESM bundle-key editor (Edit Project). ESMs sharing a key group onto one COC.
-function EsmBundles({ projectId }) {
-  const { rows } = useLiveQuery('project_esms', (q) => q.select('id,coc_bundle_key,ordinal,esm:esms(code,name)').eq('project_id', projectId).order('ordinal'), [projectId])
-  if (!rows.length) return null
-  const suggest = (pe) => pe.coc_bundle_key ?? (/light/i.test(pe.esm?.name || '') ? 'lighting' : '')
-  return (
-    <div style={{ marginTop: 4 }}>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 6px' }}>ESM BUNDLES</div>
-      {rows.map((pe) => (
-        <div key={pe.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)', width: 48 }}>{pe.esm?.code}</span>
-          <span style={{ flex: 1, fontSize: 12.5 }}>{pe.esm?.name}</span>
-          <input lang="en" defaultValue={suggest(pe)} placeholder="bundle key"
-            onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== (pe.coc_bundle_key || null)) bgUpdate('project_esms', pe.id, { coc_bundle_key: v }) }}
-            style={{ ...inputStyle, width: 140, padding: '6px 8px' }} />
-        </div>
-      ))}
-    </div>
-  )
-}
 function statusLabel(s) { return ({ active: 'Active', draft: 'Draft', on_hold: 'On-Hold', closed: 'Closed', deleted: 'Deleted' })[s] || s }

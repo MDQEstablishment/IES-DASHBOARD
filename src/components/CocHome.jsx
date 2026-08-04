@@ -5,12 +5,19 @@ import { useAuth } from '../rbac'
 import { Btn, Empty, Loading, Modal } from './ui'
 import { toast } from '../lib/toast'
 import { ensureCocSettings, fetchCocContext, generateAndUploadCocPdf, kindLabel } from '../lib/cocPdf'
-import CocGenerateWizard from './CocGenerateWizard'
+import CocBuilder from './CocBuilder'
+import CocCoverage from './CocCoverage'
 import CocFeedbackModal from './CocFeedbackModal'
 import CocDetailDrawer from './CocDetailDrawer'
 
-// 8S screen 1 — the single "COCs" home: a plain sentence about what this
-// project needs, three numbers, and a pipeline grouped by whose move it is.
+// The "COCs" home: the coverage matrix (what is left), three numbers, and a
+// pipeline grouped by whose move it is.
+//
+// Everything on this screen reads coc_pool (0130). The layout-mode toggle is
+// gone: the builder IS the layout decision now, so a project-wide setting that
+// silently decided how many certificates the plan proposed had nothing left to
+// decide. coc_project_settings.layout_mode keeps its data; nothing drives from
+// it.
 const STATUS_META = {
   draft: ['Draft', 'var(--text-3)', 'var(--line-soft)'],
   generated: ['PDF ready', 'var(--accent)', 'var(--accent-tint)'],
@@ -23,8 +30,8 @@ const STATUS_META = {
 
 export default function CocHome({ projectId, project, buildings, projectEsms, canManage }) {
   const { user } = useAuth()
-  const [plan, setPlan] = useState(null)
-  const [wizardOpen, setWizardOpen] = useState(false)
+  const [pool, setPool] = useState(null)
+  const [builderOpen, setBuilderOpen] = useState(false)
   const [feedbackCoc, setFeedbackCoc] = useState(null)
   const [detailCoc, setDetailCoc] = useState(null)
   const [delCoc, setDelCoc] = useState(null)
@@ -36,9 +43,6 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
 
   const { rows: cocs, refetch: refetchCocs } = useLiveQuery('cocs',
     (q) => q.select('*').eq('project_id', projectId).order('seq').order('revision'), [projectId])
-  const { rows: settingsRows } = useLiveQuery('coc_project_settings',
-    (q) => q.select('*').eq('project_id', projectId), [projectId])
-  const settings = settingsRows[0]
   const { rows: covered } = useLiveQuery('coc_covered_buildings', (q) => q.select('coc_id,building_id'), [])
   const coveredByCoc = useMemo(() => {
     const m = {}
@@ -49,30 +53,14 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
   // first open: make sure settings exist (fixed Lighting-together / AC-alone pairing)
   useEffect(() => { if (esmOpts.length) ensureCocSettings(projectId, esmOpts) }, [projectId, esmOpts.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadPlan = useCallback(async () => {
-    const { data, error } = await supabase.rpc('coc_plan_preview', { p_project_id: projectId })
-    if (!error) setPlan(Array.isArray(data) ? data : [])
+  const loadPool = useCallback(async () => {
+    const { data, error } = await supabase.rpc('coc_pool', { p_project_id: projectId })
+    if (!error) setPool(Array.isArray(data) ? data : [])
   }, [projectId])
-  useEffect(() => { loadPlan() }, [loadPlan, cocs.length, settings?.layout_mode, JSON.stringify(settings?.esm_groupings)]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 8X — coverage mode is chosen inline (the standalone settings drawer is gone).
-  // Writing layout_mode drives how many certificates the plan proposes; the live
-  // settings query + the loadPlan effect above pick the change up automatically.
-  const saveLayout = async (mode) => {
-    if ((settings?.layout_mode || 'concatenated') === mode) return
-    // .select() so a 0-row no-op (settings row missing / RLS) is an error,
-    // not a false "Saved" while the toggle silently stays put.
-    const { data, error } = await supabase.from('coc_project_settings').update({ layout_mode: mode }).eq('project_id', projectId).select('project_id')
-    if (error) toast("Couldn't save — " + error.message, 'err')
-    else if (!data || data.length === 0) toast("Couldn't save — coverage settings not found or no permission", 'err')
-    else toast('Saved')
-  }
+  useEffect(() => { loadPool() }, [loadPool, cocs.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = cocs.filter((c) => c.status !== 'superseded')
-  const toCreate = (plan || []).filter((r) => !r.exists_coc_id)
-  const missingPdf = active.filter((c) => c.status === 'draft')
-
-  const scattered = settings?.layout_mode === 'scattered'
+  const offerable = (pool || []).filter((p) => p.ready && !p.claim_root).length
 
   // ── open helpers ────────────────────────────────────────────────────────
   const openPdf = async (c) => {
@@ -102,10 +90,12 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
     if (error || !data?.ok) { toast("Couldn't create the revision — " + (error?.message || data?.error || ''), 'err'); return }
     toast(`${c.code} Rev ${data.revision} created — generate its PDF next`); refetchCocs()
   }
-  // 8Y — delete a certificate (managers only per cocs RLS). Junction rows cascade;
-  // the PDF + any feedback doc are removed from storage (0089 delete policy). If
-  // this row supersedes a prior revision, that prior rev is resurfaced with its
-  // feedback status so the chain stays consistent. Freed scope re-enters the plan.
+  // Delete a certificate. Only DRAFTS are deletable: migration 0131 fences the
+  // cocs table so an issued certificate can be superseded but not erased, and
+  // the button below is gated to match rather than letting the user discover the
+  // refusal in a toast. If this row supersedes a prior revision, that prior rev
+  // is resurfaced first so the chain never points at a dead row. Junction rows
+  // cascade, and the freed pairs return to the pool.
   const deleteCoc = async (c) => {
     setBusyId(c.id)
     try {
@@ -125,7 +115,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
       if (c.pdf_path) await supabase.storage.from('coc-pdfs').remove([c.pdf_path]).catch(() => {})
       if (c.feedback_doc_path) await supabase.storage.from('coc-responses').remove([c.feedback_doc_path]).catch(() => {})
       toast(`${c.code}${c.revision > 1 ? ` Rev ${c.revision}` : ''} deleted`)
-      setDelCoc(null); refetchCocs(); loadPlan()
+      setDelCoc(null); refetchCocs(); loadPool()
     } finally { setBusyId(null) }
   }
 
@@ -164,7 +154,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
         {c.pdf_path && <Btn style={rowBtn} onClick={() => openPdf(c)}>Open PDF</Btn>}
         {canManage && c.status === 'generated' && <Btn style={rowBtn} disabled={busyId === c.id} onClick={() => generateOne(c)}>{busyId === c.id ? 'Regenerating…' : 'Regenerate PDF'}</Btn>}
         {actionFor(c)}
-        {canManage && <button onClick={() => setDelCoc(c)} disabled={busyId === c.id} style={{ background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', color: 'var(--bad)', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Delete</button>}
+        {canManage && c.status === 'draft' && <button onClick={() => setDelCoc(c)} disabled={busyId === c.id} style={{ background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer', color: 'var(--bad)', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Delete</button>}
       </div>
     )
   }
@@ -176,43 +166,26 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
     </div>
   )
 
-  if (plan === null && cocs.length === 0) return <Loading label="Loading certificates…" />
+  if (pool === null && cocs.length === 0) return <Loading label="Loading certificates…" />
 
   return (
     <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <div style={{ flex: 1, minWidth: 260 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Completion certificates</div>
-          {canManage ? (
-            <div style={{ marginTop: 8 }}>
-              <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)', overflow: 'hidden' }}>
-                {[['concatenated', 'All buildings together'], ['scattered', 'Each building separately']].map(([v, label], i) => {
-                  const on = (settings?.layout_mode || 'concatenated') === v
-                  return (
-                    <button key={v} onClick={() => saveLayout(v)}
-                      style={{ padding: '6px 13px', fontSize: 11.5, fontWeight: on ? 700 : 500, color: on ? 'var(--accent)' : 'var(--text-3)', background: on ? 'var(--accent-tint)' : 'var(--surface-1)', border: 'none', borderLeft: i > 0 ? '1px solid var(--line)' : 'none', cursor: on ? 'default' : 'pointer' }}>{label}</button>
-                  )
-                })}
-              </div>
-            </div>
-          ) : (
-            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
-              {scattered ? 'Certificates are issued per building' : 'Certificates cover all buildings together'}
-            </div>
-          )}
         </div>
         {canManage && (
-          <Btn variant="primary" icon="doc" onClick={() => setWizardOpen(true)}>
-            {toCreate.length > 0
-              ? `Generate ${toCreate.length} certificate${toCreate.length === 1 ? '' : 's'}`
-              : missingPdf.length > 0 ? 'Finish generating PDFs' : 'Generate certificates'}
+          <Btn variant="primary" icon="doc" disabled={offerable === 0} onClick={() => setBuilderOpen(true)}>
+            {offerable > 0 ? `Generate — ${offerable} pair${offerable === 1 ? '' : 's'} ready` : 'Nothing ready to certify'}
           </Btn>
         )}
       </div>
 
+      <CocCoverage pool={pool || []} esmOpts={esmOpts} cocs={cocs} onOpenCoc={setDetailCoc} />
+
       {/* three numbers */}
-      <div style={{ display: 'flex', gap: 10, margin: '14px 0 18px', flexWrap: 'wrap' }}>
-        {[[plan?.length ?? '—', 'planned'], [waiting.length, 'with TARSHID'], [done.length, 'approved']].map(([n, l]) => (
+      <div style={{ display: 'flex', gap: 10, margin: '0 0 18px', flexWrap: 'wrap' }}>
+        {[[pool === null ? '—' : offerable, 'pairs ready'], [waiting.length, 'with TARSHID'], [done.length, 'approved']].map(([n, l]) => (
           <div key={l} style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', padding: '10px 16px', minWidth: 110, textAlign: 'center' }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 700 }}>{n}</div>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{l}</div>
@@ -221,7 +194,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
       </div>
 
       {active.length === 0 ? (
-        <Empty icon="doc">{toCreate.length > 0 ? 'No certificates yet — use Generate to create them from the plan above.' : 'No certificates yet.'}</Empty>
+        <Empty icon="doc">{offerable > 0 ? 'No certificates yet — Generate composes the first one.' : 'No certificates yet.'}</Empty>
       ) : (
         <>
           {stage('NEEDS YOUR ACTION', needsAction)}
@@ -230,10 +203,10 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
         </>
       )}
 
-      {wizardOpen && (
-        <CocGenerateWizard projectId={projectId} project={project} esmName={esmName} plan={plan || []} drafts={missingPdf}
-          coveredByCoc={coveredByCoc} buildings={buildings}
-          onClose={() => setWizardOpen(false)} onDone={() => { refetchCocs(); loadPlan() }} />
+      {builderOpen && (
+        <CocBuilder projectId={projectId} project={project} esmOpts={esmOpts} esmName={esmName}
+          pool={pool || []} cocs={cocs}
+          onClose={() => setBuilderOpen(false)} onDone={() => { refetchCocs(); loadPool() }} />
       )}
       {feedbackCoc && (
         <CocFeedbackModal coc={feedbackCoc} onClose={() => setFeedbackCoc(null)}
@@ -250,9 +223,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
             <Btn variant="primary" disabled={busyId === delCoc.id} style={{ background: 'var(--bad)' }} onClick={() => deleteCoc(delCoc)}>{busyId === delCoc.id ? 'Deleting…' : 'Delete certificate'}</Btn>
           </>}>
           <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-            {['sent', 'approved', 'accepted_with_comments'].includes(delCoc.status)
-              ? `${delCoc.code} was already sent to TARSHID — deleting removes the certificate record and its feedback history, and the PDF from storage. This can't be undone.`
-              : `This removes the certificate and its PDF. Its scope will be offered again in the plan.`}
+            This removes the draft and its PDF. Its pairs return to the pool.
           </div>
         </Modal>
       )}

@@ -14,14 +14,16 @@ export default function Reports() {
 
   const { rows: materials, loading } = useLiveQuery('materials', (q) => q.select('code,name,unit,esm:esms(code)'))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,material_code'))
-  const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty'))
+  const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: profiles } = useLiveQuery('profiles', (q) => q.select('id,full_name,role,archived'))
   const { rows: tasks } = useLiveQuery('tasks', (q) => q.select('assigned_to_id,status,due_date,created_at,updated_at'))
   const { rows: escs } = useLiveQuery('escalations', (q) => q.select('raised_by_id'))
 
   // consumption per material code
   const scopeMat = {}; scopes.forEach((s) => { scopeMat[s.id] = s.material_code })
-  const consumed = {}; install.forEach((r) => { const c = scopeMat[r.scope_id]; if (c) consumed[c] = (consumed[c] || 0) + (r.qty || 0) })
+  // 0100's rule, the same one Dashboard / Projects / ProjectDetail /
+  // BuildingDetail / ProgressReportCard apply: everything not rejected counts.
+  const consumed = {}; install.forEach((r) => { const c = scopeMat[r.scope_id]; if (c && r.qa_status !== 'rejected') consumed[c] = (consumed[c] || 0) + (r.qty || 0) })
   const consBars = materials
     .map((m) => ({ esm: m.esm?.code || '—', name: m.name, unit: m.unit || '', qty: consumed[m.code] || 0 }))
     .filter((b) => b.qty > 0)
