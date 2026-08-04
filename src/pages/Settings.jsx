@@ -38,7 +38,7 @@ const CATS = [
   // because the survey's old-unit picker reads the same imported registry
   ...(FEATURES.savingSheet ? [{ key: 'template', label: 'Saving Sheet Template' }] : []),
   { key: 'report', label: 'Report Template' },
-  // 9L(1b) — what people wrote in مُرشد's feedback box. Visible to pmo/admin
+  // 9L(1b) — what people sent Murshid's way. Visible to pmo/admin
   // (RLS enforces that too — this tab is convenience, not the control).
   { key: 'feedback', label: 'Murshid' },
   { key: 'audit', label: 'Audit Log' },

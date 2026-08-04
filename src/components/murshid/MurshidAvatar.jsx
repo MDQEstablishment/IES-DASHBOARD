@@ -1,4 +1,4 @@
-// مُرشد's face. Sprint 9M(A).
+// Murshid's face. Sprint 9M(A).
 //
 // The owner's approved artwork, re-optimised: circular crop with alpha,
 // quantised, which took the 192 from 64 kB to 14 kB.
@@ -27,7 +27,7 @@ export default function MurshidAvatar({ size = 24, style }) {
       <img
         src={`${B}murshid-avatar-192.png`}
         srcSet={`${B}murshid-avatar-192.png 1x, ${B}murshid-avatar-384.png 2x`}
-        width={size} height={size} alt="مُرشد" decoding="async"
+        width={size} height={size} alt="Murshid" decoding="async"
         style={{ width: size, height: size, borderRadius: '50%', display: 'block', flex: 'none', ...style }} />
     </picture>
   )

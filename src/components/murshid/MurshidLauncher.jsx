@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import MurshidPanel from './MurshidPanel'
 import MurshidAvatar from './MurshidAvatar'
 
-// مُرشد — the floating launcher, present on every page inside the shell.
+// Murshid — the floating launcher, present on every page inside the shell.
 //
 // POSITION: bottom-left of the CONTENT area, not of the viewport. The 9J shell
 // pins a 240px sidebar (68px collapsed) to the left edge for the full height,
@@ -49,15 +49,15 @@ export default function MurshidLauncher({ collapsed }) {
       )}
       <button
         onClick={() => setOpen((o) => !o)}
-        title={open ? 'إغلاق مُرشد' : 'افتح مُرشد — المساعد'}
-        aria-label="مُرشد"
+        title={open ? 'Close Murshid' : 'Open Murshid — the assistant'}
+        aria-label="Murshid"
         style={{
           display: 'flex', alignItems: 'center', gap: 9, padding: '11px 16px',
           borderRadius: 999, background: 'var(--accent)', color: 'var(--surface-1)',
           boxShadow: 'var(--shadow-2)', fontWeight: 600, fontSize: 13.5,
         }}>
         <MurshidAvatar size={24} />
-        <span dir="rtl">مُرشد</span>
+        <span>Murshid</span>
       </button>
     </div>
   )

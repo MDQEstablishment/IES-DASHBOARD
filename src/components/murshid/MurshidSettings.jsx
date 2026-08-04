@@ -4,7 +4,7 @@ import { useLiveQuery } from '../../lib/db'
 import { toast } from '../../lib/toast'
 import { num, toLatin } from '../../lib/format'
 
-// 9L(3b) — مُرشد's controls and its own meter, mirroring the 9D-4 card so the
+// 9L(3b) — Murshid's controls and its own meter, mirroring the 9D-4 card so the
 // two AI budgets are read the same way.
 //
 // The meter filters ai_runs to job='murshid', and the cap it shows is
@@ -51,11 +51,12 @@ export default function MurshidSettings({ role }) {
 
   return (
     <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Murshid assistant (مُرشد)</div>
+      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Murshid assistant</div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 14 }}>
         The in-app assistant. It answers only from data the asking person can already see — every query runs under their own
-        session, so it inherits their permissions exactly. Help articles, the FAQ and the feedback box are static and always
-        work; only the chat consumes budget. The API key is held server-side per deployment and is never stored here.
+        session, so it inherits their permissions exactly. The panel is a conversation now: with the chat off it still opens,
+        still accepts a question and still records it, and answers back that it is not switched on yet. Only an answered
+        question consumes budget. The API key is held server-side per deployment and is never stored here.
       </div>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, cursor: canWrite ? 'pointer' : 'default' }}>
@@ -63,7 +64,7 @@ export default function MurshidSettings({ role }) {
           onChange={(e) => save('murshid_enabled', e.target.checked ? 'true' : 'false')} />
         <span style={{ fontSize: 13, fontWeight: 600 }}>Enable the chat</span>
         <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
-          {enabled ? 'on' : 'off — the panel still serves help, FAQ and feedback'}
+          {enabled ? 'on' : 'off — the panel still opens and records questions, but cannot answer them'}
         </span>
       </label>
 

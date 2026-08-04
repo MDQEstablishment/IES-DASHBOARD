@@ -289,7 +289,7 @@ export default function Shell() {
         </main>
       </div>
       <BuildWatcher />
-      {/* 9L — مُرشد rides the shell, so it is present on every routed page
+      {/* 9L — Murshid rides the shell, so it is present on every routed page
           without any page importing it. It reads the page's own
           data-screen-label from the DOM; nothing is passed down. */}
       <MurshidLauncher collapsed={collapsed} />

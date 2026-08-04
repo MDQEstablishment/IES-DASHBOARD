@@ -29,6 +29,12 @@ const ICONS = {
   x: (<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>),
   logout: (<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>),
   box: (<><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="M3.3 7 12 12l8.7-5M12 22V12" /></>),
+  // Added for the Murshid chat: copy an answer, rate it, send a question.
+  // Same 24-box, same stroke language as the ported set above.
+  copy: (<><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>),
+  thumbup: (<><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" /><path d="M7 11l4.5-8.5a2.5 2.5 0 0 1 4.6 1.9L15 9h4.7a2.3 2.3 0 0 1 2.2 2.9l-2 7.4A2.3 2.3 0 0 1 17.7 21H7z" /></>),
+  thumbdown: (<><path d="M7 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3" /><path d="M7 13l4.5 8.5a2.5 2.5 0 0 0 4.6-1.9L15 15h4.7a2.3 2.3 0 0 0 2.2-2.9l-2-7.4A2.3 2.3 0 0 0 17.7 3H7z" /></>),
+  send: (<><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></>),
 }
 
 export default function Icon({ name, size = 15, strokeWidth = 2, style, ...rest }) {

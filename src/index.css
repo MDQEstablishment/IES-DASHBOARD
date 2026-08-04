@@ -233,7 +233,7 @@ h1,h2,h3,p{margin:0}
   }
 }
 
-/* ---- 9L: the مُرشد dock -------------------------------------------------
+/* ---- 9L: the Murshid dock -------------------------------------------------
    Anchored to the bottom-left of the CONTENT area, not the viewport: the
    sidebar owns the left edge for its full height, so a viewport-corner button
    would sit on top of the navigation. The offset follows the sidebar's own

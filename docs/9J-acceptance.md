@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 528 interactive controls · 274 database touches.**
+**Totals: 56 files · 525 interactive controls · 278 database touches.**
 
 ## Per-file summary
 
@@ -53,9 +53,8 @@ that commit message.
 | `src/components/murshid/MurshidAvatar.jsx` | 0 | 0 | — | ☐ |
 | `src/components/murshid/MurshidFeedback.jsx` | 1 | 1 | — | ☐ |
 | `src/components/murshid/MurshidLauncher.jsx` | 1 | 0 | — | ☐ |
-| `src/components/murshid/MurshidPanel.jsx` | 11 | 1 | — | ☐ |
+| `src/components/murshid/MurshidPanel.jsx` | 8 | 5 | — | ☐ |
 | `src/components/murshid/MurshidSettings.jsx` | 3 | 3 | — | ☐ |
-| `src/components/murshid/helpContent.js` | 0 | 0 | — | ☐ |
 | `src/components/survey/DailyLog.jsx` | 6 | 0 | — | ☐ |
 | `src/components/survey/EntriesTable.jsx` | 15 | 1 | — | ☐ |
 | `src/components/survey/EntryForm.jsx` | 21 | 5 | — | ☐ |
@@ -857,19 +856,18 @@ shared primitives: Empty×1, Loading×1
 | control → handler | count |
 | --- | --- |
 | `onChange:setDraft` | 1 |
-| `onChange:setFbMsg+setFbSent` | 1 |
-| `onClick:ask` | 2 |
+| `onClick:ask` | 1 |
 | `onClick:onClose` | 1 |
-| `onClick:sendFeedback` | 1 |
-| `onClick:setFbCat` | 1 |
-| `onClick:setOpenFaq` | 1 |
-| `onClick:setOpenGuide` | 1 |
-| `onClick:setTab` | 1 |
+| `onClick:onCopy` | 1 |
+| `onClick:onReact` | 2 |
+| `onClick:startNew` | 1 |
 | `onKeyDown:ask` | 1 |
 
 | database effect | count |
 | --- | --- |
 | `bgInsert:murshid_feedback` | 1 |
+| `from:murshid_conversations` | 2 |
+| `from:murshid_messages` | 2 |
 
 ### `src/components/murshid/MurshidSettings.jsx`
 
@@ -883,12 +881,6 @@ shared primitives: Empty×1, Loading×1
 | `from:ai_settings` | 1 |
 | `read:ai_runs` | 1 |
 | `read:ai_settings` | 1 |
-
-### `src/components/murshid/helpContent.js`
-
-| control → handler | count |
-| --- | --- |
-| _(no interactive controls)_ | 0 |
 
 ### `src/components/survey/DailyLog.jsx`
 

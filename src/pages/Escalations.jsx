@@ -79,7 +79,7 @@ export default function Escalations() {
     }, { okMsg: 'Escalated one level higher' })
 
   // 9L — the one page that never carried a screen label. Same unstyled wrapper
-  // the other nine use; مُرشد reads the attribute to pick its help content.
+  // the other nine use; Murshid reads the attribute to pick its help content.
   return (
     <div data-screen-label="Escalations">
       <PageTitle kicker="Hierarchy chain" title="Escalations"
