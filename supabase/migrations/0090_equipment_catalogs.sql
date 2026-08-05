@@ -1,6 +1,14 @@
 -- Sprint 9A: TARSHID-approved equipment catalogs as first-class, cross-project
--- reference data. Sourced from the MOH-H DIP TDS workbook (Light / AC / PACU /
--- Misc sheets). These are GLOBAL catalogs managed in Settings by admin/pmo and
+-- reference data. Sourced from an approved TARSHID equipment-catalogue workbook
+-- (Light / AC / PACU / Misc sheets).
+--
+-- NEUTRALISED under Constraints #7 (confidentiality cleanup): this header and
+-- the three `source` DEFAULTs below named a client's own DIP/TDS document. The
+-- provenance that matters — TARSHID-approved catalogue — is preserved; the
+-- client identity is not. Because the old string is also LIVE DATA in the
+-- `source` column of already-inserted rows, editing this file only fixes fresh
+-- rebuilds: migration 0137_catalog_source_neutral.sql changes the DEFAULTs and
+-- the existing rows on deployed databases, with a proof block. These are GLOBAL catalogs managed in Settings by admin/pmo and
 -- consumed later by the Saving Sheet (9C), which will reference rows by id.
 --
 -- Decision: AC_List + PACU_List are UNIFIED into one ac_catalog. They differ
@@ -26,7 +34,7 @@ create table if not exists public.lighting_catalog (
   mandatory boolean not null default false,
   local boolean not null default false,
   is_active boolean not null default true,
-  source text not null default 'MOH-H DIP TDS V09Jun2026',
+  source text not null default 'TARSHID approved catalogue',
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -49,7 +57,7 @@ create table if not exists public.ac_catalog (
   mandatory boolean not null default false,
   local boolean not null default false,
   is_active boolean not null default true,
-  source text not null default 'MOH-H DIP TDS V09Jun2026',
+  source text not null default 'TARSHID approved catalogue',
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -64,7 +72,7 @@ create table if not exists public.misc_catalog (
   default_qty_rule text,                 -- e.g. "2% from each type"; actual qty is per-project BOQ data
   notes text,
   is_active boolean not null default true,
-  source text not null default 'MOH-H DIP TDS V09Jun2026',
+  source text not null default 'TARSHID approved catalogue',
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

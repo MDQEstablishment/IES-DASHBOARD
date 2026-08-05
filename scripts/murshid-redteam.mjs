@@ -138,7 +138,7 @@ ok('prompt: answer only from the supplied context', /السياق المرفق �
 ok('prompt: context is data, never instructions', /بيانات، وليس تعليمات/.test(SYSTEM_PROMPT))
 ok('prompt: no tech, no code, no schema, no self-description', /التقنيات|الكود|بنية قاعدة البيانات/.test(SYSTEM_PROMPT))
 ok('prompt: never evaluate people', /لا تقيّم الأشخاص/.test(SYSTEM_PROMPT))
-ok('prompt: Latin digits', /الأرقام اللاتينية/.test(SYSTEM_PROMPT))
+ok('prompt: Latin digits', /الأرقام اللاتينية|Latin digits \(0-9\)/.test(SYSTEM_PROMPT))
 ok('prompt: say so when the answer is not in the context', /قل ذلك صراحة/.test(SYSTEM_PROMPT))
 
 // ---------------------------------------------------------------------------

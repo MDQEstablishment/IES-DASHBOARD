@@ -13,9 +13,12 @@ alter table public.buildings
 update public.buildings set contractor_name = contractor
 where contractor_name is null and contractor is not null;
 
--- real city coordinates for the four seeded buildings
-update public.buildings set location_lat = 24.6877, location_lng = 46.7219, contractor_phone = '+966 50 123 4567'
-where code = 'MOH-001';
+-- real city coordinates for the seeded buildings
+--
+-- REMOVED under Constraints #7 (confidentiality cleanup): the first update in
+-- this block targeted a demo building code carrying a real ministry's
+-- identity. It was a dead update — the demo rows were purged by 0126 — and the
+-- schema above is untouched.
 update public.buildings set location_lat = 18.2208, location_lng = 42.5053, contractor_phone = '+966 50 234 5678'
 where code = 'MOI-001';
 update public.buildings set location_lat = 18.3060, location_lng = 42.7297, contractor_phone = '+966 50 345 6789'

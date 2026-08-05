@@ -15,7 +15,11 @@ alter table public.project_esms add column if not exists coc_bundle_key text;
 update public.project_esms pe set coc_bundle_key = 'lighting'
   from public.projects p, public.esms e
  where pe.project_id = p.id and pe.esm_id = e.id and p.code = 'PROJECT-A' and e.code in ('ESM1','ESM2');
-update public.projects set coc_layout = 'concatenated' where code in ('PROJECT-A','PROJECT-B');
+-- NARROWED under Constraints #7 (confidentiality cleanup): the `code in (...)`
+-- list also named a demo project code carrying a real ministry's identity. That
+-- code is removed; it was a dead update, the demo rows having been purged by
+-- 0126. Every schema statement in this migration is untouched.
+update public.projects set coc_layout = 'concatenated' where code in ('PROJECT-A');
 
 -- 3) Paired replacements -----------------------------------------------------
 create table if not exists public.project_item_pairs (

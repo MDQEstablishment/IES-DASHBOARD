@@ -122,11 +122,12 @@ that commit message.
 | `format.js` | `c03144e8bd851ea0` |
 | `image.js` | `377425ac96352664` |
 | `inspectionDocs.js` | `f7edaacaf482e34c` |
+| `lightingSavings.js` | `0f4419ed9b0becd9` |
 | `nav.js` | `36299f48dc4a9eab` |
 | `progressReport.js` | `697d0d9e617ba836` |
 | `progressReportGen.js` | `5b18c2398b717a37` |
 | `reportPhotoAnnex.js` | `118486cb831caf0f` |
-| `savingSheet.js` | `f0f807e2c7ca42c3` |
+| `savingSheet.js` | `306379887525e8c6` |
 | `savingSheetGen.js` | `e25cfb6c04b83480` |
 | `search.js` | `f4d469e48f2e18d6` |
 | `supabase.js` | `33b838e12ee34aca` |

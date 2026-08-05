@@ -11,7 +11,7 @@ create table if not exists public.cocs (
   id                   uuid primary key default gen_random_uuid(),
   project_id           uuid not null references public.projects(id) on delete cascade,
   seq                  int  not null,                       -- per-project sequence behind `code`
-  code                 text not null,                       -- e.g. PROJECT-B-COC-001
+  code                 text not null,                       -- e.g. PRJ-COC-001
   reference_no         text,                                -- file reference number
   esm_bundle           text not null,                       -- display label "ESM1+ESM2"
   esm_codes            text[] not null,                     -- source of truth ["ESM1","ESM2"]

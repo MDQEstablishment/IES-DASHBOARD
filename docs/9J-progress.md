@@ -346,7 +346,7 @@ are spread one at a time across five weeks:
 | PROJECT-A-DIP-FULL | 2026-06-28 00:06:23 |
 | PROJECT-A | 2026-07-16 20:32:13 |
 | PROJECT-A-DIP-709 | 2026-07-24 23:39:36 |
-| PROJECT-B | 2026-07-25 15:20:26 |
+| DEMO-PROJECT-2 | 2026-07-25 15:20:26 |  <!-- code neutralised, Constraints #7 -->
 | MHRSD-K | 2026-08-01 12:24:15 |
 
 Eight projects, six distinct days, 26 June to 1 August. **That shape is the

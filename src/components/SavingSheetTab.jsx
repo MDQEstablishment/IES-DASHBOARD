@@ -6,7 +6,7 @@ import { Btn, Empty, Loading, Modal } from './ui'
 import Icon from './Icon'
 import { toast } from '../lib/toast'
 import { num, fmtDateTime } from '../lib/format'
-import { loadConstants, computeProject, readiness, resolveSelectionDescriptions, MAX_SELECTION_ROWS } from '../lib/savingSheet'
+import { loadConstants, computeProject, readiness, resolveSelectionDescriptions, violatesGate, MAX_SELECTION_ROWS } from '../lib/savingSheet'
 import { fetchAllRows } from '../lib/tarshidImport'
 import AiAssistPanel from './AiAssistPanel'
 import ProjectUnitSelection from './ProjectUnitSelection'
@@ -138,7 +138,9 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
   if (!canManage) return <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }}><Empty icon="doc">The saving sheet is managed by PMO and admins.</Empty></div>
   if (le || loadingRef || !consts) return <Loading label="Loading survey, hours and catalogs…" />
 
-  const violations = rows.filter((r) => r.in_scope && r.flags.some((f) => ['low-savings', 'capacity-out', 'type-mismatch'].includes(f)))
+  // U4 — was a fourth copy of the gate list. One predicate, in the lib, or the
+  // tab and readiness() can disagree about what a violation is.
+  const violations = rows.filter(violatesGate)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

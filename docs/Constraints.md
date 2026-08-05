@@ -22,3 +22,18 @@ These hold every sprint unless the owner explicitly amends them.
    MIR/WIR; Amiri (subset:false) for the COC Arabic labels.
 5. **Additive migrations only** — no destructive ops without explicit owner sign-off.
 6. **Run every test / build before claiming done; live-site smoke after deploy.**
+
+7. **Client-supplied documents are reference material only.** They are read to
+   extract structure and formulas; neither the files nor any figure identifiable
+   to a client enters the repository, the fixtures, or the commit history. If a
+   test genuinely requires real values it uses anonymised or synthetic data, and
+   the need is raised rather than solved quietly.
+
+   The failure this rule exists for was not imperfect cleaning. It was a
+   negative finding reported with confidence from a method that could only see
+   part of the file: a visible-grid search of a stripped `.xlsx` found "zero
+   client references" while 204 and 342 facility names sat in
+   `xl/sharedStrings.xml`, with more in comments parts, `docProps/core.xml` and
+   `customXml`. A negative finding is only as strong as the method that produced
+   it, and for binary/compound formats a visible-layer search does not establish
+   absence — unzip and search every part, or do not claim it is clean.

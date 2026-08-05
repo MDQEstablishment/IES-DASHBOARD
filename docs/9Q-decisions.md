@@ -152,7 +152,8 @@ through a filter that was merely sloppy rather than absent. Every one returned
 
 **A3 — the converse (3).** *A search that returns nothing is not a secure
 search, it is a dead one.* If A2 had passed because the queries were broken,
-this fails: the `proje` searching for its **own** building `MOH-001`, its own
+this fails: the `proje` searching for its **own** building `DEMO-001` (code
+neutralised, Constraints #7), its own
 project `PROJECT-A` and its own document each returns exactly one row.
 
 **A4 — materials (2).** A `proje` sees the same 56-row catalogue a `pmo` does

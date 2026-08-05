@@ -24,6 +24,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # U3 — the saving-sheet engine's pins run BEFORE the build, so a red X on
+      # a branch means either the build or the math is broken and merge is
+      # blocked either way. node:test, no extra dependency; the harness needs
+      # node >= 20.6 for module.register (setup-node's "20" is 20.19+).
+      - run: npm test
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -28,9 +28,15 @@ alter table public.buildings
   add column if not exists status_override_by uuid references public.profiles(id),
   add column if not exists status_override_at timestamptz;
 
--- 4) Backfill engineer_id for the two seeded projects (complaint 1.7) ---------
+-- 4) Backfill engineer_id for the seeded projects (complaint 1.7) ------------
 --    Seeded engineer is the single profile with role 'proje' (Yousef Al-Maliki).
+--
+--    NARROWED under Constraints #7 (confidentiality cleanup): the `code in
+--    (...)` list also named a demo project code carrying a real ministry's
+--    identity. That code is removed from the list; it was a dead update, the
+--    demo rows having been purged by 0126. Every schema statement above is
+--    untouched.
 update public.projects
    set engineer_id = (select id from public.profiles where role = 'proje' limit 1)
- where code in ('PROJECT-A', 'PROJECT-B')
+ where code in ('PROJECT-A')
    and engineer_id is null;

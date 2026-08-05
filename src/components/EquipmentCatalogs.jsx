@@ -9,7 +9,9 @@ import { toLatin } from '../lib/format'
 import { fetchAllRows } from '../lib/tarshidImport'
 import TarshidImportModal from './TarshidImportModal'
 
-// Sprint 9A — TARSHID-approved equipment catalogs (from the MOH-H DIP TDS).
+// Sprint 9A — TARSHID-approved equipment catalogs (from an approved TARSHID
+// equipment-catalogue workbook; the client-identifying source name was removed
+// under Constraints #7 — see migrations 0090 and 0137).
 // Three global reference tables surfaced as a Settings panel. Everyone reads;
 // only admin/pmo write (enforced server-side; the write UI is gated to match).
 // The survey pickers consume these rows by id — retire is soft

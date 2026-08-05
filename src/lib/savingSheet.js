@@ -5,11 +5,21 @@
 // hardcoded (defaults below are only a last-resort fallback).
 import { supabase } from './supabase'
 
+// ⚠ THIS OBJECT IS AN ALLOW-LIST, NOT JUST A FALLBACK. loadConstants() below
+// does `if (r.key in out)`, so a row in tarshid_constants whose key is missing
+// HERE is read from the database and silently discarded. Migration 0135 seeds
+// four new keys; they are listed here for that reason, not for their defaults.
+// T-K1 pins the round-trip so this cannot regress.
 export const CONST_DEFAULTS = {
   tariff_sar_kwh: 0.32,
   seasonal_factor: 0.9,
   capacity_tolerance_pct: 10,
   min_savings_pct: 15,
+  // U3 / migration 0135
+  lighting_derating: 0.9,          // lighting only — NOT the AC seasonal_factor
+  control_derating: 0.9,
+  control_savings_fraction: 0.3,
+  btu_per_ton: 12000,              // replaces the literals at m2PerTon and oldBtu
 }
 
 export async function loadConstants() {
@@ -30,26 +40,89 @@ const okNum = (v) => typeof v === 'number' && Number.isFinite(v)
 // workbook's R/S/T/U/V columns (Surveyed Unit Description, Equivalent AC Model
 // Description, T1 BTU, T1 EER, Equivalent SEER) derive from the real nameplate
 // instead of the assumed factor.
-export const modelKey = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+// U3 / C-REG. The string key is the NATURAL KEY OF THE TABLE — (equipment_type,
+// model_no), 0093:34 — not model_no alone. With 1,516 rows a bare model number
+// collides across equipment types and the old first-wins lookup returned
+// whichever row happened to be indexed first.
+//
+// TWO KEY FORMS, and the reason there are two. Migration 0134 imports model_no
+// VERBATIM: four registry rows carry stray spaces ("B2424C ", "S242NH ",
+// "S242NC  N52", " HBPUDC24"), and collapsing that whitespace would merge three
+// real rows into others — 1,516 would become 1,513. TARSHID's own workbook
+// lookups resolve against those verbatim strings, so the exact key is
+// authoritative and U3 adopts the SEED's convention, not the collapsing one in
+// src/lib/tarshidImport.js (which is now the divergent module and is scheduled
+// to adopt this).
+//
+// A surveyed model string is typed by a human, though, so an exact miss falls
+// back to the whitespace-collapsed key — but ONLY where that collapsed key is
+// unambiguous. Where two registry rows collapse together the fallback refuses
+// to choose, because guessing between "S242NH" and "S242NH " is exactly the
+// silent wrong answer this key change exists to remove.
+const foldCase = (s) => String(s ?? '').toLowerCase()
+const collapse = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
+
+// Kept for callers that only have a model string. Collapsing + folding is the
+// LOOSE form; it is never used on its own to resolve a registry row.
+export const modelKey = (s) => collapse(s).toLowerCase()
+
+// The exact pair key: equipment_type is trimmed/folded (it is a controlled
+// vocabulary), model_no is folded ONLY — its whitespace is data.
+export const registryKey = (equipmentType, modelNo) =>
+  `${collapse(equipmentType).toLowerCase()}\u001f${foldCase(modelNo)}`
+export const registryKeyLoose = (equipmentType, modelNo) =>
+  `${collapse(equipmentType).toLowerCase()}\u001f${modelKey(modelNo)}`
 
 // TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
 // generator harness can exercise it directly. Do not assume it is dead code.
 export function buildRegistryIndex(registry = []) {
-  const byId = new Map(), byModel = new Map()
+  const byId = new Map(), byPair = new Map(), byPairLoose = new Map(), looseAmbiguous = new Set()
   ;(registry || []).forEach((r) => {
     if (r.id) byId.set(r.id, r)
-    if (r.model_no && !byModel.has(modelKey(r.model_no))) byModel.set(modelKey(r.model_no), r)
+    if (r.model_no == null || r.model_no === '') return
+    const exact = registryKey(r.equipment_type, r.model_no)
+    if (!byPair.has(exact)) byPair.set(exact, r)
+    const loose = registryKeyLoose(r.equipment_type, r.model_no)
+    if (byPairLoose.has(loose) && byPairLoose.get(loose) !== r) looseAmbiguous.add(loose)
+    else if (!byPairLoose.has(loose)) byPairLoose.set(loose, r)
   })
-  return { byId, byModel }
+  return { byId, byPair, byPairLoose, looseAmbiguous }
 }
 
 // TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
 // generator harness can exercise it directly. Do not assume it is dead code.
 export function registryHit(entry, index) {
   if (!index) return null
+  // the explicit link always wins — a human or an accepted AI match set it
   if (entry?.registry_id && index.byId.has(entry.registry_id)) return index.byId.get(entry.registry_id)
-  const k = modelKey(entry?.model)
-  return k ? index.byModel.get(k) || null : null
+  if (entry?.model == null || entry.model === '') return null
+  const exact = index.byPair.get(registryKey(entry.equipment_type, entry.model))
+  if (exact) return exact
+  const loose = registryKeyLoose(entry.equipment_type, entry.model)
+  if (index.looseAmbiguous.has(loose)) return null
+  return index.byPairLoose.get(loose) || null
+}
+
+// U3 — ONE type predicate. computeRow used strict equality (:151) while
+// isCompliant used bidirectional substring (:256-257), so the same pair could
+// be a mismatch in one place and a match in the other. [EXT] says EQUAL, so
+// both now call this: normalised equality, and an absent type on either side
+// is not a mismatch (nothing to contradict).
+export function typeMatches(a, b) {
+  const x = collapse(a).toLowerCase(), y = collapse(b).toLowerCase()
+  if (!x || !y) return true
+  return x === y
+}
+
+// U3 / C3 — Excel TRUNC(x, 2): toward zero, never rounding. Done on the string
+// form because Math.trunc(x * 100) / 100 lands on the wrong side whenever the
+// scaling introduces its own representation error (0.29 * 100 = 28.999...).
+export function trunc2(x) {
+  if (x == null || !Number.isFinite(x)) return x
+  const s = x.toFixed(12)                       // more places than the workbook keeps
+  const dot = s.indexOf('.')
+  if (dot < 0) return x                         // |x| >= 1e21 — toFixed goes exponential
+  return Number(s.slice(0, dot + 3))            // sign survives; toward zero for both signs
 }
 
 // Old-unit efficiency: prefer the registry's equivalent SEER for the surveyed
@@ -67,19 +140,19 @@ export function oldEfficiency(entry, index, assumedOldEff) {
 // registry's T1 BTU for that model.
 // TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
 // generator harness can exercise it directly. Do not assume it is dead code.
-export function oldBtu(entry, index) {
+export function oldBtu(entry, index, btuPerTon = CONST_DEFAULTS.btu_per_ton) {
   const tr = n(entry.tr)
-  if (okNum(tr) && tr > 0) return tr * 12000
+  if (okNum(tr) && tr > 0) return tr * btuPerTon
   const hit = registryHit(entry, index)
   return okNum(n(hit?.t1_btu)) ? n(hit.t1_btu) : null
 }
 
 // Workbook column L — m² served per ton of installed capacity. One definition,
 // used by the survey form and anything that reports it: area / (BTU/12000) / qty.
-export function m2PerTon({ room_area, btu, qty }) {
+export function m2PerTon({ room_area, btu, qty }, btuPerTon = CONST_DEFAULTS.btu_per_ton) {
   const a = Number(room_area), b = Number(btu), q = Number(qty) || 1
   if (!(a > 0) || !(b > 0) || !(q > 0)) return null
-  return Math.round((a / (b / 12000) / q) * 100) / 100
+  return Math.round((a / (b / btuPerTon) / q) * 100) / 100
 }
 
 // The project's approved shortlist decides the replacement for a surveyed row
@@ -87,10 +160,10 @@ export function m2PerTon({ room_area, btu, qty }) {
 // then a stable id tie-break — the same row always resolves to the same unit.
 // TEST-ONLY EXPORT — nothing in the app imports this; it is exported so the
 // generator harness can exercise it directly. Do not assume it is dead code.
-export function bestFromSelection(row, selCats, consts) {
+export function bestFromSelection(row, selCats, consts, engine = {}) {
   let best = null
   for (const cat of selCats) {
-    const v = isCompliant(row, cat, consts)
+    const v = isCompliant(row, cat, consts, engine)
     if (!v.ok) continue
     if (!best) { best = { cat, savPct: v.savPct }; continue }
     // Number(null) is 0, so an UNPRICED unit would rank as the cheapest and
@@ -105,24 +178,68 @@ export function bestFromSelection(row, selCats, consts) {
   return best?.cat || null
 }
 
+// ── C2 — THE SEASONAL FACTOR IS A SWITCHABLE TERM, PINNED BY FIXTURE ───────
+// [EXT]'s savings formula contains NO 0.9 factor. The shipped code multiplied
+// by consts.seasonal_factor and — worse — applied it inside the 15% gate too,
+// so the shipped gate actually demanded ≈16.7% raw.
+//
+// The design refuses to guess (§1.2 C2): an approved TARSHID AC workbook
+// decides, and it is not here yet (§8.1). So the engine ships WORKBOOK-FAITHFUL
+// by default — no factor — and the factor is reachable only through an explicit
+// option, so whichever way T-C2 resolves is a one-line change and never a
+// silent one. The constant row stays in tarshid_constants either way, unused
+// until then; removing it would destroy the evidence.
+//
+// The SAME term is used by computeRow and isCompliant. That is not tidiness:
+// the divergence between them is precisely how a row could pass the gate and
+// then report a different percentage.
+export function seasonalTerm(consts, engine = {}) {
+  if (!engine.applySeasonalFactor) return 1
+  const f = Number(consts?.seasonal_factor)
+  return Number.isFinite(f) && f !== 0 ? f : 1
+}
+
+// ── U4 — THE GATES ARE LAW ─────────────────────────────────────────────────
+// These three were cosmetic: computeRow raised them, the tab drew them as
+// coloured chips, and the sheet generated regardless. TARSHID's Instr. sheet
+// states them as REQUIREMENTS, so readiness() now blocks on them.
+//
+// ONE list, exported, so the readiness item, the tab's violation count and any
+// future caller cannot drift apart — which is exactly how these three came to
+// mean different things in different places in the first place.
+export const GATE_FLAGS = ['low-savings', 'capacity-out', 'type-mismatch']
+
+// Does this row violate a TARSHID gate? A row that is out of scope — excluded
+// by decision, residential, or an inverter unit — is not being replaced, so
+// there is no replacement for a gate to judge.
+export const violatesGate = (row) => !!row?.in_scope && (row.flags || []).some((f) => GATE_FLAGS.includes(f))
+
 // One computed AC row. `cat` = the linked ac_catalog replacement (may be null).
 // Scope rules (TARSHID Instr.): inverter old units and residential buildings
 // are OUT of replacement scope — flagged, never silently dropped.
-export function computeRow({ entry, cat, building, oh, consts, index, assumedOldEff, replacementSource = null }) {
+//
+// U4 adds the THIRD way out of scope: a deliberate, attributed exclusion
+// (migration 0136). It is the only sanctioned answer to a row that fails a gate
+// and cannot be resolved, and it is deliberately not silent — the reason and
+// the person travel with the row all the way onto the sheet's remarks.
+export function computeRow({ entry, cat, building, oh, consts, index, assumedOldEff, replacementSource = null, engine = {} }) {
   const qty = n(entry.qty) || 0
   const eflh = n(oh?.eflh)
-  const bt = oldBtu(entry, index)
+  const bt = oldBtu(entry, index, consts?.btu_per_ton ?? CONST_DEFAULTS.btu_per_ton)
   const { seer: oldSeer, source: seerSource } = oldEfficiency(entry, index, assumedOldEff)
   const newSeer = cat ? (n(cat.seer) ?? n(cat.ieer)) : null
   const newBtu = cat ? n(cat.capacity_btu) : null
+  const seasonal = seasonalTerm(consts, engine)
 
   const residential = !!building?.is_residential
   const inverter = entry.inverter === true
-  const inScope = !residential && !inverter
+  const excluded = entry.scope_excluded === true
+  const inScope = !residential && !inverter && !excluded
 
   const flags = []
   if (residential) flags.push('residential')
   if (inverter) flags.push('inverter')
+  if (excluded) flags.push('scope-excluded')
   if (!cat) flags.push('no-replacement')
   if (!okNum(eflh)) flags.push('no-eflh')
   if (!okNum(bt)) flags.push('no-capacity')
@@ -130,11 +247,30 @@ export function computeRow({ entry, cat, building, oh, consts, index, assumedOld
   // never silent (9D-6)
   if (seerSource !== 'registry') flags.push('assumed-eff')
 
+  // ── C1 — THE CAPACITY TERM IS THE NEW UNIT'S, IN BOTH TERMS ──────────────
+  // [EXT], verbatim: baseline kWh = BTU_new / SEER_baseline / 1000 x qty x EFLH,
+  // and the savings term carries BTU_new/1000 as well. The shipped code used
+  // oldBtu() in both, which the percentage hid perfectly — capacity cancels in
+  // savings/baseline — while every ABSOLUTE kWh on the delivered sheet was out
+  // by BTU_new/BTU_old on any row where the replacement is not exactly the
+  // surveyed capacity. The approved workbook wins (design §1.2 C1).
+  //
+  // CONSEQUENCE, stated rather than hidden: with no replacement there is no
+  // BTU_new, so there is no baseline either. That is not a regression — it is
+  // what "savings are attributable to efficiency alone" means. Such a row is
+  // already flagged 'no-replacement' and contributes nothing to the totals.
+  const capBtu = newBtu
   let baseline = null, savings = null, savingsPct = null, capacityCheck = null, payback = null
-  if (inScope && okNum(eflh) && okNum(bt) && okNum(oldSeer) && oldSeer > 0 && qty > 0) {
-    baseline = (bt / oldSeer / 1000) * qty * eflh
+  if (inScope && okNum(eflh) && okNum(capBtu) && capBtu > 0 && okNum(oldSeer) && oldSeer > 0 && qty > 0) {
+    baseline = (capBtu / oldSeer / 1000) * qty * eflh
     if (okNum(newSeer) && newSeer > 0) {
-      savings = ((newSeer - oldSeer) / (newSeer * oldSeer)) * (bt / 1000) * qty * consts.seasonal_factor * eflh
+      // ── C3 — TRUNC(x,2) AT THE ROW LEVEL ────────────────────────────────
+      // [EXT]: the workbook TRUNCs savings kWh to 2 places, per row, before
+      // anything sums it. Truncate-then-sum is not sum-then-truncate across
+      // ~90k fixtures, so the placement is the whole point: here, on the row's
+      // savings, and nowhere else. baseline and the percentage are left at full
+      // precision because the workbook does not truncate them.
+      savings = trunc2(((newSeer - oldSeer) / (newSeer * oldSeer)) * (capBtu / 1000) * qty * seasonal * eflh)
       savingsPct = baseline > 0 ? (savings / baseline) * 100 : null
       const cost = (n(cat?.unit_cost) ?? null) != null && (n(cat?.labor_cost) ?? null) != null
         ? n(cat.unit_cost) + n(cat.labor_cost) : null
@@ -142,15 +278,17 @@ export function computeRow({ entry, cat, building, oh, consts, index, assumedOld
         payback = (qty * cost) / (savings * consts.tariff_sar_kwh)
       }
     }
+    // The capacity CHECK keeps the OLD unit's BTU as its denominator — it asks
+    // "how far is the replacement from what was surveyed", which is a different
+    // question from the energy math and is unaffected by C1.
     if (okNum(newBtu) && okNum(bt) && bt > 0) capacityCheck = ((newBtu - bt) / bt) * 100
+  } else if (inScope && okNum(newBtu) && okNum(bt) && bt > 0) {
+    capacityCheck = ((newBtu - bt) / bt) * 100
   }
 
   if (savingsPct != null && savingsPct < consts.min_savings_pct) flags.push('low-savings')
   if (capacityCheck != null && Math.abs(capacityCheck) > consts.capacity_tolerance_pct) flags.push('capacity-out')
-  if (cat && entry.equipment_type && cat.equipment_type &&
-      String(cat.equipment_type).trim().toLowerCase() !== String(entry.equipment_type).trim().toLowerCase()) {
-    flags.push('type-mismatch')
-  }
+  if (cat && !typeMatches(entry.equipment_type, cat.equipment_type)) flags.push('type-mismatch')
   if (cat && (n(cat.unit_cost) == null || n(cat.labor_cost) == null)) flags.push('no-cost')
 
   return {
@@ -183,12 +321,19 @@ export function computeRow({ entry, cat, building, oh, consts, index, assumedOld
     days_per_week: oh?.days_per_week ?? null, weeks_per_year: oh?.weeks_per_year ?? null,
     in_scope: inScope, baseline_kwh: baseline, savings_kwh: savings,
     savings_pct: savingsPct, capacity_check_pct: capacityCheck, payback_years: payback,
+    // U4 / 0136 — the exclusion travels WITH the row. A number that is missing
+    // from the sheet because someone decided so must carry that decision to
+    // wherever the sheet is read, or it reads as a gap in the survey.
+    scope_excluded: excluded,
+    scope_exclusion_reason: excluded ? (entry.scope_exclusion_reason || null) : null,
+    scope_excluded_by: excluded ? (entry.scope_excluded_by || null) : null,
+    scope_excluded_at: excluded ? (entry.scope_excluded_at || null) : null,
     flags,
   }
 }
 
 // Whole-project computation: entries + OH + catalogs -> rows + totals.
-export function computeProject({ entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff, selection = [] }) {
+export function computeProject({ entries, buildings, ohRows, acCatalog, registry, consts, assumedOldEff, selection = [], engine = {} }) {
   const bById = new Map(buildings.map((b) => [b.id, b]))
   const catById = new Map(acCatalog.map((c) => [c.id, c]))
   const index = buildRegistryIndex(registry)
@@ -203,15 +348,19 @@ export function computeProject({ entries, buildings, ohRows, acCatalog, registry
     let cat = e.catalog_item_id ? catById.get(e.catalog_item_id) || null : null
     let replacementSource = cat ? 'row' : null
     if (!cat && selCats.length) {
-      const probe = { old_btu: oldBtu(e, index), old_seer: oldEfficiency(e, index, assumedOldEff).seer, equipment_type: e.equipment_type }
-      cat = bestFromSelection(probe, selCats, consts)
+      const probe = {
+        old_btu: oldBtu(e, index, consts?.btu_per_ton ?? CONST_DEFAULTS.btu_per_ton),
+        old_seer: oldEfficiency(e, index, assumedOldEff).seer,
+        equipment_type: e.equipment_type,
+      }
+      cat = bestFromSelection(probe, selCats, consts, engine)
       if (cat) replacementSource = 'selection'
     }
     return computeRow({
       entry: e, cat, replacementSource,
       building: bById.get(e.building_id),
       oh: ohMap.get(ohKey(e.building_id, e.room_type)),
-      consts, index, assumedOldEff,
+      consts, index, assumedOldEff, engine,
     })
   })
 
@@ -223,7 +372,11 @@ export function computeProject({ entries, buildings, ohRows, acCatalog, registry
     units: rows.reduce((a, r) => a + (r.qty || 0), 0),
     baseline_kwh: inScope.reduce((a, r) => a + (r.baseline_kwh || 0), 0),
     savings_kwh: inScope.reduce((a, r) => a + (r.savings_kwh || 0), 0),
-    violations: rows.filter((r) => r.flags.some((f) => ['low-savings', 'capacity-out', 'type-mismatch'].includes(f))).length,
+    // U4 — the same predicate readiness() blocks on. It counted OUT-OF-SCOPE
+    // rows too before, so an excluded row still showed as a violation in the
+    // summary strip while no longer being one.
+    violations: rows.filter(violatesGate).length,
+    excluded_by_decision: rows.filter((r) => r.scope_excluded).length,
   }
   totals.savings_pct = totals.baseline_kwh > 0 ? (totals.savings_kwh / totals.baseline_kwh) * 100 : null
   return { rows, totals }
@@ -242,20 +395,20 @@ export const MAX_SELECTION_ROWS = 20   // VLOOKUP range is fixed at row 21
 
 // Is `cat` a compliant replacement for a surveyed row? Uses the same math as
 // computeRow — no AI claim is trusted without passing this.
-export function isCompliant(row, cat, consts) {
+export function isCompliant(row, cat, consts, engine = {}) {
   const oldBtu = row.old_btu, oldSeer = row.old_seer
   const newBtu = cat?.capacity_btu == null ? null : Number(cat.capacity_btu)
   const newSeer = cat?.seer == null ? (cat?.ieer == null ? null : Number(cat.ieer)) : Number(cat.seer)
   if (!oldBtu || !oldSeer || !newBtu || !newSeer) return { ok: false, why: 'missing capacity or efficiency' }
   const capPct = ((newBtu - oldBtu) / oldBtu) * 100
   if (Math.abs(capPct) > consts.capacity_tolerance_pct) return { ok: false, why: `capacity ${capPct.toFixed(1)}% outside ±${consts.capacity_tolerance_pct}%` }
-  // savings % is independent of qty/EFLH: (newSEER-oldSEER)/newSEER × seasonal
-  const savPct = ((newSeer - oldSeer) / newSeer) * consts.seasonal_factor * 100
+  // Savings % is independent of qty, EFLH and capacity — the algebraic identity
+  // of design §1.1, and T-G7 pins it. The seasonal term is the SAME one
+  // computeRow uses, so the gate can no longer demand a different number from
+  // the one the sheet reports.
+  const savPct = ((newSeer - oldSeer) / newSeer) * seasonalTerm(consts, engine) * 100
   if (savPct < consts.min_savings_pct) return { ok: false, why: `savings ${savPct.toFixed(1)}% below ${consts.min_savings_pct}%` }
-  const typeOk = !row.equipment_type || !cat.equipment_type ||
-    String(cat.equipment_type).trim().toLowerCase().includes(String(row.equipment_type).trim().toLowerCase()) ||
-    String(row.equipment_type).trim().toLowerCase().includes(String(cat.equipment_type).trim().toLowerCase())
-  if (!typeOk) return { ok: false, why: 'different equipment type' }
+  if (!typeMatches(row.equipment_type, cat.equipment_type)) return { ok: false, why: 'different equipment type' }
   return { ok: true, capPct, savPct }
 }
 
@@ -431,6 +584,23 @@ export function readiness({ project, rows, ohRows, entries, template, selection 
   const noCost = rows.filter((r) => r.in_scope && r.flags.includes('no-cost')).length
   const noSpaceType = entries.filter((e) => e.category === 'ac' && !String(e.room_type || '').trim()).length
 
+  // ── U4 — THE GATES, AS BLOCKERS ──────────────────────────────────────────
+  // Counted per FLAG rather than per row, because "3 rows are wrong" sends
+  // someone hunting while "2 capacity, 1 savings" tells them what to fix.
+  const violating = rows.filter(violatesGate)
+  const byFlag = GATE_FLAGS.map((f) => [f, violating.filter((r) => r.flags.includes(f)).length]).filter(([, n]) => n > 0)
+  const GATE_WORDS = {
+    'capacity-out': 'outside the ±capacity tolerance',
+    'low-savings': 'below the minimum savings',
+    'type-mismatch': 'replaced by a different equipment type',
+  }
+  // An exclusion that lost its reason or its author is not an exclusion, it is
+  // a silent override. 0136's trigger makes this unreachable through the app;
+  // the readiness item exists for rows that arrive by any other road, and
+  // because a gate whose escape hatch is unchecked is not a gate.
+  const unattributed = rows.filter((r) => r.scope_excluded &&
+    (!String(r.scope_exclusion_reason || '').trim() || !r.scope_excluded_by)).length
+
   const items = [
     { key: 'template', label: 'Saving-sheet template uploaded', count: template ? 0 : 1, blocking: true,
       hint: template ? `Version ${template.version}` : 'Settings → Saving Sheet Template', link: null },
@@ -453,6 +623,17 @@ export function readiness({ project, rows, ohRows, entries, template, selection 
       hint: missingEflh ? 'Survey → Operating Hours (EFLH column)' : 'All spaces have EFLH', link: 'hours' },
     { key: 'space', label: 'AC rows carrying a space type', count: noSpaceType, blocking: true,
       hint: noSpaceType ? 'Edit those entries and set a room type' : 'All rows have a space type', link: 'survey' },
+    // U4 — was a chip, is now a wall. TARSHID's Instr. sheet states these as
+    // requirements of the submission, so a sheet carrying them is not a sheet
+    // that can be sent.
+    { key: 'gates', label: 'Every in-scope row meets the TARSHID capacity, savings and type rules', count: violating.length, blocking: true,
+      hint: violating.length
+        ? `${byFlag.map(([f, n]) => `${n} ${GATE_WORDS[f]}`).join(' · ')} — change the replacement, correct the survey, or exclude the row from scope with a reason`
+        : 'All in-scope rows pass', link: null },
+    { key: 'exclusions', label: 'Every scope exclusion records who and why', count: unattributed, blocking: true,
+      hint: unattributed
+        ? `${unattributed} row${unattributed === 1 ? ' is' : 's are'} excluded with no reason or no author — an unexplained exclusion is a silent override`
+        : 'Attributed', link: null },
     // 9D-4b — the project's own 'Aprvd Project Unit' shortlist: the payback
     // VLOOKUP resolves against it, so unpriced rows and any AC_Savings
     // description missing from it are hard blockers.

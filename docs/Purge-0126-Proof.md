@@ -177,8 +177,12 @@ requires.
 - `1de762ad-a993-49a8-bed6-84a4cc9e80c1/bd93f7b2-6181-4233-a9c6-4a0438c60cd0/2026-06-20/1781981787710-3zd3fd.jpg`
 
 **coc-pdfs (2)**
-- `53312e46-4da3-41f9-babd-7630f28297c1/PROJECT-B-COC-001-R1.pdf`
-- `53312e46-4da3-41f9-babd-7630f28297c1/PROJECT-B-COC-002-R1.pdf`
+- `53312e46-4da3-41f9-babd-7630f28297c1/DEMO-PROJECT-2-COC-001-R1.pdf`
+- `53312e46-4da3-41f9-babd-7630f28297c1/DEMO-PROJECT-2-COC-002-R1.pdf`
+  <!-- Both filenames began with the demo programme's project code, which
+       carried a real ministry's identity; neutralised under Constraints #7.
+       The objects themselves were deleted by the purge this document proves,
+       and the count (2) and paths are otherwise unchanged. -->
 
 **daily-progress-photos (11)**
 - `1de762ad-…-80c1/2026-06-28/a17bfe84-d866-44cc-9e3e-1ce5af1f2a02.jpeg`

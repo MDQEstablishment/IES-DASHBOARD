@@ -21,10 +21,12 @@ update public.projects
 set end_date = coalesce(start_date, created_at::date) + ((coalesce(total_weeks, 26)) * 7)
 where end_date is null;
 
--- Plausible centroids for the two demo programmes so the Map renders immediately.
+-- Plausible centroids for the demo programmes so the Map renders immediately.
 update public.projects
 set location_lat = 18.2164, location_lng = 42.5053, location_address = 'Asir Region, Saudi Arabia'
 where code = 'PROJECT-A' and location_lat is null;
-update public.projects
-set location_lat = 24.7136, location_lng = 46.6753, location_address = 'Riyadh, Saudi Arabia'
-where code = 'PROJECT-B' and location_lat is null;
+
+-- REMOVED under Constraints #7 (confidentiality cleanup): a second backfill
+-- statement here targeted a demo project code carrying a real ministry's
+-- identity. It was a dead update — the demo rows were purged by 0126 — and the
+-- schema above is untouched. Nothing else in this migration changed.

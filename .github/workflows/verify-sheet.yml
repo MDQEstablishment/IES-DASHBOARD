@@ -1,0 +1,91 @@
+name: Cross-check gate (saving sheet)
+
+# Design §0.1(4): before any sheet is released, the engine's numbers are
+# compared against the numbers TARSHID's own formulas actually produce, and a
+# mismatch BLOCKS. This workflow is where that comparison runs, because it
+# needs a spreadsheet engine and the browser is not one.
+#
+# WHY IT IS ITS OWN WORKFLOW rather than a step in deploy.yml: recalculation
+# needs LibreOffice Calc, which is a ~400 MB install. Keeping it separate lets
+# the ordinary build stay fast while this runs in parallel on the same push —
+# both must be green, so merge is blocked either way.
+#
+# THE JUSTIFICATION, in one sentence: an approved TARSHID lighting workbook was
+# found shipping a summary that cached another project's numbers above
+# completely empty input sheets. A workbook can display numbers that do not
+# belong to it. Recalculating such a file drives every one of those figures to
+# zero — which is what T-PIV now demonstrates on a synthetic workbook built
+# in-test (the client artefact having been removed, Constraints #7).
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      xlsx:
+        description: 'Path in the repo to a produced .xlsx to verify (optional)'
+        required: false
+      snapshot:
+        description: 'Path in the repo to the matching engine snapshot .json (optional)'
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-sheet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # --no-install-recommends keeps this to the Calc engine and its filters
+      # rather than pulling a desktop in behind it.
+      - name: Install LibreOffice Calc
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libreoffice-calc
+          soffice --headless --version
+
+      # IES_REQUIRE_RECALC turns "LibreOffice is missing so we skipped" into a
+      # hard failure. Without it, a runner image that dropped the package would
+      # produce a green run that verified nothing — the exact failure mode this
+      # whole workflow exists to prevent.
+      - name: Cross-check gate (T-XCHK, T-PIV) and the full engine suite
+        env:
+          IES_REQUIRE_RECALC: '1'
+        run: npm test
+
+      # Optional: verify a specific produced workbook on demand.
+      - name: Verify a named workbook
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.xlsx != '' && inputs.snapshot != '' }}
+        run: |
+          node scripts/verify-saving-sheet.mjs \
+            --xlsx "${{ inputs.xlsx }}" \
+            --snapshot "${{ inputs.snapshot }}" \
+            --out verify-result.json \
+            --sql verify-record.sql
+          cat verify-result.json
+
+      # The result and the statement that records it. There is no service
+      # credential in CI (established in U1), so this job cannot write to the
+      # database; it produces the evidence and the exact UPDATE, and applying
+      # that is a credentialed step. The gate itself lives in Postgres.
+      - name: Upload the verification result
+        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification
+          path: |
+            verify-result.json
+            verify-record.sql
+          if-no-files-found: ignore

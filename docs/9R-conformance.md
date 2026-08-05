@@ -367,8 +367,13 @@ Audit sentences produced by link edits, captured live and rolled back (amendment
 ```
 … updated 'Resolve Window 1.5 TR shortfall': ESM from none to ESM1.
 … updated 'Client sign-off walk-through — MOI-001': building from MOI-001 to MOI-003.
-… updated 'Client sign-off walk-through — MOI-001': project from PROJECT-A to PROJECT-B,
+… updated 'Client sign-off walk-through — MOI-001': project from PROJECT-A to DEMO-PROJECT-2,
   building from MOI-001 to none.
+```
+<!-- The second project code in this transcript was the demo programme's, which
+     carried a real ministry's identity; it is shown neutralised under
+     Constraints #7. The behaviour the transcript records is unchanged. -->
+```
 ```
 
 ---
