@@ -815,3 +815,56 @@ and monthly cost per option.
 - **Order of work**: A1 first — it unblocks U5 (sheet population), the
   return of the six skipped tests, T-C2's closure, and the Murshid intake
   layer (§7) which remains the last unit, unchanged in design.
+
+---
+
+# PLAN v3 — keep TARSHID's files, clean them properly; Instr. is the authority
+
+**Supersedes §11 (authoring).** Owner's ruling, confirmed back to him: do not
+author a template from scratch and do not delete the artefacts — TARSHID's
+file is the accepted one, and anything we author carries acceptance risk we
+cannot close ourselves. The originals were recovered intact from outside the
+repository (hashes match the §0.5 record), which is what removal-not-redaction
+preserved: deletion was reversible because nothing was ever modified.
+
+## 17. The key insight — the workbook classifies itself
+
+The Instr. sheet is not narrative; it is a classification, with a colour
+legend: green = fill, pink = do not change. Cleaning authority derives from
+Instr., not from judgement:
+
+| class | sheets | treatment |
+|---|---|---|
+| FILL (project data) | OH · AC_Savings · Light_Savings · Aprvd Project Unit · Project_Info | data cells emptied completely; the form skeleton (labels, headers) is TARSHID's and stays |
+| REFER (TARSHID reference) | Old_Model_Registry · Aprvd Baseline Unit · Project_AC List · Project_Light List · Mnu | untouched at all — sheet XML byte-identical, every registry row and string stays |
+| COMPUTED | Pivot · Pivot_2 · Pivot_Cntrl · Pivot_Baseline · Data_Check · DataCheck · Vstack | cached values cleared so they recompute |
+
+**The root cause of the first failed clean, named**: the Arabic facility
+strings the audit found (204/342) are ORPHANS — deleting a row removes the
+row element but leaves its strings in xl/sharedStrings.xml. The correct clean
+removes what the deleted fill rows left behind (orphaned strings, blanked in
+place — deleting entries would renumber si indices and rewrite the refer
+sheets' XML, which the ruling forbids), plus document metadata, comments and
+customXml — while the reference sheets and their ~2,504 + ~500 entries stay
+completely intact. Not every string in the file is client data: model numbers
+and capacities are TARSHID's; hospital names, coordinates, zones and hours
+are the client's. A blunt purge destroys the registries; a shallow one leaves
+the client behind.
+
+**The verification bar (owner's words, the part the first attempt got
+wrong)**: absence is proven by inspecting every part inside the archive, not
+the visible grid — enumerate members, search each, report counts per category
+per part, and state the method alongside the result so the next reader can
+judge whether the negative finding is worth anything.
+
+Formulas, dropdowns, data validation, named ranges, formats and pivot
+definitions stay untouched: the file remains the one TARSHID issued in every
+respect except that the project is gone from it.
+
+**Gate**: cleaned files enter the repository only after the per-part proof is
+presented and Constraints #7 gains its sanctioned exception (a client-supplied
+file may enter only after full-part cleaning, proven by this method, proof
+recorded). Everything else in PLAN v2 stands: EFLH round-trip (§12),
+DB-single-source with the A3 audit now delivered (§13), no invented values
+with the A4 audit now delivered (§14), backup scoped not built (§15), and the
+standing items (§16).
