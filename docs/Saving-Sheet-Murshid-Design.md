@@ -665,3 +665,153 @@ Perfect means: never wrong about what is missing, never silent about what is
 assumed, and never the author of a number.
 
 **Stop. The owner approves this plan before anything is built.**
+
+---
+
+# PLAN v2 — the authored templates, and everything the owner's rulings changed
+
+**Status: APPROVED DIRECTION, units below awaiting implementation.** Written
+after the confidentiality remediation (Constraints #7) removed the client
+workbooks from the repository and its history. Everything in §§0–9 above
+remains the record of how the model was learned and verified; where a ruling
+below supersedes one above, the supersession is stated here explicitly.
+
+## 10. The supersession of §0 — recorded, not papered over
+
+§0 recorded an absolute ruling: TARSHID's own template and nothing else, no
+formula ever written by us. That ruling assumed TARSHID issues a canonical
+blank file. Two later facts broke the assumption: TARSHID does not issue a
+blank workbook at all (their real flow: they give buildings and coordinates,
+the ESCO surveys and fills the sheet, TARSHID returns EFLH, the ESCO
+completes), and the only "blank" files obtainable are client files stripped of
+rows — which is how a real client's data entered this repository. The owner's
+final ruling supersedes §0: **we author two clean canonical templates
+ourselves — standardised, in the repository, used for every project he adds.**
+A template we author contains no client data because none was ever in it.
+
+"TARSHID's template" was therefore always the FORMAT, not a specific holy
+file, and faithfulness to the format is what acceptance requires. Three
+consequences absorbed:
+
+1. **The §0.1(4) cross-check changes meaning, honestly restated.** It becomes
+   an implementation-independence check — our JS engine against our authored
+   formulas executing under Excel's semantics — no longer an authority check.
+   It still catches engine bugs, formula-authoring bugs and stale caches. The
+   wall stays; what it certifies is renamed.
+2. **Fill-time discipline survives untouched**: xlsxPatch's refusal to write
+   formula cells now protects OUR authored formulas from the filler.
+3. **Two old blockers dissolve**: the zero-per-row-formula problem (we author
+   the rows' formulas from [EXT]) and the stale-cache residue (we author with
+   clean caches; the verify gate still guards every generated file).
+
+## 11. Unit A1 — author the two canonical templates (unblocks everything)
+
+Two workbooks, AC and Lighting, rebuilt from the verified specification:
+[EXT] formulas, the §0.5 structure inventories recorded before deletion, the
+fill maps in savingSheetGen.js, the column decodes in lightingSavings.js, and
+the reference registries now living in the database (1,516 / 194 / 339 rows).
+
+**Reproduce faithfully** (the output must be a file TARSHID recognises):
+sheet names and order; column layout and headers; every formula verbatim
+including cross-sheet references; number formats and rounding behaviour; the
+data-validation dropdowns and their sources; the summary and pivot structures.
+
+**Never reproduce**: any building name, any coordinate, any operating hour,
+any project reference, any author/title metadata, any comment. The reference
+registries load from the database, not baked into the file — and at runtime
+the code LOADS the stored artefact (repo = source of record; bucket/DB =
+runtime source, hash-pinned per 0135), it never assembles a workbook in code.
+
+**The verification bar, owner's words, not softenable**: fill our template
+and an approved workbook with the same anonymised inputs and compare cell by
+cell across the calculation sheets — same values, same formulas, same
+formats. If they diverge anywhere, OUR template is wrong and we fix it rather
+than explaining the difference. Dependency: the comparison partner is the
+anonymised derivative the coordinator is preparing (identical quantities,
+capacities, efficiencies, hours and computed results; nothing identifying) —
+or the comparison runs owner-side against the real file, which never enters
+this repository.
+
+**Two-tier language, kept visible wherever the template's status is stated:**
+- *verified-equivalent* — what cell-by-cell parity against an approved
+  workbook establishes. Everything we can do internally ends here.
+- *proven-accepted* — exists only after TARSHID accepts a sheet produced from
+  our template. Final acceptance is TARSHID's, and until then the template is
+  verified-equivalent, not proven. The first authored template goes to the
+  owner for review before it carries a real submission.
+
+The six skipped tests return here: T-XCHK against the authored template stops
+being self-comparison in the degraded sense — it verifies the SHIPPED
+ARTEFACT's formulas against the engine, which is exactly what the release
+gate needs — and T-WIT's witnesses are replaced by the anonymised
+derivative's figures once supplied. T-C2 (the seasonal factor) closes on the
+same derivative's absolute kWh.
+
+## 12. Unit A2 — the EFLH round-trip becomes a lifecycle state
+
+TARSHID supplies EFLH, after the survey, not before. The saving-sheet
+lifecycle therefore contains a genuine external round-trip:
+
+  buildings+coords from TARSHID → ESCO survey → sheet partially filled
+  → WAITING ON TARSHID (EFLH) → EFLH arrives → completion → verify gate → out
+
+`waiting_on_tarshid_eflh` becomes a real, visible status (additive migration:
+state + requested_at + received_at + provenance/source_ref per 0135's
+provenance columns). Murshid's readiness check names it distinctly: "waiting
+on TARSHID for EFLH (requested N days ago)" — never a generic missing-input,
+because a stage depending on an outside party otherwise looks stalled with no
+explanation. §3's EFLH ruling stands otherwise unchanged: never computed,
+never derived from hours; the impossibility warning (EFLH > annual hours)
+remains the only computation permitted.
+
+## 13. Unit A3 — nothing held in code: the DB-single-source audit
+
+Owner's rule: the code reads from the database and stores nothing itself —
+constants, catalogues, templates, reference registries and configuration all
+live in the database as the single source of truth, so client data is never
+lost and backup captures everything. Execution: AUDIT FIRST, REPORT BEFORE
+CHANGING — some of what looks hardcoded is a deliberate frozen constant
+(CONST_DEFAULTS is a last-resort fallback by design; the deny-list regexes
+are security posture, not configuration). The audit deliverable is a table:
+value · where hardcoded · proposed home (existing table / new row /
+deliberately stays in code with the reason) — put to the coordinator before
+any migration is written.
+
+## 14. Unit A4 — no invented values anywhere in the interface
+
+Owner's reason, recorded because it defines the acceptance test: he walks the
+site himself to confirm it is correct and accurate, so an invented value is
+not untidy — it actively prevents him from telling whether the system works.
+Anything that looks like data must be data. Every screen either renders
+database rows or an honest empty state saying what has to happen first. The
+audit sweeps for: sample text, seeded/illustrative numbers, hardcoded lists
+standing in for query results, and placeholder copy. Same discipline as A3:
+inventory first, then the fix, so nothing that IS real gets mistaken for a
+placeholder and deleted.
+
+## 15. Unit A5 — the backup system: scoped, not built
+
+Options and a recommendation go to the coordinator; retention and storage
+location are the owner's decisions. The scoping covers: what is backed up
+(database including storage buckets — templates, generated sheets, photos;
+the repo is already its own record), cadence, where copies live (provider
+PITR vs scheduled dumps to independent storage vs both), how a restore is
+PROVEN (a restore that has never been rehearsed is a hope, not a backup —
+the plan must include a periodic restore drill against a scratch project),
+and monthly cost per option.
+
+## 16. Standing items carried forward
+
+- **PROJECT-A seed data** (`seed/moi-asir-buildings.csv`, ~700 rows of a
+  second real client's register, in tree and in main's history): awaiting the
+  owner's ruling — it is the live programme's data, not this plan's to remove.
+- **GitHub server-side retention**: the purged commits remain fetchable by
+  direct SHA until GitHub's garbage collection or a Support request; the
+  owner files the Support ticket if he wants a timetable.
+- **Repository visibility**: stays public by the owner's decision (hosting
+  strategy — moving to Cloudflare when ready), explicitly not a judgement
+  that the exposure was acceptable; the purge is therefore the only
+  containment and was verified from a fresh clone.
+- **Order of work**: A1 first — it unblocks U5 (sheet population), the
+  return of the six skipped tests, T-C2's closure, and the Murshid intake
+  layer (§7) which remains the last unit, unchanged in design.
