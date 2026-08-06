@@ -4,30 +4,26 @@
 // Excel recomputation). Constants come from tarshid_constants — never
 // hardcoded (defaults below are only a last-resort fallback).
 import { supabase } from './supabase'
+// U5 / COMMIT A — the gate, the constants allow-list and the two normalisers now
+// live in ONE module that the Edge Function imports as well. Before this the
+// server carried a hand-written copy that had never received U3's corrections,
+// so `saving-sheet-agent`'s shortlist rejected candidates this file accepts.
+// The module is plain, dependency-free ESM precisely so Deno and the browser can
+// both import the SAME FILE — see its header for the constraints that keeps.
+import {
+  CONST_DEFAULTS, constsFromRows, collapse, foldCase,
+  typeMatches, seasonalTerm, clientCompliant,
+} from '../../supabase/functions/_shared/compliance.js'
 
-// ⚠ THIS OBJECT IS AN ALLOW-LIST, NOT JUST A FALLBACK. loadConstants() below
-// does `if (r.key in out)`, so a row in tarshid_constants whose key is missing
-// HERE is read from the database and silently discarded. Migration 0135 seeds
-// four new keys; they are listed here for that reason, not for their defaults.
-// T-K1 pins the round-trip so this cannot regress.
-export const CONST_DEFAULTS = {
-  tariff_sar_kwh: 0.32,
-  seasonal_factor: 0.9,
-  capacity_tolerance_pct: 10,
-  min_savings_pct: 15,
-  // U3 / migration 0135
-  lighting_derating: 0.9,          // lighting only — NOT the AC seasonal_factor
-  control_derating: 0.9,
-  control_savings_fraction: 0.3,
-  btu_per_ton: 12000,              // replaces the literals at m2PerTon and oldBtu
-}
+// Re-exported so every existing importer of savingSheet.js is untouched: this
+// file remains the engine's public face, the shared module is an implementation
+// detail of how the server is kept honest.
+export { CONST_DEFAULTS, typeMatches, seasonalTerm }
 
 export async function loadConstants() {
   const { data, error } = await supabase.from('tarshid_constants').select('key,value')
   if (error || !data) return { ...CONST_DEFAULTS }
-  const out = { ...CONST_DEFAULTS }
-  data.forEach((r) => { if (r.key in out) out[r.key] = Number(r.value) })
-  return out
+  return constsFromRows(data)
 }
 
 const n = (v) => (v == null || v === '' ? null : Number(v))
@@ -59,8 +55,9 @@ const okNum = (v) => typeof v === 'number' && Number.isFinite(v)
 // unambiguous. Where two registry rows collapse together the fallback refuses
 // to choose, because guessing between "S242NH" and "S242NH " is exactly the
 // silent wrong answer this key change exists to remove.
-const foldCase = (s) => String(s ?? '').toLowerCase()
-const collapse = (s) => String(s ?? '').replace(/\s+/g, ' ').trim()
+// `collapse` and `foldCase` are imported from the shared module above — the
+// registry keys and the type predicate must normalise identically or the two
+// runtimes would disagree on which rows are even the same row.
 
 // Kept for callers that only have a model string. Collapsing + folding is the
 // LOOSE form; it is never used on its own to resolve a registry row.
@@ -101,17 +98,6 @@ export function registryHit(entry, index) {
   const loose = registryKeyLoose(entry.equipment_type, entry.model)
   if (index.looseAmbiguous.has(loose)) return null
   return index.byPairLoose.get(loose) || null
-}
-
-// U3 — ONE type predicate. computeRow used strict equality (:151) while
-// isCompliant used bidirectional substring (:256-257), so the same pair could
-// be a mismatch in one place and a match in the other. [EXT] says EQUAL, so
-// both now call this: normalised equality, and an absent type on either side
-// is not a mismatch (nothing to contradict).
-export function typeMatches(a, b) {
-  const x = collapse(a).toLowerCase(), y = collapse(b).toLowerCase()
-  if (!x || !y) return true
-  return x === y
 }
 
 // U3 / C3 — Excel TRUNC(x, 2): toward zero, never rounding. Done on the string
@@ -179,25 +165,10 @@ export function bestFromSelection(row, selCats, consts, engine = {}) {
 }
 
 // ── C2 — THE SEASONAL FACTOR IS A SWITCHABLE TERM, PINNED BY FIXTURE ───────
-// [EXT]'s savings formula contains NO 0.9 factor. The shipped code multiplied
-// by consts.seasonal_factor and — worse — applied it inside the 15% gate too,
-// so the shipped gate actually demanded ≈16.7% raw.
-//
-// The design refuses to guess (§1.2 C2): an approved TARSHID AC workbook
-// decides, and it is not here yet (§8.1). So the engine ships WORKBOOK-FAITHFUL
-// by default — no factor — and the factor is reachable only through an explicit
-// option, so whichever way T-C2 resolves is a one-line change and never a
-// silent one. The constant row stays in tarshid_constants either way, unused
-// until then; removing it would destroy the evidence.
-//
-// The SAME term is used by computeRow and isCompliant. That is not tidiness:
-// the divergence between them is precisely how a row could pass the gate and
-// then report a different percentage.
-export function seasonalTerm(consts, engine = {}) {
-  if (!engine.applySeasonalFactor) return 1
-  const f = Number(consts?.seasonal_factor)
-  return Number.isFinite(f) && f !== 0 ? f : 1
-}
+// `seasonalTerm` is imported and re-exported from the shared module. The SAME
+// term is used by computeRow, by isCompliant and now by the Edge Function's
+// `select` job: the divergence between them is precisely how a row could pass
+// one gate, fail another, and then report a third percentage.
 
 // ── U4 — THE GATES ARE LAW ─────────────────────────────────────────────────
 // These three were cosmetic: computeRow raised them, the tab drew them as
@@ -395,21 +366,12 @@ export const MAX_SELECTION_ROWS = 20   // VLOOKUP range is fixed at row 21
 
 // Is `cat` a compliant replacement for a surveyed row? Uses the same math as
 // computeRow — no AI claim is trusted without passing this.
+//
+// U5 / COMMIT A — the body moved into the shared module and the Edge Function
+// calls its sibling adaptor there. This is now a NAME, not an implementation:
+// there is nowhere left for the client and the server to disagree.
 export function isCompliant(row, cat, consts, engine = {}) {
-  const oldBtu = row.old_btu, oldSeer = row.old_seer
-  const newBtu = cat?.capacity_btu == null ? null : Number(cat.capacity_btu)
-  const newSeer = cat?.seer == null ? (cat?.ieer == null ? null : Number(cat.ieer)) : Number(cat.seer)
-  if (!oldBtu || !oldSeer || !newBtu || !newSeer) return { ok: false, why: 'missing capacity or efficiency' }
-  const capPct = ((newBtu - oldBtu) / oldBtu) * 100
-  if (Math.abs(capPct) > consts.capacity_tolerance_pct) return { ok: false, why: `capacity ${capPct.toFixed(1)}% outside ±${consts.capacity_tolerance_pct}%` }
-  // Savings % is independent of qty, EFLH and capacity — the algebraic identity
-  // of design §1.1, and T-G7 pins it. The seasonal term is the SAME one
-  // computeRow uses, so the gate can no longer demand a different number from
-  // the one the sheet reports.
-  const savPct = ((newSeer - oldSeer) / newSeer) * seasonalTerm(consts, engine) * 100
-  if (savPct < consts.min_savings_pct) return { ok: false, why: `savings ${savPct.toFixed(1)}% below ${consts.min_savings_pct}%` }
-  if (!typeMatches(row.equipment_type, cat.equipment_type)) return { ok: false, why: 'different equipment type' }
-  return { ok: true, capPct, savPct }
+  return clientCompliant(row, cat, consts, engine)
 }
 
 // Canonical description = the VLOOKUP key written to column B. It must match

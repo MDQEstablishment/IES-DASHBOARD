@@ -28,8 +28,20 @@
 //
 // SAFETY: model ids returned by the AI are validated against our real tables —
 // an invented id is rejected, never written.
+//
+// U5 / COMMIT A — THE ENGINE DIVERGENCE IS CLOSED. This file used to carry its
+// own hand-written `compliant()`. It never received U3's corrections, so it
+// applied the seasonal factor UNCONDITIONALLY inside the 15% gate (demanding
+// ≈16.7% raw where the client demands 15%) and rejected candidates the client
+// would accept, hardcoded 12000 BTU/ton after that number moved into
+// tarshid_constants, and read constants with bare `??` fallbacks and no
+// allow-list. All three are gone: the predicate and the constants now come from
+// ../_shared/compliance.js, which src/lib/savingSheet.js imports as well — the
+// two agree BY CONSTRUCTION, and tests/complianceParity.test.mjs drives one case
+// table through both adaptors to keep it that way.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { constsFromRows, btuPerTon, serverCompliant } from "../_shared/compliance.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -56,17 +68,22 @@ export const normalizeModel = (s: string) =>
     .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06F0))
     .replace(/[^a-z0-9]+/g, " ").trim();
 
-const trOf = (r: any) => Number(r?.tr ?? r?.capacity_tr ?? (r?.t1_btu ? r.t1_btu / 12000 : NaN));
+// The BTU→ton conversion is `tarshid_constants.btu_per_ton`, never a literal:
+// it is the same number `savingSheet.js` oldBtu()/m2PerTon() read, and a
+// hardcoded 12000 here would have made the shortlist score against one
+// conversion while the engine computed with another.
+const trOf = (r: any, btuTon: number) =>
+  Number(r?.tr ?? r?.capacity_tr ?? (r?.t1_btu ? r.t1_btu / btuTon : NaN));
 
 // Candidate shortlist: same equipment type family first, then tonnage band.
-function shortlist(unknown: any, pool: any[], limit: number) {
+function shortlist(unknown: any, pool: any[], limit: number, btuTon: number) {
   const want = normalizeModel(unknown.equipment_type || "");
   const tr = Number(unknown.tr);
   const scored = pool.map((r) => {
     let s = 0;
     const rt = normalizeModel(r.equipment_type || "");
     if (want && rt && (rt.includes(want) || want.includes(rt))) s += 3;
-    const rtr = trOf(r);
+    const rtr = trOf(r, btuTon);
     if (Number.isFinite(tr) && Number.isFinite(rtr)) {
       const d = Math.abs(rtr - tr) / Math.max(tr, 0.1);
       if (d <= 0.1) s += 3; else if (d <= 0.25) s += 2; else if (d <= 0.5) s += 1;
@@ -250,6 +267,17 @@ Deno.serve(async (req) => {
       return json({ error: "not_configured", message: "The AI assistant is not configured (missing key). All other features work normally." }, 503);
     }
 
+    // ---- TARSHID constants, once, through the SHARED allow-list -------------
+    // Hoisted out of the two job branches that each loaded it, and read through
+    // constsFromRows() so an unknown or renamed key is discarded here exactly as
+    // it is in the browser. Previously this branch used `?? 10 / ?? 15 / ?? 0.9`
+    // with no allow-list at all, so a renamed key degraded on the server and not
+    // on the client — the two then disagreed with nothing to say so.
+    const { data: constRows } = await admin.from("tarshid_constants").select("key,value");
+    const C = constsFromRows(constRows);
+    const BTU_PER_TON = btuPerTon(C);
+    const tol = C.capacity_tolerance_pct, minSav = C.min_savings_pct;
+
     // ---- shared data -------------------------------------------------------
     const { data: entries } = await admin.from("survey_entries")
       .select("id,make,model,equipment_type,tr,qty,inverter,building_id,room_type,size_category,category,catalog_item_id,registry_id,match_source,match_confidence")
@@ -326,7 +354,7 @@ Deno.serve(async (req) => {
         const chunk = distinctList.slice(i, i + CHUNK);
         const candIds = new Set<string>();
         const lines = chunk.map((x) => {
-          const cands = shortlist(x, reg, CAND_PER_ROW);
+          const cands = shortlist(x, reg, CAND_PER_ROW, BTU_PER_TON);
           cands.forEach((c: any) => candIds.add(c.id));
           return {
             key: x.key,
@@ -367,10 +395,6 @@ Deno.serve(async (req) => {
     // ======================= JOB: REPLACE / ADJUST =========================
     if (job === "replace" || job === "adjust") {
       const model = S.model_replace || "claude-sonnet-4-5-20250929";
-      const { data: consts } = await admin.from("tarshid_constants").select("key,value");
-      const C: Record<string, number> = {};
-      (consts || []).forEach((r: any) => { C[r.key] = Number(r.value) });
-      const tol = C.capacity_tolerance_pct ?? 10, minSav = C.min_savings_pct ?? 15;
 
       const { data: catalog } = await admin.from("ac_catalog")
         .select("id,description,equipment_type,make,model,size_category,capacity_btu,capacity_tr,seer,ieer,unit_cost,labor_cost").eq("is_active", true);
@@ -402,11 +426,11 @@ Deno.serve(async (req) => {
         const chunk = distinctList.slice(i, i + CHUNK);
         const candIds = new Set<string>();
         const lines = chunk.map((x) => {
-          const cands = shortlist({ equipment_type: x.old?.equipment_type, tr: trOf(x.old), make: x.old?.make, model: x.old?.model_no }, cat, CAND_PER_ROW);
+          const cands = shortlist({ equipment_type: x.old?.equipment_type, tr: trOf(x.old, BTU_PER_TON), make: x.old?.make, model: x.old?.model_no }, cat, CAND_PER_ROW, BTU_PER_TON);
           cands.forEach((c: any) => candIds.add(c.id));
           return {
             key: x.key,
-            old_unit: { make: x.old?.make, model: x.old?.model_no, equipment_type: x.old?.equipment_type, tr: trOf(x.old), seer: x.old?.equivalent_seer, btu: x.old?.t1_btu },
+            old_unit: { make: x.old?.make, model: x.old?.model_no, equipment_type: x.old?.equipment_type, tr: trOf(x.old, BTU_PER_TON), seer: x.old?.equivalent_seer, btu: x.old?.t1_btu },
             candidates: cands.map((c: any) => ({ id: c.id, description: c.description, equipment_type: c.equipment_type, make: c.make, model: c.model, btu: c.capacity_btu, tr: c.capacity_tr, seer: c.seer ?? c.ieer, unit_cost: c.unit_cost, labor_cost: c.labor_cost })),
           };
         });
@@ -449,10 +473,6 @@ Deno.serve(async (req) => {
     // consolidates and applies the ESCO's stated preference.
     if (job === "select") {
       const model = S.model_replace || "claude-sonnet-4-5-20250929";
-      const { data: consts } = await admin.from("tarshid_constants").select("key,value");
-      const C: Record<string, number> = {};
-      (consts || []).forEach((r: any) => { C[r.key] = Number(r.value) });
-      const tol = C.capacity_tolerance_pct ?? 10, minSav = C.min_savings_pct ?? 15, seasonal = C.seasonal_factor ?? 0.9;
 
       const { data: chf } = await admin.from("category_hours_factors").select("assumed_old_eff").eq("category", "ac").maybeSingle();
       const assumedOldEff = Number(chf?.assumed_old_eff) || 8;
@@ -475,7 +495,9 @@ Deno.serve(async (req) => {
       const groups = new Map<string, any>();
       for (const r of scope) {
         const reg: any = r.registry_id ? regById.get(r.registry_id) : null;
-        const btu = Number(r.tr) > 0 ? Number(r.tr) * 12000 : (reg?.t1_btu != null ? Number(reg.t1_btu) : null);
+        // BTU/ton from constants — the same conversion savingSheet.js oldBtu()
+        // uses. A literal 12000 here was the pre-C1 capacity path.
+        const btu = Number(r.tr) > 0 ? Number(r.tr) * BTU_PER_TON : (reg?.t1_btu != null ? Number(reg.t1_btu) : null);
         const seer = reg?.equivalent_seer != null ? Number(reg.equivalent_seer) : assumedOldEff;
         if (!btu || !seer) continue;
         const key = r.registry_id || normalizeModel(`${r.make || ""} ${r.model || ""} ${r.tr || ""}`);
@@ -491,17 +513,22 @@ Deno.serve(async (req) => {
       }
       const groupList = [...groups.values()];
 
-      // compliance — the SAME math as savingSheet.js isCompliant()
-      const compliant = (g: any, c: any) => {
-        const newBtu = c.capacity_btu == null ? null : Number(c.capacity_btu);
-        const newSeer = c.seer == null ? (c.ieer == null ? null : Number(c.ieer)) : Number(c.seer);
-        if (!newBtu || !newSeer) return false;
-        if (Math.abs(((newBtu - g.btu) / g.btu) * 100) > tol) return false;
-        if (((newSeer - g.seer) / newSeer) * seasonal * 100 < minSav) return false;
-        const a = normalizeModel(g.equipment_type), b = normalizeModel(c.equipment_type || "");
-        if (a && b && !a.includes(b) && !b.includes(a)) return false;
-        return true;
-      };
+      // compliance — LITERALLY the same code as savingSheet.js isCompliant(),
+      // not a re-statement of it. Both are one-line adaptors over
+      // complianceVerdict() in ../_shared/compliance.js.
+      //
+      // What this replaced, and why it mattered: the old body multiplied by
+      // `seasonal` unconditionally, so the gate demanded ≈16.7% raw savings
+      // while the browser demanded 15% and the sheet reported the raw figure —
+      // the server silently withheld compliant units from the shortlist. It
+      // also matched equipment types by bidirectional SUBSTRING over
+      // normalizeModel(), so "Split" covered "Split AC" here and did not there.
+      //
+      // `engine` is empty: the shipped default is workbook-faithful (no seasonal
+      // factor), exactly as the client ships. When T-C2 resolves, ONE module
+      // changes and both runtimes move together.
+      const engine = {};
+      const compliant = (g: any, c: any) => serverCompliant(g, c, C, engine).ok;
       const optionsFor = new Map<string, any[]>();
       groupList.forEach((g) => optionsFor.set(g.key, cat.filter((c: any) => compliant(g, c))));
       const coverable = groupList.filter((g) => (optionsFor.get(g.key) || []).length > 0);
