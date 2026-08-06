@@ -58,8 +58,8 @@ async function loadFormOptions() {
 }
 
 // ── A3(16) — the demo password has no committed fallback ────────────────────
-// This script carried `process.env.VITE_DEMO_PASSWORD || 'IESdemo2026!'` — a
-// working password committed to a public repository, and directly against the
+// This script carried a hardcoded fallback after `process.env.VITE_DEMO_PASSWORD`
+// — a working password committed to a public repository, and directly against the
 // standing rule already written down at src/lib/constants.js:7-9 ("The shared
 // demo password comes ONLY from env — no committed fallback"). One module
 // obeyed the rule and one quietly did not.
