@@ -21,7 +21,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22, not 20. tests/oneFactOneHome.test.mjs imports
+          # supabase/functions/_shared/pricing.ts directly — the Deno module is
+          # the single home for those constants and a test that re-declared them
+          # would defeat its purpose. Importing .ts needs Node's type stripping,
+          # which is >= 22.6; on 20 the file fails to load with
+          # ERR_UNKNOWN_FILE_EXTENSION before a single assertion runs.
+          # This surfaced the first time those tests ever executed in CI.
+          node-version: 22
           cache: npm
       - run: npm ci
       # U3 — the saving-sheet engine's pins run BEFORE the build, so a red X on
