@@ -403,6 +403,22 @@ per-project **"models missing nameplate photo"** worklist on the engineer's
 consolidation screen, and the model picker marks such models with a warning
 badge until the photo lands.
 
+**Gallery upload, not camera-only — owner ruling, and it already works.** A
+model registered through the Excel path is photographed later, by an engineer
+who has already left the site, so the photo must come from the phone's gallery
+(or a desktop file picker), not only from a live capture. Verified in the
+codebase rather than assumed: every photo input today — `FileDropZone` in
+`EntryForm.jsx`, and the raw inputs in `BuildingPhotos.jsx` and
+`DailyProgress.jsx` — is a plain `<input type="file" accept="image/*">` with
+**no `capture` attribute**, which is exactly what makes the mobile OS offer
+camera *and* gallery. Nothing needs building.
+
+**The rule this creates is a prohibition:** never add `capture="environment"`
+(or any `capture` value) to a survey photo input. It would force live capture
+and silently remove the gallery option — turning a working requirement into a
+broken one while looking like a UI improvement. The nameplate-photo worklist
+above is the path for filling these in after the fact.
+
 ### 6.5 `survey_entries` gains `project_model_id`
 
 `project_model_id uuid REFERENCES project_models(id)` — nullable (legacy rows;
@@ -699,6 +715,14 @@ the other, and the Excel path cannot carry a photo at all.
 **Recommendation: A.** It costs nothing where the camera is in the surveyor's
 hand and blocks nothing where it isn't. Worth the owner's explicit ruling
 because it is the one place this design says "required" at all.
+
+> **RULED — A, with the gallery addition.** A model created through the Excel
+> path must accept its nameplate photo from the phone gallery afterwards, not
+> only from a live capture, because that engineer has left the site. Checked
+> rather than assumed: this already works — no photo input in the codebase
+> sets a `capture` attribute, so the mobile OS offers camera and gallery
+> both. The design records it as a standing prohibition against ever adding
+> one. See §6.4.
 
 ### Q4 — How long before an unused code block is tidied away?
 
