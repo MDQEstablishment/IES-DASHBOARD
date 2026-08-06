@@ -116,7 +116,7 @@ that commit message.
 | module | sha256 (16) |
 | --- | --- |
 | `buckets.js` | `81797f6afa490c6f` |
-| `cocPdf.js` | `6552ad6ce03c21d4` |
+| `cocPdf.js` | `2f3e201727d43290` |
 | `constants.js` | `e2f8065dc39d13da` |
 | `db.js` | `713bc6a56028523d` |
 | `docPdf.js` | `fd3e67257d14aa68` |
