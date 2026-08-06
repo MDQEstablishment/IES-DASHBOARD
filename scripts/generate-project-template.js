@@ -20,6 +20,66 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { mkdirSync, readFileSync } from 'node:fs'
 
+// ── A3(18) — the dropdown lists come from the database ──────────────────────
+// This generator used to hold its own copies of the status and ESM lists, at
+// five call sites, alongside a second set of copies in
+// src/components/ProjectModals.jsx. Two independent copies of one fact, and
+// nothing that would notice them diverging: a fourth ESM added to the
+// catalogue would appear in neither the template's dropdown nor the importer's
+// validation, and the template would keep offering exactly three.
+//
+// Both now read `public.v_form_options` (migration 0139). The generator FAILS
+// rather than falling back to a literal — a template built from guessed lists
+// is worse than no template, because it looks authoritative and ships to a
+// client to fill in.
+async function loadFormOptions() {
+  const url = process.env.VITE_SUPABASE_URL
+  const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  if (!url || !key) {
+    throw new Error(
+      'VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY must be set.\n' +
+      '  The template\'s status and ESM dropdowns are read from public.v_form_options;\n' +
+      '  there is no built-in list to fall back to, by design.')
+  }
+  const { createClient } = await import('@supabase/supabase-js')
+  const sb = createClient(url, key)
+  const pwd = requireDemoPassword()
+  const { error: authErr } = await sb.auth.signInWithPassword({ email: 'admin@ies.demo.local', password: pwd })
+  if (authErr) throw new Error(`admin sign-in failed, so the option lists cannot be read: ${authErr.message}`)
+  const { data, error } = await sb.from('v_form_options').select('domain,value,label,ordinal').order('ordinal')
+  if (error) throw new Error(`could not read v_form_options: ${error.message}`)
+  const of = (d) => (data || []).filter((r) => r.domain === d).map((r) => r.value)
+  const opts = { project_status: of('project_status'), building_status: of('building_status'), esm: of('esm') }
+  for (const [k, v] of Object.entries(opts)) {
+    if (v.length === 0) throw new Error(`v_form_options returned no rows for "${k}" — refusing to build a template with an empty dropdown`)
+  }
+  console.log(`• option lists from the database — status ${opts.project_status.length}, building status ${opts.building_status.length}, ESM ${opts.esm.length} (${opts.esm.join('/')})`)
+  return opts
+}
+
+// ── A3(16) — the demo password has no committed fallback ────────────────────
+// This script carried `process.env.VITE_DEMO_PASSWORD || 'IESdemo2026!'` — a
+// working password committed to a public repository, and directly against the
+// standing rule already written down at src/lib/constants.js:7-9 ("The shared
+// demo password comes ONLY from env — no committed fallback"). One module
+// obeyed the rule and one quietly did not.
+//
+// NOTE FOR THE OWNER, raised separately and deliberately NOT acted on here:
+// removing the fallback does not un-publish it. That credential has been in
+// git history and must be rotated. Rotation is the owner's action, not this
+// commit's — see MYTASKS_DEMO_CREDENTIAL_ROTATION in docs/Backlog.md.
+function requireDemoPassword() {
+  const pwd = process.env.VITE_DEMO_PASSWORD
+  if (!pwd) {
+    throw new Error(
+      'VITE_DEMO_PASSWORD is not set.\n' +
+      '  This script signs in as the admin demo account to read the option lists\n' +
+      '  and to upload the template. There is no default: a password in source is\n' +
+      '  a published password. Set it in .env.local (git-ignored) or the shell.')
+  }
+  return pwd
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const OUT_DIR = join(ROOT, 'public', 'templates')
@@ -98,7 +158,7 @@ function addDropdown(ws, colLetter, list, fromRow = 2, toRow = 1 + INPUT_ROWS) {
   }
 }
 
-async function build() {
+async function build(opts) {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'IES Programme Control Platform'
   wb.created = new Date()
@@ -195,7 +255,7 @@ async function build() {
     'Abha, Asir', 18.2164, 42.5053,
     'PROJECT-A-2025', 'Entity A', '00', '2025-08-15', '2027-01-15', 'Tarshid', '', '',
     'DELETE-BEFORE-UPLOAD'])
-  addDropdown(proj, 'H', ['active', 'draft', 'on_hold', 'closed']) // status (col 8)
+  addDropdown(proj, 'H', opts.project_status) // status (col 8)
   proj.getColumn('lat').numFmt = '0.000000'
   proj.getColumn('lng').numFmt = '0.000000'
 
@@ -218,7 +278,7 @@ async function build() {
   exampleRow(blds, 3, ['PROJECT-A', 'MOI-002', 'Civil Defense — Khamis', 'Khamis Mushait', 18.3, 42.73, 2, 2600,
     'Najd Technical Co.', '+966 55 222 3333', 'pending', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', '',
     'Civil Defense', 'MTR-002', 'SUB-1002', 'ACC-77002', 'Maj. Nasser', '+966 55 333 4444', 3120])
-  addDropdown(blds, 'K', ['pending', 'in_progress', 'signed', 'on_hold', 'blocked'])
+  addDropdown(blds, 'K', opts.building_status)
   blds.getColumn('lat').numFmt = '0.000000'
   blds.getColumn('lng').numFmt = '0.000000'
 
@@ -230,7 +290,7 @@ async function build() {
   ])
   exampleRow(scopes, 2, ['MOI-001', 'ESM1', 'LED-40W', 'ceiling panel', 120, 'fixtures', 'DELETE-BEFORE-UPLOAD'])
   exampleRow(scopes, 3, ['MOI-001', 'ESM3', 'AC-S15', 'split 1.5 TR', 15, 'units', 'DELETE-BEFORE-UPLOAD'])
-  addDropdown(scopes, 'B', ['ESM1', 'ESM2', 'ESM3'])
+  addDropdown(scopes, 'B', opts.esm)
 
   // ── Sheet 5: Materials ─────────────────────────────────────────────────────
   const mats = wb.addWorksheet('Materials', { properties: { tabColor: { argb: BLUE } } })
@@ -238,9 +298,18 @@ async function build() {
     ['material_code', 16, 'req'], ['description', 28, 'req'], ['esm', 10, 'req'], ['unit', 12, 'opt'],
     ['threshold', 12, 'opt'], ['supplier', 22, 'opt'],
   ])
-  exampleRow(mats, 2, ['LED-40W', 'LED 40W Ceiling Panel', 'ESM1', 'fixtures', 1000, 'Philips'])
-  exampleRow(mats, 3, ['AC-S15', 'Split WM 1.5 TR', 'ESM3', 'units', 200, 'Trane'])
-  addDropdown(mats, 'C', ['ESM1', 'ESM2', 'ESM3'])
+  // A3(17) — these two rows were the ONLY example rows in the workbook without
+  // a DELETE-BEFORE-UPLOAD marker. `isExampleRow()` in ProjectModals.jsx tests
+  // for that exact string and nothing else, so both rows survived the filter
+  // and a client who forgot to delete them imported two real materials —
+  // "LED 40W Ceiling Panel" from Philips and a Trane split — into their
+  // programme. They are styled as examples and read as examples; only the
+  // machine could not tell. The Materials sheet has no free 'remarks' column,
+  // so the marker goes in `supplier`, which is optional and is where the
+  // give-away brand names were.
+  exampleRow(mats, 2, ['LED-40W', 'LED 40W Ceiling Panel', 'ESM1', 'fixtures', 1000, 'DELETE-BEFORE-UPLOAD'])
+  exampleRow(mats, 3, ['AC-S15', 'Split WM 1.5 TR', 'ESM3', 'units', 200, 'DELETE-BEFORE-UPLOAD'])
+  addDropdown(mats, 'C', opts.esm)
 
   // ── Sheet 6: Items (Old↔New replacement pairs) ─────────────────────────────
   // Sprint 8B #25/#4 — each row pairs one removed (old) item with one installed
@@ -253,7 +322,7 @@ async function build() {
   ])
   exampleRow(items, 2, ['MOI-001', 'ESM3', 'OLD-AC-2T', 'Old window AC 2 TR', 4, 'AC-S15', 'Split inverter 1.5 TR', 4, 'units', 'DELETE-BEFORE-UPLOAD'])
   exampleRow(items, 3, ['MOI-001', 'ESM1', 'OLD-FL-40', 'Old fluorescent 40W', 120, 'LED-40W', 'LED panel 40W', 120, 'fixtures', 'DELETE-BEFORE-UPLOAD'])
-  addDropdown(items, 'B', ['ESM1', 'ESM2', 'ESM3'])
+  addDropdown(items, 'B', opts.esm)
 
   mkdirSync(OUT_DIR, { recursive: true })
   await wb.xlsx.writeFile(OUT_FILE)
@@ -264,8 +333,8 @@ async function build() {
 async function upload(file) {
   const url = process.env.VITE_SUPABASE_URL
   const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
-  const pwd = process.env.VITE_DEMO_PASSWORD || 'IESdemo2026!'
   if (!url || !key) { console.log('• skip bucket upload (no SUPABASE env)'); return }
+  const pwd = requireDemoPassword()
   try {
     const { createClient } = await import('@supabase/supabase-js')
     const sb = createClient(url, key)
@@ -282,5 +351,14 @@ async function upload(file) {
   }
 }
 
-const file = await build()
+// Fail loudly and early: a missing env var must stop the run with a sentence
+// that says what to set, not produce a template built from assumptions.
+let opts
+try {
+  opts = await loadFormOptions()
+} catch (e) {
+  console.error('\u2717 cannot generate the template:', e.message)
+  process.exit(1)
+}
+const file = await build(opts)
 await upload(file)

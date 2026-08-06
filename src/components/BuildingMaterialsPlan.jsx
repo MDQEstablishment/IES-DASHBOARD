@@ -6,10 +6,17 @@ import { Empty } from './ui'
 // Available-in-warehouse (project-wide stock shared across the project's
 // buildings). Grouped by ESM, sorted by category code. Low badge when the
 // available warehouse stock can't cover this building's remaining need.
-const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
 const num = (v) => (v == null ? 0 : Number(v))
 
 export default function BuildingMaterialsPlan({ buildingId, projectId }) {
+  // A3(14) — the ESM display order comes from `esms.ordinal` (migration 0139).
+  // The literal `({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)` this replaces existed
+  // VERBATIM in five components: one fact, five copies, and every ESM outside
+  // the three tied at the same sentinel 9. Unknown codes now sort after all
+  // known ones instead of colliding with each other.
+  const { rows: esmRows } = useLiveQuery('esms', (q) => q.select('code,ordinal').order('ordinal'))
+  const esmRank = Object.fromEntries(esmRows.map((e) => [e.code, e.ordinal]))
+  const ESM_ORDER = (c) => (c in esmRank ? esmRank[c] : Number.MAX_SAFE_INTEGER)
   const { rows: plan } = useLiveQuery('building_material_plan', (q) => q.select('*').eq('building_id', buildingId), [buildingId])
   const { rows: pstock } = useLiveQuery('project_warehouse_stock', (q) => q.select('category_id,qty_on_hand').eq('project_id', projectId), [projectId])
   const { rows: cats } = useLiveQuery('material_categories', (q) => q.select('id,code,name_en,esm:esms(code)'))

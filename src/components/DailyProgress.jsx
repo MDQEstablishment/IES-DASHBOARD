@@ -16,7 +16,6 @@ const Lbl = ({ children }) => <span style={{ display: 'block', fontFamily: 'var(
 // all-or-nothing through the log_daily_progress RPC, which consumes from the
 // project warehouse and hard-blocks any line that would over-draw stock. Below,
 // a collapsible Daily Log history of past batches.
-const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
 // Colored ESM pills (8J-2): ESM1 indigo, ESM2 violet, ESM3 teal.
 const ESM_PILL = { ESM1: { c: 'var(--esm1)', bg: 'var(--esm1-bg)' }, ESM2: { c: 'var(--esm2)', bg: 'var(--esm2-bg)' }, ESM3: { c: 'var(--esm3)', bg: 'var(--esm3-bg)' } }
 const esmPill = (code) => ESM_PILL[code] || { c: 'var(--text-3)', bg: 'var(--line-soft)' }
@@ -30,6 +29,14 @@ function EsmBadge({ code, style }) {
 }
 
 export default function DailyProgress({ buildingId, projectId, buildingCode, canWrite, user }) {
+  // A3(14) — the ESM display order comes from `esms.ordinal` (migration 0139).
+  // The literal `({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)` this replaces existed
+  // VERBATIM in five components: one fact, five copies, and every ESM outside
+  // the three tied at the same sentinel 9. Unknown codes now sort after all
+  // known ones instead of colliding with each other.
+  const { rows: esmRows } = useLiveQuery('esms', (q) => q.select('code,ordinal').order('ordinal'))
+  const esmRank = Object.fromEntries(esmRows.map((e) => [e.code, e.ordinal]))
+  const ESM_ORDER = (c) => (c in esmRank ? esmRank[c] : Number.MAX_SAFE_INTEGER)
   const { rows: materials } = useLiveQuery('materials', (q) =>
     q.select('id,code,name,unit,brand,esm_id,esm:esms(code,name),category:material_categories(id,code,name_en,is_active,esm_id)').order('name'))
   const { rows: rooms } = useLiveQuery('rooms', (q) => q.select('id,name,floor').eq('building_id', buildingId).order('name'), [buildingId])

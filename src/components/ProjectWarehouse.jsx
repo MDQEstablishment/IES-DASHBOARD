@@ -8,10 +8,17 @@ import { Empty } from './ui'
 // category: is_short). Rows are aggregated by material NAME across brand
 // variants; click a row to drill down to the brand-by-brand split. The low-stock
 // badge fires when the row's category is short.
-const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
 const num = (v) => (v == null ? 0 : Number(v))
 
 export default function ProjectWarehouse({ projectId }) {
+  // A3(14) — the ESM display order comes from `esms.ordinal` (migration 0139).
+  // The literal `({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)` this replaces existed
+  // VERBATIM in five components: one fact, five copies, and every ESM outside
+  // the three tied at the same sentinel 9. Unknown codes now sort after all
+  // known ones instead of colliding with each other.
+  const { rows: esmRows } = useLiveQuery('esms', (q) => q.select('code,ordinal').order('ordinal'))
+  const esmRank = Object.fromEntries(esmRows.map((e) => [e.code, e.ordinal]))
+  const ESM_ORDER = (c) => (c in esmRank ? esmRank[c] : Number.MAX_SAFE_INTEGER)
   const { rows: stock, loading } = useLiveQuery('project_warehouse_stock',
     (q) => q.select('*').eq('project_id', projectId), [projectId])
   const { rows: catStock } = useLiveQuery('project_category_stock',

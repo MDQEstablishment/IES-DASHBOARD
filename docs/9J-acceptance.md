@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 536 interactive controls · 277 database touches.**
+**Totals: 57 files · 536 interactive controls · 287 database touches.**
 
 ## Per-file summary
 
@@ -19,7 +19,7 @@ that commit message.
 | `src/components/AiUsageMeter.jsx` | 1 | 4 | — | ☐ |
 | `src/components/BuildWatcher.jsx` | 1 | 0 | — | ☐ |
 | `src/components/BuildingChat.jsx` | 9 | 5 | — | ☐ |
-| `src/components/BuildingMaterialsPlan.jsx` | 0 | 3 | — | ☐ |
+| `src/components/BuildingMaterialsPlan.jsx` | 0 | 4 | — | ☐ |
 | `src/components/BuildingModals.jsx` | 24 | 6 | — | ☐ |
 | `src/components/BuildingPhotos.jsx` | 3 | 4 | — | ☐ |
 | `src/components/BuildingsMap.jsx` | 0 | 0 | — | ☐ |
@@ -28,23 +28,23 @@ that commit message.
 | `src/components/CocDetailDrawer.jsx` | 1 | 2 | — | ☐ |
 | `src/components/CocFeedbackModal.jsx` | 7 | 3 | — | ☐ |
 | `src/components/CocHome.jsx` | 11 | 7 | — | ☐ |
-| `src/components/DailyProgress.jsx` | 10 | 8 | — | ☐ |
+| `src/components/DailyProgress.jsx` | 10 | 9 | — | ☐ |
 | `src/components/DateInput.jsx` | 10 | 0 | — | ☐ |
 | `src/components/EquipmentCatalogs.jsx` | 17 | 3 | — | ☐ |
 | `src/components/FileDropZone.jsx` | 5 | 0 | — | ☐ |
 | `src/components/GlobalSearch.jsx` | 7 | 0 | — | ☐ |
 | `src/components/Icon.jsx` | 0 | 0 | — | ☐ |
-| `src/components/InspectionFormModal.jsx` | 22 | 5 | — | ☐ |
+| `src/components/InspectionFormModal.jsx` | 22 | 6 | — | ☐ |
 | `src/components/LightingReplacements.jsx` | 5 | 2 | — | ☐ |
 | `src/components/Login.jsx` | 5 | 0 | Sign in | ☐ |
-| `src/components/MainWarehouse.jsx` | 2 | 1 | — | ☐ |
+| `src/components/MainWarehouse.jsx` | 2 | 2 | — | ☐ |
 | `src/components/MaterialDeliveries.jsx` | 29 | 8 | — | ☐ |
 | `src/components/ProgressReportCard.jsx` | 6 | 14 | — | ☐ |
 | `src/components/ProjectDocuments.jsx` | 25 | 11 | — | ☐ |
 | `src/components/ProjectItems.jsx` | 21 | 28 | — | ☐ |
-| `src/components/ProjectModals.jsx` | 35 | 10 | — | ☐ |
+| `src/components/ProjectModals.jsx` | 35 | 12 | — | ☐ |
 | `src/components/ProjectUnitSelection.jsx` | 15 | 6 | — | ☐ |
-| `src/components/ProjectWarehouse.jsx` | 2 | 2 | — | ☐ |
+| `src/components/ProjectWarehouse.jsx` | 2 | 3 | — | ☐ |
 | `src/components/ReportTemplate.jsx` | 4 | 6 | — | ☐ |
 | `src/components/SavingSheetTab.jsx` | 7 | 9 | — | ☐ |
 | `src/components/SavingSheetTemplate.jsx` | 4 | 6 | — | ☐ |
@@ -58,12 +58,12 @@ that commit message.
 | `src/components/murshid/MurshidSettings.jsx` | 3 | 3 | — | ☐ |
 | `src/components/survey/DailyLog.jsx` | 6 | 0 | — | ☐ |
 | `src/components/survey/EntriesTable.jsx` | 15 | 1 | — | ☐ |
-| `src/components/survey/EntryForm.jsx` | 21 | 5 | — | ☐ |
+| `src/components/survey/EntryForm.jsx` | 21 | 6 | — | ☐ |
 | `src/components/survey/OperatingHours.jsx` | 12 | 4 | — | ☐ |
 | `src/components/ui.jsx` | 4 | 0 | — | ☐ |
 | `src/pages/BuildingDetail.jsx` | 12 | 11 | Building Detail | ☐ |
 | `src/pages/DailyProgress.jsx` | 9 | 7 | Project Daily Progress | ☐ |
-| `src/pages/Dashboard.jsx` | 1 | 10 | Dashboard | ☐ |
+| `src/pages/Dashboard.jsx` | 1 | 12 | Dashboard | ☐ |
 | `src/pages/DesignSystem.jsx` | 0 | 0 | Design System | ☐ |
 | `src/pages/Escalations.jsx` | 16 | 8 | Escalations | ☐ |
 | `src/pages/ManageEsms.jsx` | 20 | 9 | Materials | ☐ |
@@ -209,6 +209,7 @@ shared primitives: Empty×1
 | database effect | count |
 | --- | --- |
 | `read:building_material_plan` | 1 |
+| `read:esms` | 1 |
 | `read:material_categories` | 1 |
 | `read:project_warehouse_stock` | 1 |
 
@@ -371,6 +372,7 @@ shared primitives: Btn×9, Empty×1, Loading×1, Modal×1
 | `io:uploadToBucket` | 1 |
 | `read:building_item_scope` | 1 |
 | `read:daily_progress_batch` | 1 |
+| `read:esms` | 1 |
 | `read:materials` | 1 |
 | `read:project_warehouse_stock` | 1 |
 | `read:rooms` | 1 |
@@ -468,6 +470,7 @@ shared primitives: Btn×8, Empty×1, Field×1, Loading×1, Modal×2
 | database effect | count |
 | --- | --- |
 | `io:downloadBlob` | 1 |
+| `read:esms` | 1 |
 | `read:project_control_links` | 1 |
 | `read:project_esms` | 1 |
 | `read:project_installed_items` | 1 |
@@ -512,6 +515,7 @@ screen label: **Sign in**
 
 | database effect | count |
 | --- | --- |
+| `read:esms` | 1 |
 | `read:main_warehouse_stock` | 1 |
 
 shared primitives: Empty×2
@@ -694,6 +698,7 @@ shared primitives: Btn×2, Empty×1
 | `io:signedUrlFor` | 1 |
 | `io:uploadToBucket` | 1 |
 | `read:profiles` | 2 |
+| `read:v_form_options` | 2 |
 | `rpc:import_project_bundle` | 1 |
 
 shared primitives: Btn×13, Field×20, FileDropZone×1, Modal×4
@@ -733,6 +738,7 @@ shared primitives: Btn×7, Empty×1
 
 | database effect | count |
 | --- | --- |
+| `read:esms` | 1 |
 | `read:project_category_stock` | 1 |
 | `read:project_warehouse_stock` | 1 |
 
@@ -952,6 +958,7 @@ shared primitives: Btn×7, Empty×1, Modal×2
 | `io:signedUrlFor` | 1 |
 | `io:uploadToBucket` | 1 |
 | `read:rooms` | 1 |
+| `read:space_types` | 1 |
 
 shared primitives: Btn×3, Field×13, FileDropZone×1, Modal×1
 
@@ -1056,14 +1063,16 @@ screen label: **Dashboard**
 | `read:building_item_scope` | 1 |
 | `read:buildings` | 1 |
 | `read:escalations` | 1 |
+| `read:esms` | 1 |
 | `read:install_log` | 1 |
 | `read:materials` | 1 |
+| `read:project_esms` | 1 |
 | `read:projects` | 1 |
 | `read:tarshid_constants` | 1 |
 | `read:tasks` | 1 |
 | `read:v_project_doc_progress` | 1 |
 
-shared primitives: Empty×5, Loading×1
+shared primitives: Empty×6, Loading×1
 
 ### `src/pages/DesignSystem.jsx`
 screen label: **Design System**

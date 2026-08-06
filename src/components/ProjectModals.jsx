@@ -11,7 +11,15 @@ import { toast } from '../lib/toast'
 import { localDayKey } from '../lib/format'
 import { read, utils } from 'xlsx'
 
-const STATUSES = ['active', 'draft', 'on_hold', 'closed']
+// A3(18) — the project-status, building-status and ESM lists are no longer
+// held here. They came from `public.v_form_options` (migration 0139), a view
+// over the real pg_enum labels plus the `esms` table, and the SAME view feeds
+// scripts/generate-project-template.js — so the app's validation and the Excel
+// template's dropdowns cannot drift apart, which is exactly what they had done.
+// The view withholds `project_status.deleted` and `building_status.archived`:
+// both are legal column values reached only through their own controls, and
+// offering "deleted" in a dropdown would soft-delete a project with no
+// confirmation and no reason recorded.
 const num = (v) => (v === '' || v == null ? null : Number(v))
 
 // ── The project schedule is the contract pair ───────────────────────────────
@@ -38,6 +46,12 @@ const weeksBetween = (from, to) => {
 export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const navigate = useNavigate()
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name,role').eq('archived', false).order('full_name'))
+  // A3(18) — the selectable project statuses, from the database (see the note
+  // above statusLabel's former neighbours). statusLabel() still supplies the
+  // WORDING so this dropdown keeps reading the same as the status chips
+  // everywhere else; only the SET of values now comes from the enum.
+  const { rows: formOptions } = useLiveQuery('v_form_options', (q) => q.select('domain,value,label,ordinal').order('ordinal'))
+  const projectStatuses = formOptions.filter((o) => o.domain === 'project_status').map((o) => o.value)
   const init = (k, d = '') => (project?.[k] ?? d)
   const [f, setF] = useState({
     code: init('code'), name: init('name'), client: init('client'), region: init('region'),
@@ -161,7 +175,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       <Group first>
         <Row>
           <Field label="Project code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="ABC-REGION" /></Field>
-          <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
+          <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{projectStatuses.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
         </Row>
         <Field label="Project name"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Client — Region name" /></Field>
       </Group>
@@ -301,8 +315,6 @@ export function AssignEngineerModal({ project, onClose }) {
 }
 
 // ── Excel import (multi-sheet template → atomic RPC) ────────────────────────
-const BSTATUSES = ['pending', 'in_progress', 'signed', 'on_hold', 'blocked']
-const ESMS = ['ESM1', 'ESM2', 'ESM3']
 const TEMPLATE_BUCKET_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/project-templates/IES-Project-Template-v3.xlsx`
 const TEMPLATE_STATIC_URL = `${import.meta.env.BASE_URL}templates/IES-Project-Template-v3.xlsx`
 
@@ -319,6 +331,11 @@ const isNum = (v) => v !== '' && !isNaN(Number(v))
 
 export function ProjectImportModal({ onClose }) {
   const navigate = useNavigate()
+  // A3(13)(18) — the three lists the importer validates against. They used to
+  // be literals here, which meant a fourth ESM could not be imported without a
+  // deploy: `!ESMS.includes(...)` rejected the row and the file with it.
+  const { rows: formOptions } = useLiveQuery('v_form_options', (q) => q.select('domain,value,label,ordinal').order('ordinal'))
+  const optionValues = (domain) => formOptions.filter((o) => o.domain === domain).map((o) => o.value)
   const [parsed, setParsed] = useState(null) // { project, buildings, scopes, materials }
   const [errors, setErrors] = useState([])
   const [importErr, setImportErr] = useState('') // server-side failure surfaced inline
@@ -346,6 +363,9 @@ export function ProjectImportModal({ onClose }) {
   }
 
   const onFile = async (e) => {
+    const PSTATUSES = optionValues('project_status')
+    const BSTATUSES = optionValues('building_status')
+    const ESMS = optionValues('esm')
     const file = e.target.files?.[0]; if (!file) return
     setFileName(file.name)
     setErrors([]); setParsed(null); setImportErr('')
@@ -360,7 +380,13 @@ export function ProjectImportModal({ onClose }) {
     if (!pr) errs.push('The Project sheet has no data row.')
     if (pr && !s(pr.code)) errs.push('Project: code is required.')
     if (pr && !s(pr.name)) errs.push('Project: name is required.')
-    if (pr && s(pr.status) && !STATUSES.includes(s(pr.status))) errs.push(`Project: invalid status "${s(pr.status)}".`)
+    // The lists are read from the database. If that read has not landed the
+    // file is NOT waved through — an unvalidated import is worse than a
+    // retry, because the RPC would then create real rows from unchecked values.
+    if (PSTATUSES.length === 0 || BSTATUSES.length === 0 || ESMS.length === 0) {
+      errs.push('The status and ESM lists could not be read from the database, so this file cannot be checked. Reload the page and try again.')
+    }
+    if (pr && s(pr.status) && PSTATUSES.length > 0 && !PSTATUSES.includes(s(pr.status))) errs.push(`Project: invalid status "${s(pr.status)}" — expected one of ${PSTATUSES.join(', ')}.`)
 
     const seen = new Set()
     buildings.forEach((b, i) => {
@@ -371,24 +397,24 @@ export function ProjectImportModal({ onClose }) {
       if (pr && s(b.project_code) && s(b.project_code) !== s(pr.code)) errs.push(`${ln}: project_code "${s(b.project_code)}" ≠ Project code "${s(pr.code)}".`)
       if (s(b.lat) && (!isNum(b.lat) || Math.abs(Number(b.lat)) > 90)) errs.push(`${ln}: lat out of range.`)
       if (s(b.lng) && (!isNum(b.lng) || Math.abs(Number(b.lng)) > 180)) errs.push(`${ln}: lng out of range.`)
-      if (s(b.status) && !BSTATUSES.includes(s(b.status))) errs.push(`${ln}: invalid status "${s(b.status)}".`)
+      if (s(b.status) && BSTATUSES.length > 0 && !BSTATUSES.includes(s(b.status))) errs.push(`${ln}: invalid status "${s(b.status)}" — expected one of ${BSTATUSES.join(', ')}.`)
       if (s(b.operating_hours) && !isNum(b.operating_hours)) errs.push(`${ln}: operating_hours must be a number.`)
     })
     scopes.forEach((c, i) => {
       const ln = `Scopes row ${i + 1}`
       if (!s(c.building_code)) errs.push(`${ln}: building_code is required.`)
       else if (!seen.has(s(c.building_code))) errs.push(`${ln}: building_code "${s(c.building_code)}" not found in Buildings.`)
-      if (!ESMS.includes(s(c.esm).toUpperCase())) errs.push(`${ln}: esm must be ESM1/ESM2/ESM3.`)
+      if (ESMS.length > 0 && !ESMS.includes(s(c.esm).toUpperCase())) errs.push(`${ln}: esm must be one of ${ESMS.join('/')}.`)
       if (s(c.planned_qty) && !isNum(c.planned_qty)) errs.push(`${ln}: planned_qty must be a number.`)
     })
     materials.forEach((m, i) => {
       const ln = `Materials row ${i + 1}`
       if (!s(m.material_code)) errs.push(`${ln}: material_code is required.`)
-      if (!ESMS.includes(s(m.esm).toUpperCase())) errs.push(`${ln}: esm must be ESM1/ESM2/ESM3.`)
+      if (ESMS.length > 0 && !ESMS.includes(s(m.esm).toUpperCase())) errs.push(`${ln}: esm must be one of ${ESMS.join('/')}.`)
     })
     items.forEach((it, i) => {
       const ln = `Items row ${i + 1}`
-      if (!ESMS.includes(s(it.esm).toUpperCase())) errs.push(`${ln}: esm must be ESM1/ESM2/ESM3.`)
+      if (ESMS.length > 0 && !ESMS.includes(s(it.esm).toUpperCase())) errs.push(`${ln}: esm must be one of ${ESMS.join('/')}.`)
       if (s(it.old_qty) && !isNum(it.old_qty)) errs.push(`${ln}: old_qty must be a number.`)
       if (s(it.new_qty) && !isNum(it.new_qty)) errs.push(`${ln}: new_qty must be a number.`)
     })

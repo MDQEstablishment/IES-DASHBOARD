@@ -16,7 +16,18 @@ const control = { ...inputStyle, boxSizing: 'border-box', width: '100%', maxWidt
 
 // Latin-digit enforcement (same rule as 9A-fix): map Arabic-Indic/Persian -> Latin, strip the rest.
 const numFilter = (s) => toLatin(s).replace(/[^\d.-]/g, '')
-const ROOM_TYPES = ['Office', 'Corridor', 'Toilet', 'Meeting Room', 'Lobby', 'Reception', 'Ward', 'Clinic', 'Laboratory', 'Warehouse', 'Kitchen', 'Electrical Room', 'Staircase', 'Parking', 'Outdoor']
+// A3(15) — the fifteen space types moved to public.space_types (migration
+// 0139) and are read below. They looked like a presentational list and were
+// not: survey_entries.room_type is the JOIN KEY that operating hours and EFLH
+// resolve on (savingSheet.js:340, lightingSavings.js:274, savingSheetGen.js:91,
+// the sync_operating_hours path), and a space type that has no operating-hours
+// row is a BLOCKING readiness item on the saving sheet. A list with that much
+// downstream weight cannot need a deploy to extend.
+//
+// The field stays a free-text input with a datalist, exactly as before: the
+// table supplies the suggestions, it does not become a fence. Values captured
+// before this change are the same strings (space_types.code = label), so no
+// historical row is orphaned.
 
 // numeric field keys and the int field
 const NUMF = ['room_width', 'room_height', 'room_area', 'tr', 'wattage', 'age_years']
@@ -76,6 +87,8 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
   const NO_BUILDING = '00000000-0000-0000-0000-000000000000'
   const { rows: buildingRooms } = useLiveQuery('rooms', (q) =>
     q.select('id,name,floor').eq('building_id', form.building_id || NO_BUILDING).order('name'), [form.building_id])
+  const { rows: spaceTypes } = useLiveQuery('space_types', (q) =>
+    q.select('code,label,ordinal').eq('active', true).order('ordinal'))
   const roomMatch = useMemo(() => {
     const k = roomKey(form.room_name)
     if (!k) return null
@@ -194,7 +207,7 @@ export default function SurveyEntryForm({ project, buildings, row, onClose, onSa
         </Field>
         <Field label="Room type">
           <input style={control} list="survey-room-types" value={form.room_type} onChange={(e) => set('room_type', e.target.value)} />
-          <datalist id="survey-room-types">{ROOM_TYPES.map((t) => <option key={t} value={t} />)}</datalist>
+          <datalist id="survey-room-types">{spaceTypes.map((t) => <option key={t.code} value={t.code}>{t.label !== t.code ? t.label : undefined}</option>)}</datalist>
         </Field>
         <NumField label="Width (m)" v={form.room_width} on={(v) => set('room_width', v)} />
         <NumField label="Height (m)" v={form.room_height} on={(v) => set('room_height', v)} />

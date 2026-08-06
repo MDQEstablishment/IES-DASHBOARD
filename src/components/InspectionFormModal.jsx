@@ -58,7 +58,12 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
   // MIR item picker (Sprint 8E #6): group items by ESM — the selected ESM first
   // (labelled "selected"), then the rest in ascending ESM order; within a group
   // sort by description then model.
-  const ESM_RANK = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
+  // A3(14) — from `esms.ordinal` (migration 0139), not the fifth copy of
+  // `({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)`. Unknown codes sort after every
+  // known one rather than tying with each other at the sentinel.
+  const { rows: esmRows } = useLiveQuery('esms', (q) => q.select('code,ordinal').order('ordinal'))
+  const esmRank = Object.fromEntries(esmRows.map((e) => [e.code, e.ordinal]))
+  const ESM_RANK = (c) => (c in esmRank ? esmRank[c] : Number.MAX_SAFE_INTEGER)
   const groupedItems = (() => {
     const byEsm = {}
     items.forEach((it) => { (byEsm[it.esm_code] = byEsm[it.esm_code] || []).push(it) })

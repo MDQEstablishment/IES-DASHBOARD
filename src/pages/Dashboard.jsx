@@ -12,25 +12,32 @@ const CARD_DOCS = [
   ['S-Curve', 'Cumulative installed quantity against the contracted plan, sampled weekly. Planned is each project’s scope spread linearly over its own start date + duration; actual is install_log to date, capped per scope at the planned quantity, and drawn only up to today. A project with scope but no schedule is excluded and counted under the chart.', 'install_log.entry_date vs building_item_scope.planned_qty over projects.start_date + total_weeks', 'Daily Report submissions; project start date + duration'],
   ['COCs Signed', 'Certified (building × ESM) pairs out of every pair with planned scope, across active projects. A pair counts as approved once the certificate claiming it is approved or accepted with comments by TARSHID.', 'v_project_doc_progress (approved_count ÷ expected_count, doc_type=coc) — pair-grained, from coc_pool + coc_claims', 'Logging TARSHID feedback on a certificate; scope and installation drive the denominator'],
   ['Progress by Project', 'Per-project weighted %.', 'install_log + building_item_scope', 'Engineer log entries'],
-  ['Progress by ESM', 'Per-ESM aggregated % across the portfolio.', 'install_log grouped by ESM', 'Engineer log entries'],
+  ['Progress by ESM', 'Per-ESM aggregated % across the portfolio, one bar per row in the ESM catalogue. An ESM with no planned scope reads “—”, not 0%.', 'install_log grouped by building_item_scope.project_esm_id → esms (name and order from the esms table; a project’s custom_name wins when every project agrees on it)', 'Engineer log entries; the ESM catalogue under Materials'],
   ['Attention List', 'Open escalations + blocked tasks.', 'escalations + tasks', 'Auto-detected blockers + manual escalations'],
   ['Recent Activity', 'Writes across the programme in the last 24 hours, newest first, up to six.', 'audit_log (created_at within 24h)', 'Any write action'],
   ['Critical Materials', 'CRITICAL is stock below its reorder threshold. LOW is stock below threshold × the low_stock_multiplier constant; with that row absent there is no LOW band.', 'materials (received vs threshold) × tarshid_constants.low_stock_multiplier', 'Material receipts + install activity; the constant in tarshid_constants'],
 ]
 
-// ESM bucket inference from material_code prefix (fallback when no scope→esm join)
-function esmOf(code) {
-  const c = (code || '').toUpperCase()
-  if (c.startsWith('LED')) return 'ESM1'
-  if (c.startsWith('SENS')) return 'ESM2'
-  if (c.startsWith('AC') || c.startsWith('BR') || c.startsWith('RC')) return 'ESM3'
-  return null
-}
-const ESM_META = {
-  ESM1: { no: 'ESM1', name: 'Lighting / Fixtures' },
-  ESM2: { no: 'ESM2', name: 'Lighting Control / Sensors' },
-  ESM3: { no: 'ESM3', name: 'AC Units' },
-}
+// A3(11)(12)(13) — three ESM facts that were held in this file are gone.
+//
+// `esmOf(material_code)` inferred an ESM from a code PREFIX (LED->ESM1,
+// SENS->ESM2, AC/BR/RC->ESM3). Its comment called it a fallback for when there
+// is no scope->esm join. There has been a join for a long time — building_item_scope
+// .project_esm_id -> project_esms -> esms — and this was the ONLY path, so any
+// material code outside those five prefixes (every imported code of the form
+// LED-T8-120-14W is fine, but PANEL-*, LUM-*, SPLIT-* are not) vanished from
+// the ESM card while still counting in Portfolio Progress. The two numbers on
+// the same screen disagreed, silently, in the direction that looks better.
+// progressReport.js:94-101 already resolves ESM the right way; this file now
+// does the same thing.
+//
+// `ESM_META` hardcoded display names that DID NOT MATCH the database: it said
+// "Lighting / Fixtures" and "AC Units" where `esms` says "Lighting Replacement"
+// and "AC Units Replacement". The names come from `esms` now, ordered by
+// `esms.ordinal` (migration 0139), and `project_esms.custom_name` is honoured.
+//
+// `['ESM1','ESM2','ESM3']` fixed the card at three bars. A fourth ESM row in
+// the catalogue now appears without a deploy.
 
 export default function Dashboard() {
   const [help, setHelp] = useState(false)
@@ -43,7 +50,9 @@ export default function Dashboard() {
   // the S-Curve (which both derive from `overall`). Sprint 8I-A.
   const activeProjectIds = new Set(projects.map((p) => p.id))
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived' && activeProjectIds.has(b.project_id))
-  const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
+  const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,project_esm_id,planned_qty'))
+  const { rows: esmCatalog } = useLiveQuery('esms', (q) => q.select('code,name,ordinal').order('ordinal'))
+  const { rows: projectEsms } = useLiveQuery('project_esms', (q) => q.select('id,project_id,custom_name,esm:esms(code,name)'))
   const { rows: install, loading } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status,entry_date'))
   const { rows: escs } = useLiveQuery('escalations', (q) =>
     q.select('id,title,severity,status,created_at,building:buildings(code,name),raised_to:profiles!escalations_raised_to_id_fkey(full_name)')
@@ -71,6 +80,8 @@ export default function Dashboard() {
   const installedByScope = {}
   install.forEach((r) => { if (r.qa_status !== 'rejected') installedByScope[r.scope_id] = (installedByScope[r.scope_id] || 0) + (r.qty || 0) })
   const bP = {}; buildings.forEach((b) => { bP[b.id] = b.project_id })
+  // scope -> ESM code, by the real join (the same resolution progressReport.js uses)
+  const esmOfProjectEsm = {}; projectEsms.forEach((pe) => { esmOfProjectEsm[pe.id] = pe.esm?.code || null })
 
   let planned = 0, installed = 0
   const per = {}             // project_id -> {planned, installed}
@@ -85,9 +96,14 @@ export default function Dashboard() {
     plannedByScope[s.id] = s.planned_qty || 0
     scopeProject[s.id] = pid
     ;(per[pid] = per[pid] || { planned: 0, installed: 0 }); per[pid].planned += s.planned_qty || 0; per[pid].installed += ins
-    const e = esmOf(s.material_code)
+    const e = esmOfProjectEsm[s.project_esm_id]
     if (e) { (esmAgg[e] = esmAgg[e] || { planned: 0, installed: 0 }); esmAgg[e].planned += s.planned_qty || 0; esmAgg[e].installed += ins }
   })
+  // Scope whose project_esm row is missing or unresolvable is counted in
+  // Portfolio Progress but cannot be attributed to an ESM. Say so on the card
+  // rather than let the two totals disagree in silence, which is what the
+  // prefix inference did.
+  const unattributed = scopes.reduce((a, s) => (bP[s.building_id] && !esmOfProjectEsm[s.project_esm_id] ? a + (s.planned_qty || 0) : a), 0)
   // Same rule as the two bar charts below: no denominator means UNKNOWN. With
   // no planned scope anywhere this used to read a confident 0% in the largest
   // number on the page, directly above bars that (correctly) read "—".
@@ -123,10 +139,19 @@ export default function Dashboard() {
   })
 
   // Progress by ESM bars (portfolio)
-  const esmBars = ['ESM1', 'ESM2', 'ESM3'].map((k) => {
-    const d = esmAgg[k] || { planned: 0, installed: 0 }
+  // The bar's label is the catalogue name, unless every project that has
+  // adopted this ESM renamed it to the SAME thing — then that shared name is
+  // what people call it and it wins. Where projects disagree the portfolio
+  // card cannot pick a side, so it shows the catalogue name.
+  const customNameOf = (code) => {
+    const mine = projectEsms.filter((pe) => pe.esm?.code === code)
+    const names = [...new Set(mine.map((pe) => (pe.custom_name || '').trim()).filter(Boolean))]
+    return mine.length > 0 && names.length === 1 && names[0] !== '' && mine.every((pe) => (pe.custom_name || '').trim() === names[0]) ? names[0] : null
+  }
+  const esmBars = esmCatalog.map((e) => {
+    const d = esmAgg[e.code] || { planned: 0, installed: 0 }
     const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : null
-    return { no: ESM_META[k].no, name: ESM_META[k].name, prog, progW: (prog || 0) + '%' }
+    return { no: e.code, name: customNameOf(e.code) || e.name, prog, progW: (prog || 0) + '%' }
   })
 
   // ── S-Curve — REAL, or nothing ─────────────────────────────────────────────
@@ -303,6 +328,7 @@ export default function Dashboard() {
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Portfolio</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+            {esmBars.length === 0 && <Empty icon="materials">No energy saving measures are defined yet. Add them under Materials to see progress by ESM.</Empty>}
             {esmBars.map((e, i) => (
               <div key={i}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -314,6 +340,11 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
+            {unattributed > 0 && (
+              <div style={{ fontSize: 11.5, color: 'var(--warn)', marginTop: 2 }}>
+                {unattributed.toLocaleString()} planned units are not linked to an ESM and are counted in Portfolio Progress but in none of the bars above.
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -5,10 +5,17 @@ import { Empty } from './ui'
 // Sprint 8E/8H — Main Warehouse rollup (top-bar Materials page). Total stock on
 // hand aggregated by material NAME across brand variants and across all projects;
 // click a row to drill down to the brand-by-brand split. Reads main_warehouse_stock.
-const ESM_ORDER = (c) => ({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)
 const num = (v) => (v == null ? 0 : Number(v))
 
 export default function MainWarehouse() {
+  // A3(14) — the ESM display order comes from `esms.ordinal` (migration 0139).
+  // The literal `({ ESM1: 1, ESM2: 2, ESM3: 3 }[c] || 9)` this replaces existed
+  // VERBATIM in five components: one fact, five copies, and every ESM outside
+  // the three tied at the same sentinel 9. Unknown codes now sort after all
+  // known ones instead of colliding with each other.
+  const { rows: esmRows } = useLiveQuery('esms', (q) => q.select('code,ordinal').order('ordinal'))
+  const esmRank = Object.fromEntries(esmRows.map((e) => [e.code, e.ordinal]))
+  const ESM_ORDER = (c) => (c in esmRank ? esmRank[c] : Number.MAX_SAFE_INTEGER)
   const { rows: main, loading } = useLiveQuery('main_warehouse_stock', (q) => q.select('*'))
   const [open, setOpen] = useState(null)
   const [esm, setEsm] = useState('all')
