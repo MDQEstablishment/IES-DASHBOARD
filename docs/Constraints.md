@@ -76,18 +76,28 @@ These hold every sprint unless the owner explicitly amends them.
    it, and for binary/compound formats a visible-layer search does not establish
    absence — unzip and search every part, or do not claim it is clean.
 
-   **Evidence that (1) and (3) are load-bearing, from the first application of
-   this exception.** Two findings, both recorded because they are the kind that
-   a lighter method returns clean on:
+   **The worked example — why conditions (2) and (3) are not bureaucracy.**
+   During the first application of this exception, the de-identification
+   tooling's own scanner decoded UTF-8 parts as latin1. Arabic became mojibake,
+   and the Arabic detector reported **zero on the very part holding hundreds of
+   Arabic strings**. *This rule's failure mode reproduced itself inside the tool
+   written to prevent it.* It was caught only because the count was
+   cross-checked against an independent parser.
 
-   - The de-identification tooling's own scanner initially decoded UTF-8 parts
-     as latin1. Arabic became mojibake and the Arabic detector reported **zero**
-     on the very part holding hundreds of Arabic strings. This rule's failure
-     mode reproduced itself *inside the verification tool*, and was caught only
-     because the count was cross-checked against an independent parser.
-   - Two identifier classes were found that no inventory had listed and no
-     spreadsheet-level inspection could reach: an absolute filesystem path
-     containing a person's name inside `xl/workbook.xml`, and internal
-     print-server hostnames plus a Windows user-profile path inside the
-     UTF-16-encoded binary `printerSettings*.bin` members. Both surfaced only by
-     enumerating members and decoding each one more than one way.
+   That is the whole argument. A verification tool can fail in precisely the way
+   it exists to catch, and it will report success while doing so. Therefore a
+   clean result is worth nothing on its own: the method must be stated so it can
+   be judged, and cross-checked so a single tool's blind spot cannot pass for
+   absence. "The checker said clean" is not evidence — it is the claim awaiting
+   evidence.
+
+   **A second finding, on the breadth of what to search for.** Two identifier
+   classes were found that no inventory had listed and no spreadsheet-level
+   inspection could reach: an absolute filesystem path containing a person's
+   name inside `xl/workbook.xml`, and internal print-server hostnames plus a
+   Windows user-profile path inside the UTF-16-encoded binary
+   `printerSettings*.bin` members. Both surfaced only by enumerating members and
+   decoding each one more than one way. The general form: an office document
+   carries authorship infrastructure — people, hostnames, paths, tenant
+   identifiers, protection labels — that nobody puts there deliberately and no
+   category list written from the *expected* content will name.

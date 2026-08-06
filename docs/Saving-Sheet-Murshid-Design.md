@@ -966,3 +966,55 @@ not.
 and the red-team suite are untouched by all four fixes. D3 and D4 rewrite prompt
 *content*, not the prefilter — and the red-team's prompt assertions must be
 updated in step, since several match on the Arabic strings being replaced.
+
+---
+
+# 22. The de-identification, as-built — and the second narrow audit
+
+Landed as `d07f7c1` (the Constraints #7 exception) and `e3f7db0` (the two
+de-identified templates, the deterministic cleaning script, and the per-part
+proofs). Full detail in `docs/proofs/README.md`. The originals stay with the
+owner and are not in this repository.
+
+## 22.1 The audit that caught the first miss was itself too narrow
+
+Stated plainly, because this is the same lesson landing a second time and
+softening it would waste it: **the method was right and the category list was
+wrong, which produced a confident negative worth nothing.**
+
+The clearest single number: the audit estimated **16** coordinate-shaped
+strings in the AC workbook. The full per-part enumeration found **145**. It
+also found four categories nobody had thought to look for:
+
+| category found | why the earlier list missed it |
+|---|---|
+| Real people's names (comments, `docProps`) | the search looked for *facilities*, not *authors* |
+| SharePoint tenant hostnames | not content at all — document infrastructure |
+| Filesystem and print-server paths | inside UTF-16 binary parts, invisible to a UTF-8 text scan |
+| A Microsoft sensitivity label (`docMetadata/`) | a part nobody had enumerated |
+
+None of these would surface by searching for what one *expects* to find. That
+is now written into Constraints #7 as the general form: an office document
+carries authorship infrastructure that nobody put there deliberately.
+
+## 22.2 For the owner's attention — one item is his, not TARSHID's
+
+Among the SharePoint tenant hostnames removed from the workbooks, **one belongs
+to MDQ's own tenant**, not TARSHID's. It travelled inside a client-supplied
+file, into a public repository, alongside TARSHID's. It is now removed from the
+committed artefacts and purged from branch history with everything else, but
+the owner should know his own infrastructure identifier was in there — a
+document received from a third party can carry *your* organisation's details
+outward as readily as theirs.
+
+## 22.3 The verification tool failed the way it was written to prevent
+
+Recorded in Constraints #7 as the worked example, and repeated here because it
+is the most transferable thing this episode produced: the de-identification
+scanner decoded UTF-8 parts as latin1, so Arabic became mojibake and the
+detector **reported zero on the part holding hundreds of Arabic strings**. Only
+a cross-check against a second parser caught it.
+
+A checker can fail in exactly the manner it exists to catch, and report success
+while doing so. This is why a negative finding must travel with its method, and
+why one tool's clean result is a claim rather than a proof.
