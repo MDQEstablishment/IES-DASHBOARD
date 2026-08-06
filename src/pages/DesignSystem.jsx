@@ -47,11 +47,11 @@ export default function DesignSystem() {
       <Sect title="TYPOGRAPHY">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-.3px', color: 'var(--ink-display)' }}>Page title — IBM Plex Sans 700</div>
-          <div style={{ fontSize: 34, fontWeight: 700, color: 'var(--ink-display)' }}>3,482<span style={{ fontSize: 16, color: 'var(--text-3)', fontWeight: 500 }}> units</span></div>
+          <div style={{ fontSize: 34, fontWeight: 700, color: 'var(--ink-display)' }}>0,000<span style={{ fontSize: 16, color: 'var(--text-3)', fontWeight: 500 }}> units</span></div>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Card heading — Plex Sans 700 · 14px</div>
           <div style={{ fontSize: 13 }}>Body / table cell — Plex Sans 400 · 13px · line-height 1.45. Engineers scan many rows, so density stays.</div>
           <div className="ies-kicker">KICKER / LABEL — PLEX MONO 600 · TRACKED 2.5PX</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>DATA — MOI-ASR-042 · 2026-06-28 · 4,820 · 72%</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>DATA — AAA-000-000 · 0000-00-00 · 0,000 · 00%</div>
         </div>
       </Sect>
 
@@ -90,8 +90,8 @@ export default function DesignSystem() {
         <table className="ies-tbl">
           <thead><tr><th>Code</th><th>Building</th><th>Status</th><th style={{ textAlign: 'right' }}>Progress</th></tr></thead>
           <tbody>
-            <tr className="ies-trow"><td style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}>BG-001</td><td style={{ fontWeight: 600 }}>Asir Police HQ</td><td><Chip status="active" /></td><td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>72%</td></tr>
-            <tr className="ies-trow"><td style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}>BG-002</td><td style={{ fontWeight: 600 }}>Civil Defense</td><td><Chip status="pending" /></td><td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>41%</td></tr>
+            <tr className="ies-trow"><td style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}>AAA-001</td><td style={{ fontWeight: 600 }}>Sample Row One</td><td><Chip status="active" /></td><td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>00%</td></tr>
+            <tr className="ies-trow"><td style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}>AAA-002</td><td style={{ fontWeight: 600 }}>Sample Row Two</td><td><Chip status="pending" /></td><td style={{ textAlign: 'right', fontFamily: 'var(--mono)' }}>00%</td></tr>
           </tbody>
         </table>
       </Sect>

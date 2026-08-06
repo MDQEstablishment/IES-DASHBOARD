@@ -52,13 +52,13 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
     <Modal open width={620} title={mode === 'edit' ? `Edit building · ${building.code}` : 'Add building'} onClose={onClose}
       footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Add building'}</Btn></>}>
       <Row>
-        <Field label="Building code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="MOI-004" /></Field>
-        <Field label="City / region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Abha" /></Field>
+        <Field label="Building code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="ABC-001" /></Field>
+        <Field label="City / region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Sample District" /></Field>
       </Row>
-      <Field label="Building name (English)"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Police HQ — Abha" /></Field>
+      <Field label="Building name (English)"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Building name — district" /></Field>
       <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '6px 0 8px' }}>CONTRACTOR</div>
       <Row>
-        <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} placeholder="Al-Faisal HVAC" /></Field>
+        <Field label="Contractor name"><input lang="en" style={inputStyle} value={f.contractor_name} onChange={(e) => set('contractor_name', e.target.value)} placeholder="e.g. Contractor name" /></Field>
         <Field label="Contractor phone"><input lang="en" style={inputStyle} value={f.contractor_phone} onChange={(e) => set('contractor_phone', e.target.value)} placeholder="+966 50 000 0000" /></Field>
       </Row>
       <Field label="Site engineer (optional)">

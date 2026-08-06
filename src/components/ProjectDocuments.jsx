@@ -260,7 +260,7 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
   return (
     <Modal open width={540} title={`Update status · ${doc.name} (Rev ${doc.revision || 'A'})`} onClose={onClose}
       footer={<Btn onClick={onClose}>Close</Btn>}>
-      <Field label="Client reviewer name (required to approve)"><input lang="en" style={inputStyle} value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="e.g. Eng. Khalid Al-Mutairi" /></Field>
+      <Field label="Client reviewer name (required to approve)"><input lang="en" style={inputStyle} value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="e.g. Reviewer name" /></Field>
       <Field label="Notes / client comments (required to reject or approve-with-comments)"><textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Client comments / rejection reason" /></Field>
       <FileDropZone label="Approved / cover-comments version file (required for an approval)" accept=".pdf,image/*" maxSizeMb={25} onFiles={(f) => setFile(f)} helperText="PDF or image · 25 MB cap" />
       <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>WORKFLOW</div>

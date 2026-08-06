@@ -58,6 +58,135 @@ export function estimatedCompletion(project) {
 const round1 = (v) => Math.round(v * 10) / 10
 const pctOf = (part, whole) => (whole > 0 ? Math.min(100, round1((part / whole) * 100)) : 0)
 
+// ── S-curve series ──────────────────────────────────────────────────────────
+// A4 commit A. The Dashboard's largest panel used to SYNTHESIZE its curve:
+// `Math.pow(t, 0.85)` for "planned" and a linear ramp from the single scalar
+// `overall` for "actual", drawn against three fixed axis labels and a NOW
+// gridline pinned to the viewBox midpoint. Against an empty database it drew a
+// confident healthy programme. This function replaces that with the real thing.
+//
+// PURE, like everything else in this module — no supabase, no clock of its own
+// (`asOf` is passed in), so it is asserted in tests/sCurve.test.mjs rather than
+// eyeballed on screen.
+//
+// THE ONE RULE: there is no fallback shape. If the inputs cannot produce a real
+// curve, this returns { ok: false, reason } naming the missing input, and the
+// caller renders an empty state saying what has to happen first. It never
+// returns a series it invented.
+//
+//   planned  linear over each project's own contracted window
+//            (projects.start_date .. start_date + total_weeks*7), summed across
+//            projects — the same start/duration pair estimatedCompletion() uses.
+//   actual   cumulative install_log.qty by entry_date, capped per scope at
+//            building_item_scope.planned_qty. That cap is the same rule the KPI
+//            ring, Projects, ProjectDetail and assembleReportData() apply, so
+//            the curve's endpoint and Portfolio Progress cannot disagree.
+//            Drawn only up to `asOf` — the future is not measured.
+const MAX_POINTS = 53   // one year of weekly samples; longer programmes step by n weeks
+
+const addDays = (iso, n) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
+  if (!m) return ''
+  const d = new Date(+m[1], +m[2] - 1, +m[3])
+  d.setDate(d.getDate() + n)
+  const p2 = (x) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+}
+const isDay = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''))
+
+export function sCurveSeries({
+  projects = [], plannedByProject = {}, plannedByScope = {}, scopeProject = {},
+  installs = [], asOf,
+}) {
+  const plannedTotalAll = Object.values(plannedByProject).reduce((a, v) => a + (Number(v) || 0), 0)
+  if (!(plannedTotalAll > 0)) return { ok: false, reason: 'no_scope' }
+
+  // A project contributes a planned ramp only when it has BOTH ends of the
+  // contract pair and some planned scope. One without a schedule is not
+  // guessed at — it is named in `unscheduled` so the panel can say so.
+  const scheduled = []
+  const unscheduled = []
+  projects.forEach((p) => {
+    const planned = Number(plannedByProject[p.id]) || 0
+    if (planned <= 0) return
+    const end = estimatedCompletion(p)
+    if (!isDay(p.start_date) || !end) { unscheduled.push(p); return }
+    scheduled.push({ id: p.id, name: p.name || p.code || '', start: p.start_date, end, planned })
+  })
+  if (scheduled.length === 0) return { ok: false, reason: 'no_schedule', unscheduled }
+
+  const plannedTotal = scheduled.reduce((a, p) => a + p.planned, 0)
+  const start = scheduled.reduce((a, p) => (a && a < p.start ? a : p.start), '')
+  const end = scheduled.reduce((a, p) => (a && a > p.end ? a : p.end), '')
+
+  // ── actual: cumulative installed by day, capped per scope ─────────────────
+  // Only rows on a scope this series knows about, only rows carrying a date.
+  const dated = installs
+    .filter((r) => isDay(r.entry_date) && r.scope_id in plannedByScope)
+    .filter((r) => !scopeProject[r.scope_id] || plannedByProject[scopeProject[r.scope_id]] > 0)
+    .sort((a, b) => String(a.entry_date).localeCompare(String(b.entry_date)))
+  if (dated.length === 0) return { ok: false, reason: 'no_installs', plannedTotal, start, end }
+
+  const perScope = new Map()
+  const cumByDay = []          // [{ date, cum }] one entry per day that has rows
+  let cum = 0
+  dated.forEach((r) => {
+    const cap = Number(plannedByScope[r.scope_id]) || 0
+    const was = perScope.get(r.scope_id) || 0
+    const now = Math.min(cap, was + (Number(r.qty) || 0))
+    cum += now - was
+    perScope.set(r.scope_id, now)
+    const last = cumByDay[cumByDay.length - 1]
+    if (last && last.date === r.entry_date) last.cum = cum
+    else cumByDay.push({ date: r.entry_date, cum })
+  })
+
+  // ── weekly sample dates across the real timeline ──────────────────────────
+  const spanDays = Math.max(1, daysInclusive(start, end) - 1)
+  const weeks = Math.max(1, Math.ceil(spanDays / 7))
+  const step = Math.max(1, Math.ceil((weeks + 1) / MAX_POINTS))   // weeks per sample
+  const dates = []
+  for (let w = 0; w <= weeks; w += step) dates.push(addDays(start, Math.min(w * 7, spanDays)))
+  if (dates[dates.length - 1] !== end) dates.push(end)
+
+  const plannedAt = (day) => scheduled.reduce((a, p) => {
+    if (day < p.start) return a
+    const span = Math.max(1, daysInclusive(p.start, p.end) - 1)
+    const done = Math.min(span, daysInclusive(p.start, day) - 1)
+    return a + p.planned * (done / span)
+  }, 0)
+  const actualAt = (day) => {
+    let v = 0
+    for (const d of cumByDay) { if (d.date > day) break; v = d.cum }
+    return v
+  }
+
+  const today = isDay(asOf) ? asOf : ''
+  const points = dates.map((date) => ({
+    date,
+    planned: Math.round(plannedAt(date)),
+    // the actual line stops at today: a value plotted past `asOf` would be a
+    // claim about work that has not happened
+    actual: today && date > today ? null : actualAt(date),
+  }))
+
+  // where NOW sits on the axis, as a 0..1 fraction of the drawn span
+  let nowFrac = null
+  if (today && today >= start) {
+    nowFrac = today >= end ? 1 : Math.min(1, Math.max(0, (daysInclusive(start, today) - 1) / spanDays))
+  } else if (today) {
+    nowFrac = 0
+  }
+
+  const installedNow = today ? actualAt(today) : (cumByDay[cumByDay.length - 1]?.cum ?? 0)
+  return {
+    ok: true, points, start, end, asOf: today, nowFrac,
+    plannedTotal, installedNow,
+    plannedNow: today ? Math.round(plannedAt(today > end ? end : today)) : null,
+    unscheduled,
+  }
+}
+
 // The report template's tables are keyed by CATEGORY (Lights / A/C / Sensors),
 // not by ESM code, so every ESM has to land in one of three buckets. Order
 // matters: "Lighting Control" is a SENSOR row, not a lighting row, so the

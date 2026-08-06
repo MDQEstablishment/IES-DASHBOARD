@@ -160,10 +160,10 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       )}
       <Group first>
         <Row>
-          <Field label="Project code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="PROJECT-A" /></Field>
+          <Field label="Project code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="ABC-REGION" /></Field>
           <Field label="Status"><select style={inputStyle} value={f.status} onChange={(e) => set('status', e.target.value)}>{STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}</select></Field>
         </Row>
-        <Field label="Project name"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Project A" /></Field>
+        <Field label="Project name"><input lang="en" style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="Client — Region name" /></Field>
       </Group>
       {/* Client is the PAYING party, Beneficiary Entity is whose buildings are
           retrofitted — two concepts, not duplicates. Neither derives from the
@@ -178,7 +178,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       <Group>
         <Row>
           <Field label="Client"><input lang="en" style={inputStyle} value={f.client} onChange={(e) => set('client', e.target.value)} placeholder="Tarshid" /></Field>
-          <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Asir" /></Field>
+          <Field label="Region"><input lang="en" style={inputStyle} value={f.region} onChange={(e) => set('region', e.target.value)} placeholder="Region name" /></Field>
         </Row>
         <Row>
           <Field label="Project Reference No"><input lang="en" style={inputStyle} value={f.project_reference_no} onChange={(e) => set('project_reference_no', e.target.value)} placeholder="2022005" /></Field>

@@ -215,7 +215,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
           </div>
           <Field label="Description (used in the filename & document name)"><input lang="en" style={inputStyle} value={docTitle} onChange={(e) => setDocTitle(e.target.value)} placeholder="e.g. Lighting Batch A" /></Field>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Storage location"><input lang="en" style={inputStyle} value={storage} onChange={(e) => setStorage(e.target.value)} placeholder="e.g. Warehouse A, MOI-001 basement" /></Field>
+            <Field label="Storage location"><input lang="en" style={inputStyle} value={storage} onChange={(e) => setStorage(e.target.value)} placeholder="e.g. Warehouse A, ABC-001 basement" /></Field>
             <Field label="Installation areas"><input lang="en" style={inputStyle} value={installation} onChange={(e) => setInstallation(e.target.value)} placeholder="e.g. all floors, exterior facade, parking" /></Field>
           </div>
 

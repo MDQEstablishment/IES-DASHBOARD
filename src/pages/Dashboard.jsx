@@ -2,19 +2,20 @@ import { useState } from 'react'
 import Icon from '../components/Icon'
 import { Loading, Empty, Drawer } from '../components/ui'
 import { useLiveQuery } from '../lib/db'
-import { ago } from '../lib/format'
+import { ago, localToday } from '../lib/format'
+import { sCurveSeries } from '../lib/progressReport'
 
 // Card documentation (also exported to docs/Dashboard-Cards-Reference.md)
 const CARD_DOCS = [
   ['Total Projects', 'Count of non-deleted projects.', 'projects table', 'Add Project / Delete Project actions'],
-  ['Portfolio Progress', 'Weighted average installed ÷ planned across active projects.', 'install_log ÷ building_item_scope', 'Engineer install entries'],
-  ['S-Curve', 'Planned vs actual progress over time.', 'install_log aggregated by week', 'Daily Report submissions'],
+  ['Portfolio Progress', 'Weighted average installed ÷ planned across active projects. With no planned scope anywhere there is no ratio, so it reads “—” rather than 0%.', 'install_log ÷ building_item_scope', 'Engineer install entries'],
+  ['S-Curve', 'Cumulative installed quantity against the contracted plan, sampled weekly. Planned is each project’s scope spread linearly over its own start date + duration; actual is install_log to date, capped per scope at the planned quantity, and drawn only up to today. A project with scope but no schedule is excluded and counted under the chart.', 'install_log.entry_date vs building_item_scope.planned_qty over projects.start_date + total_weeks', 'Daily Report submissions; project start date + duration'],
   ['COCs Signed', 'Certified (building × ESM) pairs out of every pair with planned scope, across active projects. A pair counts as approved once the certificate claiming it is approved or accepted with comments by TARSHID.', 'v_project_doc_progress (approved_count ÷ expected_count, doc_type=coc) — pair-grained, from coc_pool + coc_claims', 'Logging TARSHID feedback on a certificate; scope and installation drive the denominator'],
   ['Progress by Project', 'Per-project weighted %.', 'install_log + building_item_scope', 'Engineer log entries'],
   ['Progress by ESM', 'Per-ESM aggregated % across the portfolio.', 'install_log grouped by ESM', 'Engineer log entries'],
   ['Attention List', 'Open escalations + blocked tasks.', 'escalations + tasks', 'Auto-detected blockers + manual escalations'],
-  ['Recent Activity', 'Last writes across the programme.', 'audit_log', 'Any write action'],
-  ['Critical Materials', 'Materials at or below their reorder threshold.', 'materials (received vs threshold)', 'Material receipts + install activity'],
+  ['Recent Activity', 'Writes across the programme in the last 24 hours, newest first, up to six.', 'audit_log (created_at within 24h)', 'Any write action'],
+  ['Critical Materials', 'CRITICAL is stock below its reorder threshold. LOW is stock below threshold × the low_stock_multiplier constant; with that row absent there is no LOW band.', 'materials (received vs threshold) × tarshid_constants.low_stock_multiplier', 'Material receipts + install activity; the constant in tarshid_constants'],
 ]
 
 // ESM bucket inference from material_code prefix (fallback when no scope→esm join)
@@ -33,7 +34,7 @@ const ESM_META = {
 
 export default function Dashboard() {
   const [help, setHelp] = useState(false)
-  const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code,name,status,client,region').is('deleted_at', null))
+  const { rows: projects } = useLiveQuery('projects', (q) => q.select('id,code,name,status,client,region,start_date,total_weeks').is('deleted_at', null))
   const { rows: allBuildings } = useLiveQuery('buildings', (q) => q.select('id,project_id,status_override'))
   // Only count buildings that belong to a live (non-deleted) project. `projects`
   // is already filtered to deleted_at IS NULL, so a building whose project_id is
@@ -43,14 +44,28 @@ export default function Dashboard() {
   const activeProjectIds = new Set(projects.map((p) => p.id))
   const buildings = allBuildings.filter((b) => b.status_override !== 'archived' && activeProjectIds.has(b.project_id))
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,material_code,planned_qty'))
-  const { rows: install, loading } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
+  const { rows: install, loading } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status,entry_date'))
   const { rows: escs } = useLiveQuery('escalations', (q) =>
     q.select('id,title,severity,status,created_at,building:buildings(code,name),raised_to:profiles!escalations_raised_to_id_fkey(full_name)')
       .neq('status', 'resolved').neq('status', 'closed').order('severity', { ascending: false }))
   const { rows: tasks } = useLiveQuery('tasks', (q) => q.select('id,title,status,priority,created_at'))
   const { rows: materials } = useLiveQuery('materials', (q) => q.select('code,name,received,threshold,esm:esms(code)'))
-  const { rows: activity } = useLiveQuery('audit_log', (q) => q.select('id,actor_name,action,entity_type,summary,created_at').order('created_at', { ascending: false }).limit(6))
+  // A4(3) — the header says "Last 24h", so the QUERY now says it too. It used
+  // to be an unfiltered `order desc limit 6`, which meant the card could show
+  // rows from any month under a 24-hour heading. The window is computed at
+  // fetch time inside the builder, so a refetch re-reads the clock.
+  const { rows: activity } = useLiveQuery('audit_log', (q) => q
+    .select('id,actor_name,action,entity_type,summary,created_at')
+    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order('created_at', { ascending: false }).limit(6))
   const { rows: cocProg } = useLiveQuery('v_project_doc_progress', (q) => q.select('project_id,expected_count,approved_count').eq('doc_type', 'coc'))
+  // A4(4) — the LOW-stock band. Business policy, so it lives in the database
+  // with the rest of the decoded parameters (migration 0138) and has NO code
+  // default: if the row is absent nothing is classified LOW, because a made-up
+  // multiplier is exactly the kind of invented number this sprint removes.
+  const { rows: constRows } = useLiveQuery('tarshid_constants', (q) => q.select('key,value'))
+  const constants = {}; constRows.forEach((r) => { constants[r.key] = Number(r.value) })
+  const lowStockMult = Number.isFinite(constants.low_stock_multiplier) ? constants.low_stock_multiplier : null
 
   // approved-installed per scope, capped at planned_qty
   const installedByScope = {}
@@ -58,18 +73,25 @@ export default function Dashboard() {
   const bP = {}; buildings.forEach((b) => { bP[b.id] = b.project_id })
 
   let planned = 0, installed = 0
-  const per = {}       // project_id -> {planned, installed}
-  const esmAgg = {}    // ESMx -> {planned, installed}
+  const per = {}             // project_id -> {planned, installed}
+  const esmAgg = {}          // ESMx -> {planned, installed}
+  const plannedByScope = {}  // scope_id -> planned_qty   (S-curve per-scope cap)
+  const scopeProject = {}    // scope_id -> project_id    (S-curve scoping)
   scopes.forEach((s) => {
     const pid = bP[s.building_id]
     if (!pid) return // scope belongs to a soft-deleted/archived-project building — exclude from all totals
     const ins = Math.min(s.planned_qty || 0, installedByScope[s.id] || 0)
     planned += s.planned_qty || 0; installed += ins
+    plannedByScope[s.id] = s.planned_qty || 0
+    scopeProject[s.id] = pid
     ;(per[pid] = per[pid] || { planned: 0, installed: 0 }); per[pid].planned += s.planned_qty || 0; per[pid].installed += ins
     const e = esmOf(s.material_code)
     if (e) { (esmAgg[e] = esmAgg[e] || { planned: 0, installed: 0 }); esmAgg[e].planned += s.planned_qty || 0; esmAgg[e].installed += ins }
   })
-  const overall = planned ? (installed / planned) * 100 : 0
+  // Same rule as the two bar charts below: no denominator means UNKNOWN. With
+  // no planned scope anywhere this used to read a confident 0% in the largest
+  // number on the page, directly above bars that (correctly) read "—".
+  const overall = planned ? (installed / planned) * 100 : null
 
   // KPIs
   const kpiProjects = projects.length
@@ -78,7 +100,7 @@ export default function Dashboard() {
 
   // Portfolio ring dash (r=26 → circ ≈ 163.4)
   const CIRC = (2 * Math.PI * 26)
-  const portFrac = Math.min(1, overall / 100)
+  const portFrac = overall == null ? 0 : Math.min(1, overall / 100)
   const portRingDash = `${(CIRC * portFrac).toFixed(1)} ${CIRC.toFixed(1)}`
 
   // Individual COCs approved = SUM(approved_count) ÷ SUM(expected_count) across
@@ -91,38 +113,62 @@ export default function Dashboard() {
   const cocRingDash = `${(CIRC * cocFrac).toFixed(1)} ${CIRC.toFixed(1)}`
 
   // Progress by Project bars
+  // A percentage with no denominator is UNKNOWN, not zero — a project with no
+  // scope yet reads "—", not "0%" in warning amber.
   const projectBars = projects.map((p) => {
     const d = per[p.id] || { planned: 0, installed: 0 }
-    const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
-    const barColor = prog >= 67 ? 'var(--ok)' : prog >= 34 ? 'var(--accent)' : 'var(--warn)'
-    return { name: p.name, prog, progW: prog + '%', barColor }
+    const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : null
+    const barColor = prog == null ? 'var(--track)' : prog >= 67 ? 'var(--ok)' : prog >= 34 ? 'var(--accent)' : 'var(--warn)'
+    return { name: p.name, prog, progW: (prog || 0) + '%', barColor }
   })
 
   // Progress by ESM bars (portfolio)
   const esmBars = ['ESM1', 'ESM2', 'ESM3'].map((k) => {
     const d = esmAgg[k] || { planned: 0, installed: 0 }
-    const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : 0
-    return { no: ESM_META[k].no, name: ESM_META[k].name, prog, progW: prog + '%' }
+    const prog = d.planned ? Math.round((d.installed / d.planned) * 100) : null
+    return { no: ESM_META[k].no, name: ESM_META[k].name, prog, progW: (prog || 0) + '%' }
   })
 
-  // S-Curve (illustrative): synthesize cumulative actual ramping to current overall,
-  // plan ramping slightly ahead. 13 points across width 260, height 92 (0 top).
-  const N = 13, W = 260, H = 92
-  const planPts = [], actPts = []
-  for (let i = 0; i < N; i++) {
-    const t = i / (N - 1)
-    const x = (t * W).toFixed(1)
-    const planY = H - (Math.pow(t, 0.85) * (H - 10))
-    const actFrac = Math.min(1, portFrac) * Math.min(1, t / 0.5) // actual reaches `overall` at "now" (midpoint)
-    const actY = H - (actFrac * (H - 10))
-    planPts.push(`${x},${planY.toFixed(1)}`)
-    if (t <= 0.5) actPts.push(`${x},${actY.toFixed(1)}`)
+  // ── S-Curve — REAL, or nothing ─────────────────────────────────────────────
+  // A4(1)/(2). This panel used to synthesize both series: planned was
+  // Math.pow(t, 0.85), actual was a linear ramp from the single `overall`
+  // scalar to the viewBox midpoint, and the axis read "−12 WK / NOW / +12 WK"
+  // — three fixed strings over a gridline pinned to x=130. On an empty
+  // database it drew a healthy programme. It is now computed from
+  // install_log.entry_date against building_item_scope.planned_qty spread over
+  // each project's own start_date .. total_weeks window (lib/progressReport.js
+  // sCurveSeries), and when it cannot be computed the panel says which input
+  // is missing instead of drawing a shape.
+  const W = 260, H = 92
+  const today = localToday()
+  const curve = sCurveSeries({
+    projects, plannedByProject: Object.fromEntries(Object.entries(per).map(([k, v]) => [k, v.planned])),
+    plannedByScope, scopeProject,
+    installs: install.filter((r) => r.qa_status !== 'rejected'),
+    asOf: today,
+  })
+  const CURVE_EMPTY = {
+    no_scope: 'No planned scope yet. Import a project bundle or add building scope — the curve is planned quantity against what has been installed, and both sides start there.',
+    no_schedule: 'No project has a schedule yet. Set a contract start date and duration on a project, and the planned line can be drawn.',
+    no_installs: 'Scope and schedule are set, but no installation has been logged. The actual line starts with the first daily progress entry.',
   }
-  const planPoints = planPts.join(' ')
-  const actualPoints = actPts.join(' ')
-  const [ax, ay] = (actPts[actPts.length - 1] || '130,92').split(',')
-  const actualNowX = ax
-  const actualNowY = ay
+  let curveSvg = null
+  if (curve.ok) {
+    const maxY = Math.max(1, curve.plannedTotal, ...curve.points.map((p) => p.actual || 0))
+    const n = curve.points.length
+    const xOf = (i) => (n > 1 ? (i / (n - 1)) * W : 0)
+    const yOf = (v) => H - (Math.min(1, v / maxY) * (H - 10))
+    const planPoints = curve.points.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p.planned).toFixed(1)}`).join(' ')
+    const drawn = curve.points.map((p, i) => ({ p, i })).filter(({ p }) => p.actual != null)
+    const actualPoints = drawn.map(({ p, i }) => `${xOf(i).toFixed(1)},${yOf(p.actual).toFixed(1)}`).join(' ')
+    const last = drawn[drawn.length - 1]
+    curveSvg = {
+      planPoints, actualPoints, maxY,
+      nowX: curve.nowFrac == null ? null : (curve.nowFrac * W).toFixed(1),
+      dotX: last ? xOf(last.i).toFixed(1) : null,
+      dotY: last ? yOf(last.p.actual).toFixed(1) : null,
+    }
+  }
 
   // Attention List — open escalations + blocked tasks
   const blocked = tasks.filter((t) => t.status === 'blocked')
@@ -145,8 +191,13 @@ export default function Dashboard() {
   const criticalMaterials = materials
     .map((m) => {
       const stock = m.received || 0, t = m.threshold || 0
-      const ratio = t ? stock / t : 9
-      const status = stock < t ? 'CRITICAL' : stock < t * 1.5 ? 'LOW' : 'OK'
+      // A material with no threshold has no shortfall to rank: Infinity sorts
+      // it last honestly, where the old `9` sentinel silently claimed "9x
+      // covered" and could outrank a genuinely over-stocked item.
+      const ratio = t ? stock / t : Infinity
+      // LOW needs the multiplier from the database (0138). Without the row
+      // there is no LOW band — only the CRITICAL test, which needs no policy.
+      const status = stock < t ? 'CRITICAL' : (lowStockMult != null && stock < t * lowStockMult) ? 'LOW' : 'OK'
       return { esm: m.esm?.code || '—', name: m.name, stock, threshold: t, status, ratio, w: Math.min(100, Math.round((stock / (t * 2 || 1)) * 100)) + '%' }
     })
     .filter((m) => m.status !== 'OK')
@@ -206,8 +257,8 @@ export default function Dashboard() {
               <circle cx="32" cy="32" r="26" fill="none" stroke="var(--accent)" strokeWidth="8" strokeLinecap="round" strokeDasharray={portRingDash} transform="rotate(-90 32 32)" />
             </svg>
             <div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{Math.round(overall)}<span style={{ fontSize: 15, color: 'var(--text-3)' }}>%</span></div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>weighted · {kpiActive} active</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 28, fontWeight: 700, lineHeight: 1, color: overall == null ? 'var(--text-3)' : undefined }}>{overall == null ? '—' : <>{Math.round(overall)}<span style={{ fontSize: 15, color: 'var(--text-3)' }}>%</span></>}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{overall == null ? 'no planned scope yet' : `weighted · ${kpiActive} active`}</div>
             </div>
           </div>
         </div>
@@ -237,7 +288,7 @@ export default function Dashboard() {
               <div key={i}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, color: p.barColor, flex: 'none', marginLeft: 8 }}>{p.prog}%</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, color: p.prog == null ? 'var(--text-3)' : p.barColor, flex: 'none', marginLeft: 8 }} title={p.prog == null ? 'No planned scope yet' : undefined}>{p.prog == null ? '—' : `${p.prog}%`}</span>
                 </div>
                 <div style={{ height: 9, borderRadius: 'var(--radius-s)', background: 'var(--track)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: p.progW, background: p.barColor }} />
@@ -256,7 +307,7 @@ export default function Dashboard() {
               <div key={i}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 12 }}><span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--accent)' }}>{e.no}</span> {e.name}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, flex: 'none', marginLeft: 8 }}>{e.prog}%</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, fontWeight: 700, flex: 'none', marginLeft: 8, color: e.prog == null ? 'var(--text-3)' : undefined }} title={e.prog == null ? 'No planned scope yet' : undefined}>{e.prog == null ? '—' : `${e.prog}%`}</span>
                 </div>
                 <div style={{ height: 9, borderRadius: 'var(--radius-s)', background: 'var(--track)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: e.progW, background: 'linear-gradient(90deg,var(--accent),var(--brass-bright))' }} />
@@ -287,9 +338,8 @@ export default function Dashboard() {
           <div style={{ fontWeight: 700, fontSize: 14 }}>S-Curve</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}><span style={{ color: 'var(--text)' }}>━ actual</span> · <span>┄ planned</span></div>
         </div>
-        {/* The SERIES IS UNCHANGED — same 13 points, same 260x92 viewBox, same
-            planPoints/actualPoints computed above. Only the rendered height
-            changes: 92px in the old KPI card, 230px here.
+        {/* The 260x92 viewBox and the 230px rendered height are unchanged; only
+            the SERIES is real now.
             vector-effect="non-scaling-stroke" is what makes that safe: the
             viewBox is stretched by preserveAspectRatio="none", so without it
             every stroke would be scaled by ~3x horizontally and the grid
@@ -299,18 +349,41 @@ export default function Dashboard() {
             than a <circle>: a circle in a non-uniformly stretched viewBox
             draws as an ellipse, whereas a round line cap is measured in
             screen units and stays a true dot at any panel width. */}
-        <svg viewBox="0 0 260 92" preserveAspectRatio="none" style={{ width: '100%', height: 230, marginTop: 8, display: 'block' }}>
-          <line x1="0" y1="23" x2="260" y2="23" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-          <line x1="0" y1="46" x2="260" y2="46" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-          <line x1="0" y1="69" x2="260" y2="69" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-          <line x1="130" y1="0" x2="130" y2="92" stroke="var(--line-ctrl)" strokeWidth="1" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
-          <polyline points={planPoints} fill="none" stroke="var(--text-faint)" strokeWidth="1.6" strokeDasharray="3 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          <polyline points={actualPoints} fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-          <line x1={actualNowX} y1={actualNowY} x2={actualNowX} y2={actualNowY} stroke="var(--accent)" strokeWidth="8" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        </svg>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 4 }}>
-          <span>−12 WK</span><span>NOW</span><span>+12 WK</span>
-        </div>
+        {!curve.ok ? (
+          <Empty icon="gauge">{CURVE_EMPTY[curve.reason] || 'The curve cannot be computed yet.'}</Empty>
+        ) : (
+          <>
+            <svg viewBox="0 0 260 92" preserveAspectRatio="none" style={{ width: '100%', height: 230, marginTop: 8, display: 'block' }}>
+              <line x1="0" y1="23" x2="260" y2="23" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              <line x1="0" y1="46" x2="260" y2="46" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              <line x1="0" y1="69" x2="260" y2="69" stroke="var(--track)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+              {/* NOW is where today actually falls on the contracted timeline,
+                  not the middle of the box. Off the timeline entirely (the
+                  programme has not started, or has run past its end) and there
+                  is no gridline to draw. */}
+              {curveSvg.nowX != null && (
+                <line x1={curveSvg.nowX} y1="0" x2={curveSvg.nowX} y2="92" stroke="var(--line-ctrl)" strokeWidth="1" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />
+              )}
+              <polyline points={curveSvg.planPoints} fill="none" stroke="var(--text-faint)" strokeWidth="1.6" strokeDasharray="3 6" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+              {curveSvg.actualPoints && (
+                <polyline points={curveSvg.actualPoints} fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              )}
+              {curveSvg.dotX != null && (
+                <line x1={curveSvg.dotX} y1={curveSvg.dotY} x2={curveSvg.dotX} y2={curveSvg.dotY} stroke="var(--accent)" strokeWidth="8" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              )}
+            </svg>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', marginTop: 4 }}>
+              <span>{curve.start}</span>
+              <span>{curve.asOf ? `NOW · ${curve.asOf}` : ''}</span>
+              <span>{curve.end}</span>
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
+              {curve.installedNow.toLocaleString()} installed of {curve.plannedTotal.toLocaleString()} planned
+              {curve.plannedNow != null && ` · plan to date ${curve.plannedNow.toLocaleString()}`}
+              {curve.unscheduled.length > 0 && ` · ${curve.unscheduled.length} project${curve.unscheduled.length === 1 ? '' : 's'} with scope but no schedule are not in this curve`}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Attention List at two-thirds so every column including AGE fits, and
@@ -356,7 +429,7 @@ export default function Dashboard() {
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Last 24h</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {recentActivity.length === 0 ? <Empty icon="bell">No recent activity.</Empty> : recentActivity.map((a, i) => (
+            {recentActivity.length === 0 ? <Empty icon="bell">Nothing was written in the last 24 hours. Any install entry, document decision or material movement appears here.</Empty> : recentActivity.map((a, i) => (
               <div key={i} style={{ display: 'flex', gap: 10, padding: '9px 0', borderTop: '1px solid var(--line)' }}>
                 <span style={{ flex: 'none', width: 8, height: 8, borderRadius: '50%', background: a.dot, marginTop: 5 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>

@@ -419,3 +419,46 @@ demo — real buildings, real people, real programme data — the risk calculus 
 made using a shared credential reasonable inverts, and the rotation stops being
 hygiene and becomes a prerequisite. Naming it keeps that reversal visible
 instead of leaving it to be rediscovered.
+
+---
+
+## ESM_PROGRESS_VS_PLAN — the report that was a card advertising itself
+
+**Status:** open · **an idea, kept; the card that carried it, removed** · owner
+decision on whether it is ever built · raised by the A4 invented-value audit
+
+**Where it came from.** `src/pages/Reports.jsx` shipped a panel reading
+`[ DESIGNER SUGGESTION ] · ESM Progress vs Plan` on the live Reports screen,
+below the two working report builders. It described a feature that does not
+exist, in the same visual language as the ones that do.
+
+**Why it was removed rather than left.** The owner walks the site to confirm the
+system is correct. A styled card on a shipped screen is a claim that something
+is there. This one had no control, so it also failed Constraints #2 in spirit —
+not a dead button, but a dead card, which is the same lie with fewer moving
+parts. A design idea belongs in a backlog, not in the product.
+
+**The idea itself, preserved verbatim from the card.** *"Per-ESM planned vs
+actual installed quantities over time, with delay attribution by building.
+High-value for the Planning Engineer's delay analysis."*
+
+**What building it would actually cost, now that the arithmetic exists.** The
+portfolio S-curve landed in this same commit as `sCurveSeries()` in
+`src/lib/progressReport.js` — cumulative capped installs by `entry_date` against
+planned quantity spread over `projects.start_date .. total_weeks`. Per-ESM is
+that same function partitioned by `building_item_scope.project_esm_id`, and
+per-building delay attribution is the same partition by `building_id`. So the
+data layer is no longer the hard part; the open questions are presentational
+(how many series read on one chart before it stops being legible) and semantic
+(what "delay" means when a project's plan is a linear ramp rather than a real
+resource-loaded schedule — a linear ramp can call a team late in week 2 for
+reasons that have nothing to do with the team).
+
+**Why that second question is the real blocker.** Attribution asserts fault. A
+linear distribution of planned quantity is a fair enough shape for a programme
+S-curve, where the errors average out, and a poor basis for telling a specific
+building it is behind. Building this on the current plan model would produce
+confident per-building delay figures derived from an assumption nobody
+approved — the same defect class this audit exists to remove. If it is built,
+it needs a real per-building schedule first, or it needs to describe itself as
+variance-from-linear rather than delay.

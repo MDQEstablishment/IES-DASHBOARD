@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 536 interactive controls · 275 database touches.**
+**Totals: 57 files · 536 interactive controls · 277 database touches.**
 
 ## Per-file summary
 
@@ -63,13 +63,13 @@ that commit message.
 | `src/components/ui.jsx` | 4 | 0 | — | ☐ |
 | `src/pages/BuildingDetail.jsx` | 12 | 11 | Building Detail | ☐ |
 | `src/pages/DailyProgress.jsx` | 9 | 7 | Project Daily Progress | ☐ |
-| `src/pages/Dashboard.jsx` | 1 | 9 | Dashboard | ☐ |
+| `src/pages/Dashboard.jsx` | 1 | 10 | Dashboard | ☐ |
 | `src/pages/DesignSystem.jsx` | 0 | 0 | Design System | ☐ |
 | `src/pages/Escalations.jsx` | 16 | 8 | Escalations | ☐ |
 | `src/pages/ManageEsms.jsx` | 20 | 9 | Materials | ☐ |
 | `src/pages/ProjectDetail.jsx` | 24 | 10 | Project Detail | ☐ |
 | `src/pages/Projects.jsx` | 7 | 6 | Projects | ☐ |
-| `src/pages/Reports.jsx` | 1 | 6 | Reports | ☐ |
+| `src/pages/Reports.jsx` | 1 | 7 | Reports | ☐ |
 | `src/pages/Settings.jsx` | 11 | 7 | Settings | ☐ |
 | `src/pages/Tasks.jsx` | 27 | 13 | My Tasks | ☐ |
 
@@ -124,7 +124,7 @@ that commit message.
 | `inspectionDocs.js` | `f7edaacaf482e34c` |
 | `lightingSavings.js` | `0f4419ed9b0becd9` |
 | `nav.js` | `36299f48dc4a9eab` |
-| `progressReport.js` | `697d0d9e617ba836` |
+| `progressReport.js` | `a2052996da973dd2` |
 | `progressReportGen.js` | `5b18c2398b717a37` |
 | `reportPhotoAnnex.js` | `118486cb831caf0f` |
 | `savingSheet.js` | `306379887525e8c6` |
@@ -1059,10 +1059,11 @@ screen label: **Dashboard**
 | `read:install_log` | 1 |
 | `read:materials` | 1 |
 | `read:projects` | 1 |
+| `read:tarshid_constants` | 1 |
 | `read:tasks` | 1 |
 | `read:v_project_doc_progress` | 1 |
 
-shared primitives: Empty×4, Loading×1
+shared primitives: Empty×5, Loading×1
 
 ### `src/pages/DesignSystem.jsx`
 screen label: **Design System**
@@ -1216,6 +1217,7 @@ screen label: **Reports**
 | `read:install_log` | 1 |
 | `read:materials` | 1 |
 | `read:profiles` | 1 |
+| `read:tarshid_constants` | 1 |
 | `read:tasks` | 1 |
 
 shared primitives: Loading×1
