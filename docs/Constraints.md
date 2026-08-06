@@ -91,6 +91,46 @@ These hold every sprint unless the owner explicitly amends them.
    absence. "The checker said clean" is not evidence — it is the claim awaiting
    evidence.
 
+   **8. THE UNREADABLE LIST — a sweep without one is invalid.**
+   *This is a rule, not advice. A confidentiality sweep that does not carry
+   this list is not a weak sweep; it is not a sweep, and its result may not
+   be reported, relied on, or recorded as a finding.*
+
+   Every sweep must publish, alongside its result, an explicit enumeration of
+   **every member it could not read**, and for each one either the alternative
+   method that cleared it or the plain words *not cleared*. Categories that
+   must appear by name whenever present: compressed archives (`.xlsx`,
+   `.docx`, `.zip`); raster and vector images; fonts; PDFs — **especially
+   PDFs whose text is hex-encoded against subset fonts, where a literal-string
+   scan returns zero characters from a page full of text**; binary members
+   detected by NUL bytes; anything skipped by size; and anything skipped by
+   file extension.
+
+   A result reported without that list is **invalid on its face**, regardless
+   of how thorough the readable part was. "We scanned everything we could
+   read" is not a finding — it is the shape of the last three failures.
+
+   The count now stands at three, each the same shape, each costing a cycle:
+
+   1. A visible-grid scan of a stripped `.xlsx` reported "zero client
+      references" while 204 and 342 facility names sat in `sharedStrings`.
+   2. The de-identification scanner decoded UTF-8 as latin-1 and reported
+      **zero Arabic on the part holding hundreds of Arabic strings** — the
+      rule's own failure mode, inside the tool written to prevent it.
+   3. A whole-object-database sweep reported two `Client_*.pdf` files clean
+      because their text is hex-encoded against subset fonts and the
+      literal-string scan returned **zero characters**. Decoded through their
+      `ToUnicode` CMaps, they carry a named client engagement, asset counts
+      and the contract value — and their own footers say *Confidential*. They
+      were caught **only** because they appeared on the unreadable list and
+      the list was worked through instead of waved past.
+
+   Every one of the three was a *confident negative from a method that could
+   not see the whole file*. The unreadable list is the only mechanism that
+   turns "I found nothing" into a claim a reviewer can actually judge, because
+   it states where the method's eyes were shut. Enumerate what you could not
+   read, or do not report a result.
+
    **A second finding, on the breadth of what to search for.** Two identifier
    classes were found that no inventory had listed and no spreadsheet-level
    inspection could reach: an absolute filesystem path containing a person's
