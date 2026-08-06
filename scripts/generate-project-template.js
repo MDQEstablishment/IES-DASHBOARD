@@ -17,8 +17,9 @@
  */
 import ExcelJS from 'exceljs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-import { mkdirSync, readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { unzipSync, zipSync } from 'fflate'
 // U5 / COMMIT B — the bucket name comes from the one list, not from a literal.
 import { BUCKETS } from '../src/lib/buckets.js'
 
@@ -87,6 +88,24 @@ const ROOT = join(__dirname, '..')
 const OUT_DIR = join(ROOT, 'public', 'templates')
 const OUT_FILE = join(OUT_DIR, 'IES-Project-Template-v3.xlsx')
 export const TEMPLATE_OBJECT_PATH = 'IES-Project-Template-v3.xlsx'
+
+// The template's own version, and the ONLY thing the workbook's timestamps are
+// derived from. Bump this when the template's shape changes; the stamp in
+// docProps/core.xml moves with it and at no other time. See the block in
+// build() for why a wall clock here made Constraints #7(4) unsatisfiable.
+export const TEMPLATE_VERSION = 3
+
+// docProps/core.xml is written as an ISO-8601 UTC string, so a UTC Date is
+// timezone-independent there.
+export const TEMPLATE_EPOCH = new Date(Date.UTC(2000, 0, 1 + TEMPLATE_VERSION, 0, 0, 0))
+
+// The ZIP member timestamp is a different problem with a different answer. The
+// DOS date/time field is written from LOCAL-time components (fflate's `wzh`:
+// getFullYear/getMonth/getDate/getHours/...), so a UTC Date would put different
+// bytes in the archive depending on the builder's timezone. This one is built
+// with the LOCAL constructor so the same y/m/d/h/m/s land in the file wherever
+// it is generated.
+export const TEMPLATE_ZIP_MTIME = new Date(2000, 0, 1 + TEMPLATE_VERSION, 0, 0, 0)
 
 // ── palette ──────────────────────────────────────────────────────────────────
 const BLUE = 'FF2563EB', YELLOW = 'FFFEF9C3', GREEN = 'FFDCFCE7', GRAY = 'FFF1F5F9', WHITE = 'FFFFFFFF'
@@ -160,10 +179,26 @@ function addDropdown(ws, colLetter, list, fromRow = 2, toRow = 1 + INPUT_ROWS) {
   }
 }
 
-async function build(opts) {
+export async function build(opts, outFile = OUT_FILE) {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'IES Programme Control Platform'
-  wb.created = new Date()
+  wb.lastModifiedBy = 'IES Programme Control Platform'
+  // ── U5 / COMMIT C, item 7 — DETERMINISM, so Constraints #7(4) is satisfiable
+  // Constraints #7(4) requires that the cleaning/generating script "produces
+  // byte-identical output from the same input on repeated runs". This generator
+  // could never satisfy it: `wb.created = new Date()` stamps docProps/core.xml
+  // with the wall clock, so two runs of identical code produced two different
+  // files and there was nothing to compare a re-run against.
+  //
+  // The timestamp is now derived from TEMPLATE_VERSION and nothing else. It is
+  // a VERSION STAMP, not a build time: it changes when the template changes and
+  // at no other moment, which is exactly what a reviewer needs it to mean.
+  // ExcelJS writes `created`, `modified` and `lastPrinted` into core.xml; all
+  // three are pinned, and lastPrinted is pinned because leaving it unset is not
+  // the same as leaving it out.
+  wb.created = TEMPLATE_EPOCH
+  wb.modified = TEMPLATE_EPOCH
+  wb.lastPrinted = TEMPLATE_EPOCH
 
   // ── Sheet 1: Instructions ──────────────────────────────────────────────────
   const ins = wb.addWorksheet('Instructions', { properties: { tabColor: { argb: BLUE } } })
@@ -250,12 +285,29 @@ async function build(opts) {
     ['contract_sign_date', 16, 'opt', 'defaults'], ['works_end_date', 16, 'opt', 'defaults'], ['energy_services_company', 22, 'opt', 'defaults'],
     ['subcontractor', 20, 'opt', 'defaults'], ['coc_bundle_key', 16, 'opt', 'defaults'], ['remarks', 22, 'opt', 'id'],
   ])
-  exampleRow(proj, 2, ['PROJECT-A', 'Project A', 'Entity A', 'Asir',
+  // ── U5 / COMMIT C, item 6 — THE EXAMPLE VALUES ARE NEUTRAL ────────────────
+  // The owner's Category F ruling: "anything unrelated, remove it." These rows
+  // named a real ministry, real facilities of that ministry, real contractors,
+  // real staff accounts and REAL COORDINATES — in a workbook a client downloads
+  // from a public repository and a public storage bucket. That is a Constraints
+  // #7 breach sitting in a distribution channel, not a styling problem.
+  //
+  // The ROWS STAY: they teach the format, and `isExampleRow()` in
+  // ProjectModals.jsx filters them on the DELETE-BEFORE-UPLOAD marker, which
+  // every one of them carries (asserted by tests/templateDeterminism.test.mjs).
+  // Only the VALUES change: generic codes, `Sample …` names, `Contractor name`,
+  // example.com addresses.
+  //
+  // COORDINATES ARE LEFT EMPTY, not zeroed. 0,0 is a real point in the Gulf of
+  // Guinea; a template that ships it would plot every un-edited import onto
+  // Null Island and look like data rather than like an omission. Blank reads as
+  // "you fill this in", which is what it means.
+  exampleRow(proj, 2, ['PRJ-001', 'Sample Project', 'Sample Client Entity', 'Sample Region',
     '2025-09-01', '2027-01-01', 64, 'active',
-    'majed.alqahtani@ies.demo.local', 'yousef.almaliki@ies.demo.local', '', '',
-    'Al-Faisal HVAC', '+966 50 000 0000', 'ops@alfaisal.example',
-    'Abha, Asir', 18.2164, 42.5053,
-    'PROJECT-A-2025', 'Entity A', '00', '2025-08-15', '2027-01-15', 'Tarshid', '', '',
+    'pm@example.com', 'engineer@example.com', '', '',
+    'Contractor name', '+000 000 0000', 'contractor@example.com',
+    'Sample City, Sample Region', '', '',
+    'REF-0001', 'Sample Client Entity', '00', '2025-08-15', '2027-01-15', 'ESCO name', '', '',
     'DELETE-BEFORE-UPLOAD'])
   addDropdown(proj, 'H', opts.project_status) // status (col 8)
   proj.getColumn('lat').numFmt = '0.000000'
@@ -274,12 +326,12 @@ async function build(opts) {
     ['elec_account_no', 16, 'opt', 'elec'], ['responsible_person_name', 22, 'opt', 'contractor'], ['responsible_person_phone', 20, 'opt', 'contractor'],
     ['operating_hours', 16, 'opt', 'dates'],
   ])
-  exampleRow(blds, 2, ['PROJECT-A', 'MOI-001', 'Police HQ — Abha', 'Abha', 18.2164, 42.5053, 3, 4200,
-    'Al-Faisal HVAC', '+966 50 000 0000', 'in_progress', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', '',
-    'Police Station', 'MTR-001', 'SUB-1001', 'ACC-77001', 'Capt. Saad', '+966 50 111 2222', 3120])
-  exampleRow(blds, 3, ['PROJECT-A', 'MOI-002', 'Civil Defense — Khamis', 'Khamis Mushait', 18.3, 42.73, 2, 2600,
-    'Najd Technical Co.', '+966 55 222 3333', 'pending', 'DELETE-BEFORE-UPLOAD', 'yousef.almaliki@ies.demo.local', '',
-    'Civil Defense', 'MTR-002', 'SUB-1002', 'ACC-77002', 'Maj. Nasser', '+966 55 333 4444', 3120])
+  exampleRow(blds, 2, ['PRJ-001', 'BLD-001', 'Sample Building One', 'Sample City', '', '', 3, 4200,
+    'Contractor name', '+000 000 0000', 'in_progress', 'DELETE-BEFORE-UPLOAD', 'engineer@example.com', '',
+    'Office', 'MTR-001', 'SUB-0001', 'ACC-0001', 'Contact name', '+000 000 0000', 3120])
+  exampleRow(blds, 3, ['PRJ-001', 'BLD-002', 'Sample Building Two', 'Sample City', '', '', 2, 2600,
+    'Contractor name', '+000 000 0000', 'pending', 'DELETE-BEFORE-UPLOAD', 'engineer@example.com', '',
+    'Warehouse', 'MTR-002', 'SUB-0002', 'ACC-0002', 'Contact name', '+000 000 0000', 3120])
   addDropdown(blds, 'K', opts.building_status)
   blds.getColumn('lat').numFmt = '0.000000'
   blds.getColumn('lng').numFmt = '0.000000'
@@ -290,8 +342,8 @@ async function build(opts) {
     ['building_code', 16, 'req'], ['esm', 10, 'req'], ['material_code', 16, 'opt'], ['sub_type', 16, 'opt'],
     ['planned_qty', 12, 'req'], ['unit', 12, 'opt'], ['notes', 24, 'opt'],
   ])
-  exampleRow(scopes, 2, ['MOI-001', 'ESM1', 'LED-40W', 'ceiling panel', 120, 'fixtures', 'DELETE-BEFORE-UPLOAD'])
-  exampleRow(scopes, 3, ['MOI-001', 'ESM3', 'AC-S15', 'split 1.5 TR', 15, 'units', 'DELETE-BEFORE-UPLOAD'])
+  exampleRow(scopes, 2, ['BLD-001', 'ESM1', 'LED-40W', 'ceiling panel', 120, 'fixtures', 'DELETE-BEFORE-UPLOAD'])
+  exampleRow(scopes, 3, ['BLD-001', 'ESM3', 'AC-S15', 'split 1.5 TR', 15, 'units', 'DELETE-BEFORE-UPLOAD'])
   addDropdown(scopes, 'B', opts.esm)
 
   // ── Sheet 5: Materials ─────────────────────────────────────────────────────
@@ -322,14 +374,33 @@ async function build(opts) {
     ['old_qty', 10, 'opt'], ['new_code', 16, 'opt'], ['new_description', 26, 'req'], ['new_qty', 10, 'opt'],
     ['unit', 12, 'opt'], ['notes', 22, 'opt'],
   ])
-  exampleRow(items, 2, ['MOI-001', 'ESM3', 'OLD-AC-2T', 'Old window AC 2 TR', 4, 'AC-S15', 'Split inverter 1.5 TR', 4, 'units', 'DELETE-BEFORE-UPLOAD'])
-  exampleRow(items, 3, ['MOI-001', 'ESM1', 'OLD-FL-40', 'Old fluorescent 40W', 120, 'LED-40W', 'LED panel 40W', 120, 'fixtures', 'DELETE-BEFORE-UPLOAD'])
+  exampleRow(items, 2, ['BLD-001', 'ESM3', 'OLD-AC-2T', 'Old window AC 2 TR', 4, 'AC-S15', 'Split inverter 1.5 TR', 4, 'units', 'DELETE-BEFORE-UPLOAD'])
+  exampleRow(items, 3, ['BLD-001', 'ESM1', 'OLD-FL-40', 'Old fluorescent 40W', 120, 'LED-40W', 'LED panel 40W', 120, 'fixtures', 'DELETE-BEFORE-UPLOAD'])
   addDropdown(items, 'B', opts.esm)
 
-  mkdirSync(OUT_DIR, { recursive: true })
-  await wb.xlsx.writeFile(OUT_FILE)
-  console.log('✓ wrote', OUT_FILE)
-  return OUT_FILE
+  // ── U5 / COMMIT C, item 7 — THE SECOND CLOCK, the one core.xml did not fix ──
+  // Pinning wb.created/modified removes the timestamp from docProps/core.xml.
+  // It does NOT remove the one in the ZIP CONTAINER: ExcelJS packs through
+  // JSZip, and `zip.file(name, data)` with no `date` option stamps every member
+  // with `new Date()`. That field is a DOS date-time with TWO-SECOND
+  // resolution, which is precisely why it is dangerous — two builds inside the
+  // same two-second bucket produce identical bytes and a naive "build twice and
+  // compare" reports determinism that is not there. Measured: two in-process
+  // builds 1.2 s apart matched; two builds in separate processes did not.
+  //
+  // So the archive is REPACKED with a fixed mtime on every member. fflate is
+  // already a dependency (xlsxPatch uses it) and its zipSync is a pure function
+  // of the input plus the level, so the output is byte-identical run to run,
+  // process to process, machine to machine. Member names, contents and ORDER
+  // are preserved exactly as ExcelJS emitted them.
+  const packed = unzipSync(new Uint8Array(await wb.xlsx.writeBuffer()))
+  const bytes = zipSync(
+    Object.fromEntries(Object.keys(packed).map((name) => [name, [packed[name], { level: 9, mtime: TEMPLATE_ZIP_MTIME }]])),
+    { level: 9 },
+  )
+  mkdirSync(dirname(outFile), { recursive: true })
+  writeFileSync(outFile, Buffer.from(bytes))
+  return outFile
 }
 
 async function upload(file) {
@@ -353,14 +424,23 @@ async function upload(file) {
   }
 }
 
-// Fail loudly and early: a missing env var must stop the run with a sentence
-// that says what to set, not produce a template built from assumptions.
-let opts
-try {
-  opts = await loadFormOptions()
-} catch (e) {
-  console.error('\u2717 cannot generate the template:', e.message)
-  process.exit(1)
+// ── U5 / COMMIT C — the CLI entry is GUARDED ─────────────────────────────────
+// build() is exported and this block only runs when the file is executed
+// directly, so tests/templateDeterminism.test.mjs can build the workbook twice
+// with fixed option lists and compare the bytes. Before this, importing the
+// module signed into Supabase and wrote to public/ as a side effect, so the
+// determinism Constraints #7(4) demands could not be checked by anything.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  // Fail loudly and early: a missing env var must stop the run with a sentence
+  // that says what to set, not produce a template built from assumptions.
+  let opts
+  try {
+    opts = await loadFormOptions()
+  } catch (e) {
+    console.error('\u2717 cannot generate the template:', e.message)
+    process.exit(1)
+  }
+  const file = await build(opts)
+  console.log('\u2713 wrote', file)
+  await upload(file)
 }
-const file = await build(opts)
-await upload(file)
