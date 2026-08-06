@@ -1017,6 +1017,68 @@ the attack it was written against.
 matched on an Arabic string that no longer exists, so leaving them alone would
 have scored the suite green against deleted text.
 
+## 21B. PLAN v4, as built — D4, and a defect it uncovered
+
+**The grounding rule is split.** Rule 1 was *answer only from the attached
+context*, so with no screen the packs returned nothing and every question —
+including one about Murshid itself — collapsed to "no data available".
+`## GROUNDING` now distinguishes **questions about DATA** (context-only,
+unchanged: this is the safety property) from **questions about Murshid's own
+capabilities and the process** (answered from its instructions, no context
+required, and *an empty context is NOT a reason to refuse one*).
+
+**A capabilities section.** `## WHAT YOU DO` names the saving-sheet intake
+explicitly — conduct the intake, ask which project, check readiness, name
+exactly what is present and what is missing, explain a result line by line,
+label the output a DRAFT requiring review. `## WHAT YOU DO NOT DO` is the other
+half and carries the sentence the failed session needed: *you never say you lack
+permission to prepare a saving sheet*, and **THE ENGINE COMPUTES EVERY NUMBER** —
+Murshid computes none, not a saving, not a total, not a count it had to work out.
+
+**The real screen vocabulary.** `SCREEN_NAMES` is exported as data and the
+red-team asserts it equals the labels in `src/lib/nav.js` `NAV_CATALOG`, so the
+prompt cannot drift away from the navigation without the suite going red. The
+prompt forbids naming any screen outside it.
+
+**The readiness pack.** A pseudo-screen `Saving Sheet Readiness`, keyed on
+`project_id`, merged in by the pure `packsFor()` when the question is about
+readiness *and* a project is in scope — so an ordinary question never drags it
+in and an ordinary screen never pays for it. It reads `projects`, `buildings`,
+`survey_entries`, `operating_hours` (with `eflh`), `project_unit_selection` and
+`building_item_scope`. Columns enumerated, limits ≤ 100, **no cost column** —
+`project_unit_selection` carries `unit_cost` and `labor_cost` and neither is
+selected — and it passes `auditPacks()` on exactly the same terms as every other
+pack. Every label states its own row cap, because a capped read reported as a
+total is a made-up number by another route.
+
+`building_item_scope` has no `project_id`, so `Pack` gained `inFrom`: a filter
+resolved from a section *already fetched in the same request*, which was itself
+read through the caller's JWT — the ids can never be wider than what RLS already
+returned. `auditPacks()` asserts the referenced section is an EARLIER pack in
+the same list and enumerates the field, so `inFrom` cannot become a route to an
+unlisted table.
+
+**Sequencing is in the prompt copy**: the survey capture stage does not exist
+yet, the full flow cannot complete today, say what is missing rather than
+pretend. *Being unable to finish is acceptable. Misdescribing your role is not.*
+
+### The defect the readiness work uncovered
+
+Auditing every pack column against the live schema before adding new ones found
+**four phantom columns in three shipped packs**: `buildings.status` (derived, not
+stored — the real columns are `scope_status` / `delivery_status` /
+`approval_status`) and `install_log.day` / `.esm_code` / `.item_description`
+(the table has `entry_date`, `room_id`, `scope_id`, `qa_status`, `note`).
+
+A pack naming a column the table does not have does not fail loudly. PostgREST
+returns 400, `index.ts`'s `if (error) continue` treats it exactly as a denied
+read, and **the section simply never arrives**. So Murshid could never see the
+buildings on Project Detail, the building on Building Detail, or anything at all
+on Daily Progress — and "no data available" was the honest answer to a question
+it should have been able to answer. All four are corrected, and a failed pack is
+now logged (table and driver message only, never a row) instead of vanishing in
+silence. The behaviour on a genuinely denied read is unchanged.
+
 ---
 
 # 22. The de-identification, as-built — and the second narrow audit

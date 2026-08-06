@@ -1,5 +1,5 @@
 // supabase/functions/murshid-chat/index.ts
-// Sprint 9L(3) — Murshid's chat endpoint. PLAN v4 D3.
+// Sprint 9L(3) — Murshid's chat endpoint. PLAN v4 D3/D4.
 //
 // This file is deliberately THIN. Every security decision — what may be read,
 // what must be refused, what a refusal says, what a call costs — lives in
@@ -23,8 +23,8 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
-  SCREEN_PACKS, SYSTEM_PROMPT, MAX_QUESTION_CHARS, CAP_MESSAGE, DISABLED_MESSAGE,
-  QUESTION_LABEL, screenQuestion, buildContextBlock, estimateCostUsd, capExceeded,
+  SYSTEM_PROMPT, MAX_QUESTION_CHARS, CAP_MESSAGE, DISABLED_MESSAGE, QUESTION_LABEL,
+  packsFor, screenQuestion, buildContextBlock, estimateCostUsd, capExceeded,
   FORBIDDEN_COLUMNS, FORBIDDEN_TABLES,
 } from "./core.ts";
 
@@ -115,7 +115,11 @@ Deno.serve(async (req) => {
     }
 
     // ---- context: the allow-list, through the CALLER's client -------------
-    const packs = SCREEN_PACKS[screen || ""] || [];
+    // packsFor() is pure and lives in core.ts: the screen's own packs always,
+    // plus the readiness pack when the question is about readiness AND a
+    // project is in scope. The handler still decides nothing — it runs what the
+    // declaration describes, through the caller's JWT, exactly as before.
+    const packs = packsFor(screen, question, params);
     const sections: { label: string; rows: Record<string, unknown>[] }[] = [];
     let rowCount = 0;
     for (const p of packs) {
@@ -125,11 +129,30 @@ Deno.serve(async (req) => {
       if (p.columns.some((c) => c === "*" || FORBIDDEN_COLUMNS.includes(c))) continue;
       if (p.eq && !params[p.eq.param]) continue;
 
+      // `inFrom` resolves its filter from a section ALREADY fetched in this same
+      // request — which was itself read through the caller's client, so the ids
+      // can never be wider than what RLS already returned to this user.
+      let ids: string[] | null = null;
+      if (p.inFrom) {
+        const src = sections.find((s) => s.label === p.inFrom!.section);
+        if (!src) continue;
+        ids = [...new Set(src.rows.map((r) => r[p.inFrom!.field]).filter((v) => v != null).map(String))];
+        if (!ids.length) continue;
+      }
+
       let q = userClient.from(p.table).select(p.columns.join(","));
       if (p.eq) q = q.eq(p.eq.column, params[p.eq.param]);
+      if (ids) q = q.in(p.inFrom!.column, ids);
       if (p.order) q = q.order(p.order.column, { ascending: p.order.ascending });
       const { data, error } = await q.limit(p.limit);
-      if (error || !data) continue;             // a denied read is simply absent
+      // A denied read is simply absent — it must never abort the answer. But
+      // absent-because-denied and absent-because-the-pack-is-wrong looked
+      // identical from the outside, and three packs sat broken for a whole
+      // sprint because of it. The behaviour is unchanged; the silence is not.
+      if (error || !data) {
+        if (error) console.error("[murshid] pack skipped", p.table, error.message);
+        continue;
+      }
       rowCount += data.length;
       sections.push({ label: p.label, rows: data as Record<string, unknown>[] });
     }
