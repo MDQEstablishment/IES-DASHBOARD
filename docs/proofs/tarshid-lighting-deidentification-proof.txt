@@ -1,0 +1,54 @@
+
+=== P2 STRUCTURAL PARITY  Lighting-original.xlsx  ->  Lighting-clean.xlsx
+  partCount            DIFF  before=60  after=58
+  sheetOrder           SAME  before=["Project_Info","Instr.","Light_Selection","OH","Light_Savings","Pi...  after=["Project_Info","Instr.","Light_Selection","OH","Light_Savings","Pi...
+  definedNames         SAME  before=2140  after=2140
+  numFmts              SAME  before=7  after=7
+  cellXfs              SAME  before=267  after=267
+  fonts                SAME  before=54  after=54
+  fills                SAME  before=30  after=30
+  sstEntries           SAME  before=1616  after=1616
+  sstCountAttr         SAME  before="24758"  after="24758"
+  sstUniqueAttr        SAME  before="1616"  after="1616"
+  dataValidationTotal  SAME  before=12  after=12
+  formulasTotal        SAME  before=5211  after=5211
+  cachedVTotal         DIFF  before=15668  after=15640
+  sheetOrder identical: true
+
+  per-sheet:
+  sheet                class  rows        cells         formulas    cachedV     dv      sheetData-identical  wholeXML-identical
+  Project_Info         -      1->1        0->0          0->0        0->0        0->0    true                 true
+  Instr.               REFER  41->41      59->59        0->0        28->28      0->0    true                 true
+  Light_Selection      REFER  503->503    10521->10521  4000->4000  2439->2439  3->3    true                 true
+  OH                   -      1->1        18->18        0->0        17->17      0->0    true                 true
+  Light_Savings        -      11->11      363->363      28->28      70->42      1->1    false                false
+  Pivot                -      1->1        0->0          0->0        0->0        1->1    true                 true
+  Pivot_2              -      1->1        8->8          0->0        1->1        0->0    true                 true
+  Pivot_Cntrl          -      1->1        9->9          0->0        0->0        2->2    true                 true
+  Pivot_Baseline       -      1->1        0->0          0->0        0->0        1->1    true                 true
+  Old_Model_Registry   REFER  501->501    6011->6011    1165->1165  3690->3690  4->4    true                 true
+  Vstack               -      1->1        12->12        0->0        12->12      0->0    true                 true
+  Project_Light List   REFER  207->207    10643->10643  0->0        8864->8864  0->0    true                 true
+  Mnu                  REFER  61->61      1310->1310    18->18      547->547    0->0    true                 false
+  DataCheck            -      11->11      271->271      0->0        0->0        0->0    true                 true
+
+=== P5 DIFF SURFACE  (60 members -> 58)
+  CHANGED  [Content_Types].xml                            4695B ->     4568B  (-127)
+  CHANGED  xl/workbook.xml                              146895B ->   146737B  (-158)
+  CHANGED  xl/worksheets/sheet5.xml                      15859B ->    15264B  (-595)
+  CHANGED  xl/worksheets/sheet13.xml                     53221B ->    53193B  (-28)
+  CHANGED  xl/sharedStrings.xml                          82592B ->    56260B  (-26332)
+  CHANGED  xl/worksheets/_rels/sheet13.xml.rels            440B ->      157B  (-283)
+  REMOVED  xl/drawings/vmlDrawing1.vml                1218B
+  CHANGED  xl/printerSettings/printerSettings1.bin       13836B ->    13836B  (+0)
+  CHANGED  xl/printerSettings/printerSettings2.bin        8496B ->     8496B  (+0)
+  CHANGED  customXml/item4.xml                            1136B ->      981B  (-155)
+  CHANGED  docMetadata/LabelInfo.xml                       309B ->      143B  (-166)
+  CHANGED  docProps/core.xml                               851B ->      814B  (-37)
+  CHANGED  docProps/custom.xml                             691B ->      615B  (-76)
+  CHANGED  xl/printerSettings/printerSettings4.bin       13836B ->    13836B  (+0)
+  CHANGED  xl/printerSettings/printerSettings3.bin        5420B ->     5420B  (+0)
+  REMOVED  xl/comments1.xml                           876B
+  CHANGED  customXml/item2.xml                           18832B ->    18136B  (-696)
+  CHANGED  xl/printerSettings/printerSettings5.bin       13836B ->    13836B  (+0)
+  UNCHANGED (byte-identical): 42 members

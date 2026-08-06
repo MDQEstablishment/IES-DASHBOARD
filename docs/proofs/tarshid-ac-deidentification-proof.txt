@@ -1,0 +1,59 @@
+
+=== P2 STRUCTURAL PARITY  AC-original.xlsx  ->  AC-clean.xlsx
+  partCount            DIFF  before=68  after=62
+  sheetOrder           SAME  before=["Project_Info","Instr.","AC_Savings","OH","Aprvd Project Unit","Pi...  after=["Project_Info","Instr.","AC_Savings","OH","Aprvd Project Unit","Pi...
+  definedNames         SAME  before=2121  after=2121
+  numFmts              SAME  before=6  after=6
+  cellXfs              SAME  before=229  after=229
+  fonts                SAME  before=55  after=55
+  fills                SAME  before=26  after=26
+  sstEntries           SAME  before=2706  after=2706
+  sstCountAttr         SAME  before="18107"  after="18107"
+  sstUniqueAttr        SAME  before="2706"  after="2706"
+  dataValidationTotal  SAME  before=8  after=8
+  formulasTotal        SAME  before=6432  after=6432
+  cachedVTotal         SAME  before=28790  after=28790
+  sheetOrder identical: true
+
+  per-sheet:
+  sheet                class  rows        cells         formulas    cachedV     dv      sheetData-identical  wholeXML-identical
+  Project_Info         -      1->1        0->0          0->0        0->0        0->0    true                 true
+  Instr.               REFER  125->125    149->149      0->0        66->66      0->0    true                 true
+  AC_Savings           -      1->1        35->35        0->0        34->34      1->1    true                 false
+  OH                   -      1->1        18->18        0->0        17->17      0->0    true                 false
+  Aprvd Project Unit   -      1->1        14->14        0->0        14->14      0->0    true                 false
+  Pivot                -      1->1        0->0          0->0        0->0        1->1    true                 true
+  Pivot_2              -      1->1        0->0          0->0        0->0        0->0    true                 true
+  Data_Check           -      1->1        31->31        0->0        30->30      0->0    true                 true
+  Aprvd Baseline Unit  REFER  301->301    4209->4209    0->0        2840->2840  0->0    true                 true
+  Old_Model_Registry   REFER  2505->2505  41336->41336  6232->6232  23621->23621 2->2    true                 true
+  Mnu                  REFER  147->147    978->978      6->6        319->319    0->0    true                 true
+  Vstack               -      1->1        8->8          0->0        8->8        1->1    true                 true
+  Project_AC List      REFER  92->92      2216->2216    194->194    1841->1841  3->3    true                 true
+
+=== P5 DIFF SURFACE  (68 members -> 62)
+  CHANGED  [Content_Types].xml                            5142B ->     4761B  (-381)
+  CHANGED  xl/workbook.xml                              144641B ->   144506B  (-135)
+  CHANGED  xl/worksheets/sheet3.xml                       9211B ->     9180B  (-31)
+  CHANGED  xl/worksheets/sheet4.xml                       3834B ->     3803B  (-31)
+  CHANGED  xl/worksheets/sheet5.xml                       3749B ->     3718B  (-31)
+  CHANGED  xl/sharedStrings.xml                         100083B ->    80372B  (-19711)
+  CHANGED  xl/worksheets/_rels/sheet5.xml.rels             440B ->      157B  (-283)
+  REMOVED  xl/drawings/vmlDrawing1.vml                4275B
+  REMOVED  xl/drawings/vmlDrawing2.vml                1186B
+  REMOVED  xl/drawings/vmlDrawing3.vml                1192B
+  CHANGED  xl/worksheets/_rels/sheet3.xml.rels             440B ->      157B  (-283)
+  CHANGED  xl/worksheets/_rels/sheet4.xml.rels             440B ->      157B  (-283)
+  REMOVED  xl/comments1.xml                           2751B
+  REMOVED  xl/comments2.xml                           864B
+  REMOVED  xl/comments3.xml                           832B
+  CHANGED  xl/printerSettings/printerSettings4.bin        5428B ->     5428B  (+0)
+  CHANGED  docProps/core.xml                               833B ->      814B  (-19)
+  CHANGED  docProps/custom.xml                             691B ->      615B  (-76)
+  CHANGED  xl/printerSettings/printerSettings2.bin        4840B ->     4840B  (+0)
+  CHANGED  xl/printerSettings/printerSettings1.bin        5428B ->     5428B  (+0)
+  CHANGED  customXml/item2.xml                           18832B ->    18136B  (-696)
+  CHANGED  xl/printerSettings/printerSettings3.bin        5359B ->     5359B  (+0)
+  CHANGED  customXml/item4.xml                            1136B ->      981B  (-155)
+  CHANGED  docMetadata/LabelInfo.xml                       309B ->      143B  (-166)
+  UNCHANGED (byte-identical): 44 members
