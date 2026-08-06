@@ -639,16 +639,87 @@ anywhere in the plan; no unit touches `src/lib`.
 
 ## 11. Questions held for the owner (nothing proceeds on these without a ruling)
 
-1. **AC Survey spec columns as locked lookups** (§7.2) — extends the C5 lock
-   list in the direction of its own rationale; approve or keep the columns
-   hand-typed with range validation only?
-2. **`buildings.name` = code string for imported buildings** (§3.3) — the
-   alternative is inventing English display names, which the no-invented-values
-   rule forbids. Confirm, or supply a preferred display convention.
-3. **Nameplate-photo enforcement point** (§6.4) — required on the app's
-   new-model path, warned-and-worklisted on the Excel path. Confirm this
-   reading of "required once per unique model" against warn-never-block.
-4. **Block housekeeping period** (§5.4) — 30 days proposed, DB-configured.
+### Q1 — Do the AC Survey specification columns become locked lookups?
+
+**Where:** §7.2, the AC Survey sheet, columns `Equipment Type · Make ·
+Model No · Inverter · T1 BTU · T1 W · T1 EER · T3 BTU · T3 W · T3 EER`.
+
+**The situation.** C5 marks four LT columns as locked formulas and lists no
+AC column as locked. But every impossible value in B5 was an AC nameplate
+rating (W = 21800, EER = 19.1, BTU = 2300, EER as the text `"7.2."`), and all
+of them were hand-typed into a survey row. The Model Code column already
+identifies the model, and the AC Models sheet already holds that model's
+ratings under validation. So the ratings can be *looked up* rather than
+*typed*.
+
+| option | what happens | cost |
+|---|---|---|
+| **A — locked lookups (recommended)** | The ten columns become locked formulas keyed on Model Code; the rating is typed once, on the Models sheet, under range validation. | The sheet looks slightly less like the one field teams know: those cells become uneditable and show a formula result. A genuinely per-unit deviation cannot be recorded on the survey row. |
+| **B — as C5 literally says** | Columns stay hand-typed with numeric-range validation only. | Range validation catches EER 19.1 but **not** a plausible-but-wrong rating, and not the same model typed with different ratings on different rows. B5 recurs in quieter form. |
+| **C — locked with an explicit override column** | Lookups by default, plus one `Rating Override (reason)` column for the genuine exception. | An extra column, and an override path that will get used for convenience unless the report flags it. |
+
+**Recommendation: A.** The whole reason a per-model registry exists is that a
+model's ratings are a property of the model, not of the room it sits in.
+Option C is the fallback if field teams object during the first round —
+adding it later is additive and costs nothing now. Flagged rather than
+assumed because it extends the owner's own lock list beyond its letter.
+
+### Q2 — What is the English `name` of an imported building?
+
+**Where:** §3.3. `buildings.name` is NOT NULL and English-only per
+Constraints #1. TARSHID supplies a free-text Arabic building name and no
+serial, no code.
+
+| option | what happens | cost |
+|---|---|---|
+| **A — name = the minted code (recommended)** | `name = 'PROJECT-B0042'`, Arabic original verbatim in `name_ar`, shown as the RTL subtitle under the code (the existing sanctioned pattern). | Lists read as codes, which is less friendly than a name until the user reads the subtitle. |
+| **B — transliterate the Arabic** | An English-looking name is generated. | **Invents data.** Arabic→Latin has no single correct mapping (the point already recorded in `docs/Backlog.md`), so it manufactures a name TARSHID never issued and that no two tools would spell alike. Contradicts the no-invented-values rule. |
+| **C — leave name blank** | Not available — the column is NOT NULL, and relaxing it touches every consumer. | Rejected on those grounds. |
+| **D — engineer types an English name at import** | A human supplies each name. | ~200 manual translations before the survey can start, blocking the import on data entry. |
+
+**Recommendation: A**, with the code editable afterwards so an engineer *may*
+set a friendlier English display name per building, but is never required to.
+That keeps the system honest by default and improvable in place.
+
+### Q3 — Where is the nameplate photo actually required?
+
+**Where:** §6.4. TARSHID's rule is "a nameplate picture of each unique
+model". The current form demands one per *entry* — 12,000+ photos on a
+project this size instead of ~500.
+
+The tension: "required" pulls one way, "capture must never be blocked" pulls
+the other, and the Excel path cannot carry a photo at all.
+
+| option | what happens | cost |
+|---|---|---|
+| **A — required in-app, worklisted on the Excel path (recommended)** | The app's new-AC-model form will not complete without the photo. Excel-created models land photo-less, are badged in the picker, and appear on a "models missing nameplate photo" worklist. | Two different standards for the same field, which must be visible in the UI or it reads as a bug. |
+| **B — required everywhere** | Excel-created models cannot be used until a photo is attached. | Blocks capture — a surveyor's uploaded day of work stalls on a photo the workbook was never able to carry. Contradicts A-4. |
+| **C — never required, always a worklist** | Uniform, never blocks. | The photo is a TARSHID approval requirement; making it optional everywhere means discovering the gap at approval time, which is the expensive place to discover it. |
+
+**Recommendation: A.** It costs nothing where the camera is in the surveyor's
+hand and blocks nothing where it isn't. Worth the owner's explicit ruling
+because it is the one place this design says "required" at all.
+
+### Q4 — How long before an unused code block is tidied away?
+
+**Where:** §5.4. A downloaded template reserves a block of 200 codes. Some
+downloads are never uploaded.
+
+To be precise about what is being asked: **codes are never reissued under any
+option** — the exclusion constraint keeps the range forever and gaps are
+harmless. The only question is when a stale block stops cluttering the
+engineer's "outstanding downloads" list. A late upload against a released
+block is still accepted in every option.
+
+| option | effect |
+|---|---|
+| **A — 30 days, DB-configured (recommended)** | Comfortably longer than any real fill-and-upload cycle; the list stays short. |
+| **B — 7 days** | Tidier list; more blocks marked stale while a surveyor is still working through a slow building. Harmless but noisy. |
+| **C — never auto-release; manual only** | Nothing is ever wrongly marked stale; the list grows and stops being read. |
+
+**Recommendation: A**, with the period in DB config so changing it is a
+settings edit, not a migration. This is the lowest-stakes of the four — it
+affects one list's tidiness and nothing about data integrity.
 
 ---
 
