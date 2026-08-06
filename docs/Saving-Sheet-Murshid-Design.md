@@ -868,3 +868,101 @@ recorded). Everything else in PLAN v2 stands: EFLH round-trip (§12),
 DB-single-source with the A3 audit now delivered (§13), no invented values
 with the A4 audit now delivered (§14), backup scoped not built (§15), and the
 standing items (§16).
+
+---
+
+# PLAN v4 — Murshid, four defects from the owner's first real session
+
+**Planned, not started.** Sequenced AFTER the purge, the template cleaning and
+the placeholder removal. Recorded now so the fix is designed rather than
+improvised.
+
+## 18. D1 — the panel is too small and cannot be resized
+
+`MurshidPanel.jsx:287-288`: `width: min(390px, 100vw-32px)`,
+`maxHeight: min(620px, 100vh-130px)`. Fixed both axes, no resize affordance.
+A conversation whose history cannot be read is not a conversation.
+
+**Fix**: a full-height side panel — `position: fixed; top/bottom: 0; right: 0`,
+default width ~420px, **user-resizable** by a drag handle on the left edge with
+the width persisted (localStorage), plus an expand control for a wide mode. The
+thread scrolls internally (`flex: 1; overflow-y: auto`); the identity strip and
+composer stay pinned. Existing tokens; no new dependency.
+
+## 19. D2 — the reply to "hi" is a brochure
+
+The static first bubble is already correct and one line
+(`MurshidPanel.jsx:57`). The defect is the **model's** answer to "hi": five
+parts, four capability bullets, a paragraph about screen context, a closing
+question. Nothing in the system prompt asks for brevity.
+
+**Fix**: a length rule in the prompt — a greeting gets a greeting; answers are
+as short as the question allows; capabilities are demonstrated on request, not
+recited on arrival. Acceptance: "hi" returns one line.
+
+## 20. D3 — English in, Arabic out. Root cause found, and it is not the rule
+
+The owner is right that this is a correctness bug and right that it must be
+fixed at the source. **The source is not the language rule — it is that the
+entire prompt environment is Arabic**, and an earlier fix that only rewrote the
+rule was treating the symptom:
+
+- `SYSTEM_PROMPT` (`core.ts:221-237`) — six of seven rules in Arabic.
+- `buildContextBlock` (`core.ts:244-254`) — every request is wrapped in Arabic
+  scaffolding: the screen header, the `<بيانات>` data tags, the "(no data)"
+  fallbacks.
+- `index.ts:151` — the user's text is prefixed with an Arabic "user's question"
+  label on every call.
+- All ten `SCREEN_PACKS` section labels (`core.ts:57-121`) are Arabic.
+
+So the model receives an all-Arabic instruction environment with one English
+sentence in it, and answers Arabic. **Fix at source**: translate the system
+prompt, the context scaffolding, the question label and the pack labels to
+English, and state the rule as *mirror the user's language per message* — not
+English-by-default, not a session or global setting. Per message, because a
+bilingual user switches mid-thread. Acceptance: English in → English out;
+Arabic in → Arabic out; alternating messages alternate correctly.
+
+## 21. D4 — Murshid misdescribed its own role (the substantive one)
+
+Asked "can you prepare the saving sheet for me, if yes what do you need", it
+failed three ways: (a) refused for lack of screen context, though the question
+was a general capability question; (b) claimed *"I do not have edit
+permissions, my role is to display data and answer questions, not to create or
+prepare files"* — contradicting the agreed design where Murshid conducts the
+intake, checks readiness, names what is missing and triggers generation; (c)
+invented screen names ("Reports", "Savings Summary") and pushed the user away
+from the thing it exists to do.
+
+**Root causes, all structural:**
+1. Rule 1 is *answer only from the attached context*. With no screen, the packs
+   return nothing, so any question — including one about Murshid itself —
+   becomes "no data available". The grounding rule must distinguish **questions
+   about DATA** (context-only, unchanged) from **questions about MURSHID'S OWN
+   CAPABILITIES** (answered from its instructions, no context required).
+2. The prompt never states what Murshid *does*. Rules 3 and 4 tell it not to
+   describe itself as a system and not to evaluate; asked what it can do, it
+   improvises the most conservative thing available. **A capabilities section is
+   required**, naming the saving-sheet intake explicitly.
+3. No screen vocabulary, so it invents one. **Give it the real nav list** and
+   forbid naming any screen outside it.
+
+**The acceptance test (the owner's own words, verbatim as the bar):** he asks
+whether Murshid can prepare a saving sheet and what it needs. Murshid says yes;
+explains it needs the survey completed with equipment and space data, operating
+hours from the entity letter, EFLH which TARSHID supplies after the survey, and
+the approved replacement units from the material submittal; asks which project;
+then checks readiness against that project and reports precisely what is present
+and what is missing. It never claims it lacks permission to do the thing it
+exists to do, and never invents a screen name.
+
+**Sequencing, stated honestly**: the full flow cannot complete until the survey
+stage exists. The deliverable now is **the conversation and the readiness
+check** — Murshid says what is missing rather than pretending it can finish
+today. Being unable to complete is acceptable; misdescribing its own role is
+not.
+
+**Safety unchanged**: the deny-list, the allow-list, JWT-scoped reads, the cap
+and the red-team suite are untouched by all four fixes. D3 and D4 rewrite prompt
+*content*, not the prefilter — and the red-team's prompt assertions must be
+updated in step, since several match on the Arabic strings being replaced.
