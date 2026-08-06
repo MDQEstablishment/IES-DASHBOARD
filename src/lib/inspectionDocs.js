@@ -3,6 +3,7 @@
 import { bgInsert, bgUpdate, uploadToBucket } from './db'
 import { generateDocPdf } from './docPdf'
 import { localToday } from './format'
+import { BUCKETS } from './buckets'
 
 export const slugify = (s) => String(s || '').trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 25)
 // {PROJECT_CODE}_{KIND}-{YYYY-SEQ}[_slug][_R{N}].pdf  — no random suffix
@@ -64,7 +65,7 @@ export async function commitInspectionDoc({ kind, project, esm, building, userId
   // deterministic, random-free storage key (unique per reference + revision)
   const safeRef = String(refNo || 'doc').replace(/[^A-Za-z0-9._-]/g, '-')
   const key = `${project.id}/${kind}/${safeRef}${revNo > 0 ? '-R' + revNo : ''}.pdf`
-  const { path, error: upErr } = await uploadToBucket('project-docs', file, { userId, key })
+  const { path, error: upErr } = await uploadToBucket(BUCKETS.PROJECT_DOCS, file, { userId, key })
   if (upErr) return { error: upErr, docId }
   await bgUpdate('project_documents', docId, { storage_path: path })
   return { docId, path, filename, referenceNo: refNo, revNo }

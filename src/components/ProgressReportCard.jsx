@@ -7,6 +7,7 @@ import DateInput from './DateInput'
 import { toast } from '../lib/toast'
 import { num, localToday } from '../lib/format'
 import { assembleReportData, estimatedCompletion } from '../lib/progressReport'
+import { BUCKETS } from '../lib/buckets'
 
 // 9F — the real report generator. Pick a project and a FROM/TO range, review
 // the estimated completion dates, generate. The workbook design lives in the
@@ -86,7 +87,7 @@ export default function ProgressReportCard() {
       const esmCodeById = new Map((peRes.data || []).map((pe) => [pe.esm?.id, pe.esm?.code]).filter(([k]) => k))
       const deliveries = (mdRes.data || []).map((d) => ({ ...d, esm_code: esmCodeById.get(d.esm_id) || null }))
       const bCodeById = new Map(buildings.map((b) => [b.id, b.code]))
-      const photos = (phRes.data || []).map((p) => ({ ...p, building_code: bCodeById.get(p.building_id) || '', bucket: 'building-photos' }))
+      const photos = (phRes.data || []).map((p) => ({ ...p, building_code: bCodeById.get(p.building_id) || '', bucket: BUCKETS.BUILDING_PHOTOS }))
 
       const data = assembleReportData({
         project, buildings, scopes, projectEsms: peRes.data || [], install: ilRes.data || [],

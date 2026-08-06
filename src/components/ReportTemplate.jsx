@@ -4,12 +4,13 @@ import { Btn, Empty } from './ui'
 import FileDropZone from './FileDropZone'
 import { toast } from '../lib/toast'
 import { num, fmtDateTime } from '../lib/format'
+import { BUCKETS } from '../lib/buckets'
 
 // 9F — versioned progress-report template. The owner designed the workbook
 // (branded header, KPI + ESM cards, column and line charts, 395 formulas); the
 // generator only writes input cells into the ACTIVE version, so the design is
 // owned in Excel and never re-implemented in styling code. Prior versions kept.
-const BUCKET = 'report-templates'
+const BUCKET = BUCKETS.REPORT_TEMPLATES
 
 export default function ReportTemplate({ role }) {
   const canWrite = ['admin', 'pmo'].includes(role)

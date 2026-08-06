@@ -7,6 +7,7 @@ import { compressImage } from '../lib/image'
 import { Empty, Btn, inputStyle } from './ui'
 import DateInput from './DateInput'
 import { fmtDate, localToday } from '../lib/format'
+import { BUCKETS } from '../lib/buckets'
 
 // Small uppercase field caption to match the Claude Design mockup.
 const Lbl = ({ children }) => <span style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: 5 }}>{children}</span>
@@ -90,7 +91,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
           const isImg = /^(jpg|jpeg|png)$/.test(ext)
           const blob = isImg ? await compressImage(f, { maxBytes: 400000 }).catch(() => f) : f
           const uuid = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())
-          const { path } = await uploadToBucket('daily-progress-photos', blob, { userId: user.id, key: `${buildingId}/${date}/${uuid}.${ext}` })
+          const { path } = await uploadToBucket(BUCKETS.DAILY_PROGRESS_PHOTOS, blob, { userId: user.id, key: `${buildingId}/${date}/${uuid}.${ext}` })
           if (path) paths.push(path)
         }
         const m = matById[l.materialId]
@@ -232,7 +233,7 @@ function HistoryRow({ batch }) {
   const esms = [...new Set(lines.map((l) => l.material?.esm?.code).filter(Boolean))].sort()
   const mono = { fontFamily: 'var(--mono)' }
 
-  const viewPhoto = (p) => openSigned('daily-progress-photos', p, 'photo')
+  const viewPhoto = (p) => openSigned(BUCKETS.DAILY_PROGRESS_PHOTOS, p, 'photo')
 
   return (
     <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-m)', overflow: 'hidden' }}>

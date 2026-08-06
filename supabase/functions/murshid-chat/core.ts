@@ -445,25 +445,19 @@ export function buildContextBlock(
 export const QUESTION_LABEL = "User's question:";
 
 // ---------------------------------------------------------------------------
-// 4. COST. Same table and rounding as the 9D-4 agent, so the two meters agree.
+// 4. COST.
+//
+// This section used to open "Same table and rounding as the 9D-4 agent, so the
+// two meters agree." That was a promise kept by hand: the table was duplicated
+// byte-for-byte in saving-sheet-agent/index.ts and a THIRD, partial copy sat in
+// extract-delivery-pdf (Haiku only, no cache pricing), so the comment was true
+// of two meters and false of the third. U5 / COMMIT B makes it structural —
+// there is one table, in ../_shared/pricing.ts, and all three import it.
+//
+// Re-exported here so nothing that reads core.ts (index.ts, the red-team
+// harness) has to know where the table moved to.
 // ---------------------------------------------------------------------------
-export const PRICE: Record<string, { in: number; out: number; cacheRead: number; cacheWrite: number }> = {
-  "claude-haiku-4-5-20251001": { in: 1.0, out: 5.0, cacheRead: 0.1, cacheWrite: 1.25 },
-  "claude-sonnet-4-5-20250929": { in: 3.0, out: 15.0, cacheRead: 0.3, cacheWrite: 3.75 },
-};
-export const priceOf = (m: string) => PRICE[m] || { in: 3.0, out: 15.0, cacheRead: 0.3, cacheWrite: 3.75 };
-
-export function estimateCostUsd(model: string, u: {
-  tokens_in?: number; tokens_out?: number; cache_read?: number; cache_write?: number;
-}): number {
-  const p = priceOf(model);
-  const cost =
-    ((u.tokens_in || 0) * p.in +
-      (u.tokens_out || 0) * p.out +
-      (u.cache_read || 0) * p.cacheRead +
-      (u.cache_write || 0) * p.cacheWrite) / 1_000_000;
-  return Math.round(cost * 1e6) / 1e6;
-}
+export { PRICE, priceOf, estimateCostUsd, usageOf } from "../_shared/pricing.ts";
 
 /** Over the cap → refuse before spending anything. */
 export function capExceeded(spentUsd: number, capUsd: number): boolean {

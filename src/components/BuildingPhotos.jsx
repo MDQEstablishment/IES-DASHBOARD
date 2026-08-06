@@ -8,6 +8,7 @@ import { CAN_INSTALL } from '../lib/constants'
 import { fmtDate } from '../lib/format'
 import Lightbox from 'yet-another-react-lightbox'
 import 'yet-another-react-lightbox/styles.css'
+import { BUCKETS } from '../lib/buckets'
 
 // Building photos (Phase 4). daily_report photos carry an ESM badge + date;
 // direct uploads are "General". Private bucket → signed URLs. Lightbox browsing.
@@ -25,7 +26,7 @@ export default function BuildingPhotos({ buildingId }) {
     let alive = true
     ;(async () => {
       const m = {}
-      for (const p of rows) m[p.id] = await signedUrlFor('building-photos', p.storage_path)
+      for (const p of rows) m[p.id] = await signedUrlFor(BUCKETS.BUILDING_PHOTOS, p.storage_path)
       if (alive) setUrls(m)
     })()
     return () => { alive = false }
@@ -38,7 +39,7 @@ export default function BuildingPhotos({ buildingId }) {
     for (const file of files) {
       if (!file.type.startsWith('image/')) continue
       const small = await compressImage(file, { maxBytes: 200000 })
-      const { path, error } = await uploadToBucket('building-photos', small, { userId: user.id, prefix: buildingId })
+      const { path, error } = await uploadToBucket(BUCKETS.BUILDING_PHOTOS, small, { userId: user.id, prefix: buildingId })
       if (!error) {
         await bgInsert('building_photos', {
           building_id: buildingId, storage_path: path, source: 'direct_upload', esm: null,

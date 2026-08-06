@@ -10,8 +10,14 @@ import { Modal, Btn, Field, inputStyle } from '../ui'
 import { toast } from '../../lib/toast'
 import { SURVEY_CATEGORIES } from '../../lib/constants'
 import FileDropZone from '../FileDropZone'
+import { BUCKETS } from '../../lib/buckets'
 
-const PHOTO_BUCKET = 'daily-progress-photos'
+// U5 / COMMIT B — survey nameplate/room/indoor photographs have their own
+// bucket. They used to share `daily-progress-photos`, which put two retention
+// lifetimes in one bucket: a daily-progress photo ages out with its report,
+// while a nameplate photograph is the only surviving record of what a unit was
+// and must outlive every saving sheet derived from it.
+const PHOTO_BUCKET = BUCKETS.SURVEY_PHOTOS
 const control = { ...inputStyle, boxSizing: 'border-box', width: '100%', maxWidth: '100%' }
 
 // Latin-digit enforcement (same rule as 9A-fix): map Arabic-Indic/Persian -> Latin, strip the rest.
@@ -452,7 +458,7 @@ function PhotoSlot({ label, path, buildingId, onPath, required }) {
   const [url, setUrl] = useState('')
   const cur = useRef(path)
   cur.current = path
-  useEffect(() => { let live = true; if (path) signedUrlFor('daily-progress-photos', path).then((u) => { if (live) setUrl(u || '') }); else setUrl(''); return () => { live = false } }, [path])
+  useEffect(() => { let live = true; if (path) signedUrlFor(PHOTO_BUCKET, path).then((u) => { if (live) setUrl(u || '') }); else setUrl(''); return () => { live = false } }, [path])
 
   const onFiles = async (file) => {
     if (!file) return

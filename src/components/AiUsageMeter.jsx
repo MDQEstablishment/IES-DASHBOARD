@@ -44,7 +44,12 @@ export default function AiUsageMeter({ role }) {
   const saveSetting = async (key, raw) => {
     const row = S[key]
     if (!row) return
-    const v = key === 'monthly_cap_usd' || key === 'min_auto_confidence' ? numFilter(raw) : String(raw).trim()
+    // U5 / COMMIT B — pdf_monthly_cap joins the numeric keys. It is a hard
+    // ceiling the Edge Function enforces, so a stray character here would make
+    // Number() return NaN and both the wall and the meter fall back to a
+    // default the operator never chose.
+    const NUMERIC = ['monthly_cap_usd', 'min_auto_confidence', 'pdf_monthly_cap']
+    const v = NUMERIC.includes(key) ? numFilter(raw) : String(raw).trim()
     if (!v || v === row.value) return
     // ai_settings' primary key is `key`, not `id` — bgUpdate can't target it
     const { data, error } = await supabase.from('ai_settings').update({ value: v }).eq('key', row.key).select('key')

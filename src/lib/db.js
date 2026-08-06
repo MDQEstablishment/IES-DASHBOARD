@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from './supabase'
 import { toast } from './toast'
+import { BUCKETS } from './buckets'
 
 // ---------------------------------------------------------------------------
 // useLiveQuery: fetch a table + auto-refetch on any realtime change to it.
@@ -112,7 +113,7 @@ export async function bgDelete(table, id, opts = {}) {
 
 export async function signedUrl(path, expires = 3600) {
   if (!path) return null
-  const { data, error } = await supabase.storage.from('images').createSignedUrl(path, expires)
+  const { data, error } = await supabase.storage.from(BUCKETS.IMAGES).createSignedUrl(path, expires)
   if (error) return null
   return data?.signedUrl || null
 }

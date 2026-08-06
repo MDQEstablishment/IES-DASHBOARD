@@ -11,6 +11,7 @@ import { fetchAllRows } from '../lib/tarshidImport'
 import AiAssistPanel from './AiAssistPanel'
 import ProjectUnitSelection from './ProjectUnitSelection'
 import LightingReplacements from './LightingReplacements'
+import { BUCKETS } from '../lib/buckets'
 
 // 9D-3 — the saving sheet as a formal deliverable: readiness → review → generate
 // → draft/approved/shared, revisioned. pmo/admin only (like COCs).
@@ -108,7 +109,7 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
       })
       const revision = (sheets.reduce((a, s) => Math.max(a, s.revision), 0) || 0) + 1
       const path = `${project.id}/rev${revision}-${Date.now()}.xlsx`
-      const { error: upErr } = await supabase.storage.from('saving-sheets')
+      const { error: upErr } = await supabase.storage.from(BUCKETS.SAVING_SHEETS)
         .upload(path, new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), { upsert: false })
       if (upErr) { toast('Upload failed — ' + upErr.message, 'err'); setBusy(false); return }
       // previous drafts/approved become superseded (history kept)
@@ -128,7 +129,7 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
   }
 
   const download = async (s) => {
-    await openSigned('saving-sheets', s.storage_path, 'workbook')
+    await openSigned(BUCKETS.SAVING_SHEETS, s.storage_path, 'workbook')
   }
   const setStatus = async (s, status, extra = {}) => {
     const { error } = await bgUpdate('saving_sheets', s.id, { status, ...extra }, { okMsg: `Revision ${s.revision} → ${STATUS_META[status][0]}` })

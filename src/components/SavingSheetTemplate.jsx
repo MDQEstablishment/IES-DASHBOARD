@@ -5,11 +5,12 @@ import { Btn, Empty } from './ui'
 import FileDropZone from './FileDropZone'
 import { toast } from '../lib/toast'
 import { num, fmtDateTime } from '../lib/format'
+import { BUCKETS } from '../lib/buckets'
 
 // 9D-3 — versioned TARSHID workbook template. Generation always fills the
 // ACTIVE version's file: the layout is never hardcoded, so a template revision
 // from TARSHID is an upload, not a code change. Prior versions are kept.
-const BUCKET = 'saving-sheet-templates'
+const BUCKET = BUCKETS.SAVING_SHEET_TEMPLATES
 
 export default function SavingSheetTemplate({ role }) {
   const canWrite = ['admin', 'pmo'].includes(role)

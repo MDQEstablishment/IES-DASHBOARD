@@ -8,6 +8,7 @@ import { fmtDate, localToday } from '../lib/format'
 import { toast } from '../lib/toast'
 import InspectionFormModal from './InspectionFormModal'
 import FileDropZone from './FileDropZone'
+import { BUCKETS } from '../lib/buckets'
 
 const DSTATUS = {
   pending: ['Pending', 'var(--text-3)', 'var(--line-soft)'], in_transit: ['In Transit', 'var(--accent)', 'var(--accent-tint)'],
@@ -42,7 +43,7 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
   const patchRow = async (id, patch) => { const { error } = await bgUpdate('material_deliveries', id, patch); if (!error) refetch() }
   const removeRow = async (id) => { const { error } = await bgDelete('material_deliveries', id); if (!error) refetch() }
   const openPdf = async (path) => {
-    await openSigned('delivery-notes', path, 'PDF')
+    await openSigned(BUCKETS.DELIVERY_NOTES, path, 'PDF')
   }
 
   return (
@@ -184,7 +185,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
     setErr(''); setBusy(true)
     const ext = (file.name.split('.').pop() || 'pdf').toLowerCase()
     const path = `${projectId}/${crypto.randomUUID()}.${ext}`
-    const up = await supabase.storage.from('delivery-notes').upload(path, file, { contentType: file.type || undefined, upsert: false })
+    const up = await supabase.storage.from(BUCKETS.DELIVERY_NOTES).upload(path, file, { contentType: file.type || undefined, upsert: false })
     if (up.error) { setBusy(false); setErr('Upload failed — ' + up.error.message); return }
     setPdfPath(path)
     const { data, error } = await supabase.functions.invoke('extract-delivery-pdf', { body: { project_id: projectId, pdf_path: path } })

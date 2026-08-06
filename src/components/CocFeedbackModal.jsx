@@ -7,6 +7,7 @@ import { toast } from '../lib/toast'
 import FileDropZone from './FileDropZone'
 import DateInput from './DateInput'
 import { localToday } from '../lib/format'
+import { BUCKETS } from '../lib/buckets'
 
 // 8S screen 4 — record what TARSHID said about a sent certificate. Approval
 // happens outside the platform; this only logs the outcome + their response
@@ -33,7 +34,7 @@ export default function CocFeedbackModal({ coc, onClose, onDone }) {
     if (file) {
       const ext = (file.name.split('.').pop() || 'pdf').toLowerCase().replace(/[^a-z0-9]/g, '') || 'pdf'
       const key = `${coc.project_id}/${coc.code}-R${coc.revision}-response.${ext}`
-      const { path, error } = await uploadToBucket('coc-responses', file, { userId: user.id, key })
+      const { path, error } = await uploadToBucket(BUCKETS.COC_RESPONSES, file, { userId: user.id, key })
       if (error) { setBusy(false); return }
       docPath = path
     }

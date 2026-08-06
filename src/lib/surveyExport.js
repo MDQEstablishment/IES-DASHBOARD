@@ -6,8 +6,11 @@
 // loaded lazily so it stays out of the main bundle.
 import { signedUrlFor } from './db'
 import { localDayKey, localToday } from './format'
+import { BUCKETS } from './buckets'
 
-const PHOTO_BUCKET = 'daily-progress-photos' // survey photos live here, prefix survey/<building_id>/
+// U5 / COMMIT B — survey photographs moved to their own bucket: same prefix
+// (survey/<building_id>/), different lifecycle from daily-progress evidence.
+const PHOTO_BUCKET = BUCKETS.SURVEY_PHOTOS
 // The exported workbook is a long-lived artifact — the default 1h signed-URL
 // expiry made every photo link die before anyone opened the file. One year.
 const PHOTO_URL_TTL = 60 * 60 * 24 * 365

@@ -22,6 +22,7 @@
 import { supabase } from './supabase'
 import { openXlsx, saveXlsx, findSheet, readSheet, findHeaderRow, colFor, patchSheet, setFullCalcOnLoad, stripChartCaches } from './xlsxPatch'
 import { labelCategory } from './progressReport'
+import { BUCKETS } from './buckets'
 
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
@@ -312,7 +313,7 @@ export function fillReportWorkbook(zip, data) {
 }
 
 export async function buildProgressReport({ templatePath, data }) {
-  const { data: dl, error } = await supabase.storage.from('report-templates').download(templatePath)
+  const { data: dl, error } = await supabase.storage.from(BUCKETS.REPORT_TEMPLATES).download(templatePath)
   if (error || !dl) throw new Error('Could not load the report template — ' + (error?.message || 'missing file'))
   const zip = openXlsx(await dl.arrayBuffer())
   const report = fillReportWorkbook(zip, data)

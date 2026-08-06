@@ -10,6 +10,7 @@ import { useAuth } from '../rbac'
 import { toast } from '../lib/toast'
 import { localDayKey } from '../lib/format'
 import { read, utils } from 'xlsx'
+import { BUCKETS } from '../lib/buckets'
 
 // A3(18) — the project-status, building-status and ESM lists are no longer
 // held here. They came from `public.v_form_options` (migration 0139), a view
@@ -79,7 +80,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
   const [curPhoto, setCurPhoto] = useState(null) // signed URL of the existing photo
   useEffect(() => {
     let cancelled = false
-    if (project?.photo_url) signedUrlFor('project-photos', project.photo_url).then((u) => { if (!cancelled) setCurPhoto(u) })
+    if (project?.photo_url) signedUrlFor(BUCKETS.PROJECT_PHOTOS, project.photo_url).then((u) => { if (!cancelled) setCurPhoto(u) })
     return () => { cancelled = true }
   }, [project?.photo_url])
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
@@ -115,12 +116,12 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         if (f.size > 800 * 1024) { try { f = await compressImage(f, { maxBytes: 800000, maxDim: 1600 }) } catch { /* keep original */ } }
         const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
         const path = `${project.id}/${crypto.randomUUID()}.${ext}`
-        const { error: upErr } = await uploadToBucket('project-photos', f, { key: path, maxBytes: 5 * 1024 * 1024 })
+        const { error: upErr } = await uploadToBucket(BUCKETS.PROJECT_PHOTOS, f, { key: path, maxBytes: 5 * 1024 * 1024 })
         if (upErr) { setBusy(false); return } // uploadToBucket already toasted
         payload.photo_url = path
-        if (project.photo_url && project.photo_url !== path) supabase.storage.from('project-photos').remove([project.photo_url])
+        if (project.photo_url && project.photo_url !== path) supabase.storage.from(BUCKETS.PROJECT_PHOTOS).remove([project.photo_url])
       } else if (removePhoto && project.photo_url) {
-        await supabase.storage.from('project-photos').remove([project.photo_url])
+        await supabase.storage.from(BUCKETS.PROJECT_PHOTOS).remove([project.photo_url])
         payload.photo_url = null
       }
       const { error } = await bgUpdate('projects', project.id, payload, { okMsg: 'Project updated' })
@@ -315,7 +316,7 @@ export function AssignEngineerModal({ project, onClose }) {
 }
 
 // ── Excel import (multi-sheet template → atomic RPC) ────────────────────────
-const TEMPLATE_BUCKET_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/project-templates/IES-Project-Template-v3.xlsx`
+const TEMPLATE_BUCKET_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${BUCKETS.PROJECT_TEMPLATES}/IES-Project-Template-v3.xlsx`
 const TEMPLATE_STATIC_URL = `${import.meta.env.BASE_URL}templates/IES-Project-Template-v3.xlsx`
 
 const isExampleRow = (row) => Object.values(row).some((v) => String(v).trim() === 'DELETE-BEFORE-UPLOAD')

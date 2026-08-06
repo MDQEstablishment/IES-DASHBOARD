@@ -2,6 +2,7 @@ import { useLiveQuery, openSigned } from '../lib/db'
 import { Drawer, Empty } from './ui'
 import { toast } from '../lib/toast'
 import { kindLabel } from '../lib/cocPdf'
+import { BUCKETS } from '../lib/buckets'
 
 // 8S screen 3 — one certificate's full story: scope, dates, files, and the
 // whole revision chain (every Rev shares the code; older ones are superseded).
@@ -60,8 +61,8 @@ export default function CocDetailDrawer({ coc, buildings, esmName, onClose }) {
           </div>
         )}
         <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-          {fileLink('coc-pdfs', c.pdf_path, 'Open PDF')}
-          {fileLink('coc-responses', c.feedback_doc_path, 'Open TARSHID response')}
+          {fileLink(BUCKETS.COC_PDFS, c.pdf_path, 'Open PDF')}
+          {fileLink(BUCKETS.COC_RESPONSES, c.feedback_doc_path, 'Open TARSHID response')}
         </div>
       </div>
     )

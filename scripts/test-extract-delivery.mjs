@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
+import { BUCKETS } from '../src/lib/buckets.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 let env = { ...process.env }
@@ -40,7 +41,7 @@ console.log('Signed in as', auth.user.email)
 
 const path = `${projectId}/test-${Date.now()}.pdf`
 const bytes = readFileSync(join(ROOT, 'seeds/fixtures/sample-delivery-note.pdf'))
-const up = await sb.storage.from('delivery-notes').upload(path, bytes, { contentType: 'application/pdf', upsert: true })
+const up = await sb.storage.from(BUCKETS.DELIVERY_NOTES).upload(path, bytes, { contentType: 'application/pdf', upsert: true })
 if (up.error) { console.error('Upload failed:', up.error.message); process.exit(1) }
 console.log('Uploaded', path)
 

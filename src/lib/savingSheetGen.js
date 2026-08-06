@@ -7,6 +7,11 @@
 import { supabase } from './supabase'
 import { openXlsx, saveXlsx, findSheet, readSheet, findHeaderRow, colFor, patchSheet, setFullCalcOnLoad } from './xlsxPatch'
 import { resolveSelectionDescriptions } from './savingSheet'
+import { BUCKETS } from './buckets'
+// U5 / COMMIT B — the write guard and the engine's ceiling are ONE constant.
+// This line said `s.row_no > 20` while savingSheet.js said 20 and the Edge
+// Function's prompt said 20 in prose: three copies of TARSHID's B2:N21 range.
+import { MAX_SELECTION_ROWS } from '../../supabase/functions/_shared/limits.js'
 
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 // Excel serial time (fraction of a day) for 'HH:MM'
@@ -172,7 +177,7 @@ function fillProjectUnits(zip, selection) {
   const patches = {}
   const ordered = [...selection].sort((a, b) => (a.row_no || 0) - (b.row_no || 0))
   ordered.forEach((s) => {
-    if (!s.description || !s.row_no || s.row_no < 1 || s.row_no > 20) return
+    if (!s.description || !s.row_no || s.row_no < 1 || s.row_no > MAX_SELECTION_ROWS) return
     const r = headerRow + s.row_no                       // row_no 1 -> sheet row 2
     patches[`${C.desc}${r}`] = s.description
     if (s.unit_cost != null) patches[`${C.unit}${r}`] = Number(s.unit_cost)
@@ -190,7 +195,7 @@ function fillProjectUnits(zip, selection) {
 // with the SAME description strings so the payback VLOOKUP and the AH
 // type-match resolve. A mismatch throws rather than shipping a broken sheet.
 export async function buildSavingSheet({ templatePath, project, buildings, ohRows, rows, selection = [] }) {
-  const { data: dl, error } = await supabase.storage.from('saving-sheet-templates').download(templatePath)
+  const { data: dl, error } = await supabase.storage.from(BUCKETS.SAVING_SHEET_TEMPLATES).download(templatePath)
   if (error || !dl) throw new Error('Could not load the template — ' + (error?.message || 'missing file'))
   const zip = openXlsx(await dl.arrayBuffer())
 

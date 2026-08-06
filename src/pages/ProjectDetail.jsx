@@ -18,6 +18,7 @@ import MaterialDeliveries from '../components/MaterialDeliveries'
 import CocHome from '../components/CocHome'
 import ProjectItems from '../components/ProjectItems'
 import ProjectWarehouse from '../components/ProjectWarehouse'
+import { BUCKETS } from '../lib/buckets'
 
 // Doc-tracker matrix columns (kind -> header label), per the canonical design.
 const DOC_COLS = [
@@ -109,7 +110,7 @@ export default function ProjectDetail() {
 
   const openFile = async (d) => {
     if (!d?.storage_path) { toast('No file attached to this document', 'err'); return }
-    await openSigned('project-docs', d.storage_path, 'document')
+    await openSigned(BUCKETS.PROJECT_DOCS, d.storage_path, 'document')
   }
 
   if (loading && !project) return <Loading />

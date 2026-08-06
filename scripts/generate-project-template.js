@@ -19,6 +19,8 @@ import ExcelJS from 'exceljs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { mkdirSync, readFileSync } from 'node:fs'
+// U5 / COMMIT B — the bucket name comes from the one list, not from a literal.
+import { BUCKETS } from '../src/lib/buckets.js'
 
 // ── A3(18) — the dropdown lists come from the database ──────────────────────
 // This generator used to hold its own copies of the status and ESM lists, at
@@ -341,7 +343,7 @@ async function upload(file) {
     const { error: authErr } = await sb.auth.signInWithPassword({ email: 'admin@ies.demo.local', password: pwd })
     if (authErr) { console.log('• skip bucket upload (admin sign-in failed):', authErr.message); return }
     const body = readFileSync(file)
-    const { error } = await sb.storage.from('project-templates').upload(TEMPLATE_OBJECT_PATH, body, {
+    const { error } = await sb.storage.from(BUCKETS.PROJECT_TEMPLATES).upload(TEMPLATE_OBJECT_PATH, body, {
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', upsert: true,
     })
     if (error) console.log('• bucket upload failed:', error.message)

@@ -8,6 +8,7 @@ import { compressImage } from '../lib/image'
 import { toast } from '../lib/toast'
 import InspectionFormModal from './InspectionFormModal'
 import FileDropZone from './FileDropZone'
+import { BUCKETS } from '../lib/buckets'
 
 // One vocabulary, shared with the ESM Documentation Tracker matrix.
 // (COCs moved to their own pipeline + `cocs` table in 8S — see the COCs tab.)
@@ -119,7 +120,7 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
 
   const afterChange = () => { refetch(); onChanged?.() }
   const openDoc = async (d) => {
-    await openSigned('project-docs', d.storage_path)
+    await openSigned(BUCKETS.PROJECT_DOCS, d.storage_path)
   }
 
   return (
@@ -221,7 +222,7 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
   const uploadFile = async () => {
     if (!file) return null
     const toUp = file.type.startsWith('image/') ? await compressImage(file, { maxBytes: 500000 }) : file
-    const { path, error } = await uploadToBucket('project-docs', toUp, { userId: user.id, prefix: doc.project_id })
+    const { path, error } = await uploadToBucket(BUCKETS.PROJECT_DOCS, toUp, { userId: user.id, prefix: doc.project_id })
     if (error) return { error }
     return { path }
   }
@@ -304,7 +305,7 @@ export function DocHistoryDrawer({ doc, onClose }) {
   const { rows: events } = useLiveQuery('doc_submission_history', (q) => q.select('*').eq('doc_id', doc.id).order('action_date', { ascending: true }), [doc.id])
   const { rows: people } = useLiveQuery('profiles', (q) => q.select('id,full_name'))
   const nameById = Object.fromEntries(people.map((p) => [p.id, p.full_name]))
-  const openFile = (p) => openSigned('project-docs', p)
+  const openFile = (p) => openSigned(BUCKETS.PROJECT_DOCS, p)
   return (
     <Drawer open title={`History · ${doc.name}`} subtitle={`Rev ${doc.revision || 'A'} · ${doc.doc_type}`} onClose={onClose}>
       {events.length === 0 ? <Empty icon="doc">No history yet.</Empty> : (
@@ -359,7 +360,7 @@ function UploadModal({ projectId, buildingId, esmOpts, bldgOpts, rows, prefill, 
     let storage_path = null, file_size_bytes = null, mime_type = null
     if (file) {
       const toUp = file.type.startsWith('image/') ? await compressImage(file, { maxBytes: 500000 }) : file
-      const { path, error } = await uploadToBucket('project-docs', toUp, { userId: user.id, prefix: projectId, maxBytes: HARD_CAP })
+      const { path, error } = await uploadToBucket(BUCKETS.PROJECT_DOCS, toUp, { userId: user.id, prefix: projectId, maxBytes: HARD_CAP })
       if (error) { setBusy(false); return }
       storage_path = path; file_size_bytes = toUp.size; mime_type = toUp.type
     }

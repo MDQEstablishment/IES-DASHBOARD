@@ -1,7 +1,8 @@
 // supabase/functions/extract-delivery-pdf/index.ts
 // Sprint 8D — read a supplier delivery-note PDF with Claude Haiku 4.5 and return
 // structured lines matched against the materials catalog. Enforces a hard monthly
-// cap (1000 extractions) and logs cost/tokens for every call (success or failure).
+// cap (ai_settings.pdf_monthly_cap) and logs cost/tokens for every call (success
+// or failure).
 //
 // Inputs : { project_id: uuid, pdf_path: string }  (PDF already uploaded to the
 //           private `delivery-notes` bucket by the client)
@@ -9,11 +10,26 @@
 // Secret : ANTHROPIC_API_KEY (Edge Function secret — never logged or echoed)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { estimateCostUsd, usageOf } from "../_shared/pricing.ts";
 
-const MODEL = "claude-haiku-4-5-20251001";
-const MONTHLY_CAP = 1000;
-// Haiku 4.5 token pricing (USD per million tokens) — used only for the cost log.
-const PRICE_IN = 1.0, PRICE_OUT = 5.0;
+// U5 / COMMIT B — THREE FACTS THAT WERE HELD HERE AND NOWHERE ELSE.
+//
+// 1. The price table. `PRICE_IN = 1.0, PRICE_OUT = 5.0` was a PARTIAL copy of
+//    the table in murshid-chat/core.ts and saving-sheet-agent/index.ts: Haiku
+//    only, and no cache pricing, so every cached call was logged at less than
+//    it cost. It now comes from ../_shared/pricing.ts, which all three import.
+// 2. The model id. Hardcoded here while the other two functions read theirs
+//    from ai_settings, so this one could not be pointed at another model
+//    without a deploy — and, priced by a table that only knew Haiku, would
+//    have billed the new model at Haiku rates in silence. Now `model_extract`.
+// 3. The monthly cap. `MONTHLY_CAP = 1000` here, and a SECOND copy at
+//    src/pages/Settings.jsx:78 driving the usage meter the PMO reads. Raising
+//    one moved the wall; raising the other moved the picture of the wall. Now
+//    `pdf_monthly_cap`, read by both.
+//
+// The defaults below are last-resort fallbacks for a missing row, nothing more.
+const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+const DEFAULT_MONTHLY_CAP = 1000;
 const WRITE_ROLES = ["admin", "pmo", "projm", "progm", "procm", "proco", "proje"];
 
 const CORS = {
@@ -137,6 +153,17 @@ Deno.serve(async (req) => {
       return json({ error: "unauthorized", message: "Your role can't create deliveries." }, 403);
     }
 
+    // --- the model and the cap, from ai_settings ------------------------------
+    // AFTER the role check on purpose: this is a service-role read, and an
+    // unauthenticated caller must not be able to make the function touch the
+    // database at all.
+    const { data: settingRows } = await admin.from("ai_settings").select("key,value");
+    const S: Record<string, string> = {};
+    (settingRows || []).forEach((r: { key: string; value: string }) => { S[r.key] = r.value });
+    const MODEL = S.model_extract || DEFAULT_MODEL;
+    const capRaw = Number(S.pdf_monthly_cap);
+    const MONTHLY_CAP = Number.isFinite(capRaw) && capRaw > 0 ? capRaw : DEFAULT_MONTHLY_CAP;
+
     const body = await req.json().catch(() => ({}));
     project_id = body.project_id || "";
     pdf_path = body.pdf_path || "";
@@ -203,9 +230,12 @@ Deno.serve(async (req) => {
       return json({ error: "extraction_failed", message: "The AI could not read this PDF. Enter it manually." }, 502);
     }
     const resp = await ar.json();
-    const usage = resp.usage || {};
-    const tokens_in = usage.input_tokens ?? null, tokens_out = usage.output_tokens ?? null;
-    const cost_usd = ((tokens_in || 0) / 1e6) * PRICE_IN + ((tokens_out || 0) / 1e6) * PRICE_OUT;
+    // usageOf() reads all four counters, including the two the old inline
+    // arithmetic ignored; estimateCostUsd() prices them from the shared table
+    // for the model actually used, not for a hardcoded one.
+    const usage = usageOf(resp);
+    const tokens_in = usage.tokens_in, tokens_out = usage.tokens_out;
+    const cost_usd = estimateCostUsd(MODEL, usage);
     const toolBlock = (resp.content || []).find((c: any) => c.type === "tool_use");
     if (!toolBlock?.input) { await log(false, { pages, tokens_in, tokens_out, cost_usd, error: "no_tool_use" }); return json({ error: "extraction_failed", message: "The AI returned no structured data." }, 502); }
     const extracted = toolBlock.input;

@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 538 interactive controls · 287 database touches.**
+**Totals: 57 files · 538 interactive controls · 288 database touches.**
 
 ## Per-file summary
 
@@ -70,7 +70,7 @@ that commit message.
 | `src/pages/ProjectDetail.jsx` | 24 | 10 | Project Detail | ☐ |
 | `src/pages/Projects.jsx` | 7 | 6 | Projects | ☐ |
 | `src/pages/Reports.jsx` | 1 | 7 | Reports | ☐ |
-| `src/pages/Settings.jsx` | 11 | 7 | Settings | ☐ |
+| `src/pages/Settings.jsx` | 11 | 8 | Settings | ☐ |
 | `src/pages/Tasks.jsx` | 27 | 13 | My Tasks | ☐ |
 
 ## Routes (must not move)
@@ -115,23 +115,24 @@ that commit message.
 
 | module | sha256 (16) |
 | --- | --- |
+| `buckets.js` | `81797f6afa490c6f` |
 | `cocPdf.js` | `6552ad6ce03c21d4` |
 | `constants.js` | `a3b54e7be5774f86` |
-| `db.js` | `1f41b6cbdb277f8b` |
+| `db.js` | `713bc6a56028523d` |
 | `docPdf.js` | `fd3e67257d14aa68` |
 | `format.js` | `c03144e8bd851ea0` |
 | `image.js` | `377425ac96352664` |
-| `inspectionDocs.js` | `f7edaacaf482e34c` |
+| `inspectionDocs.js` | `72f251aa078c3f79` |
 | `lightingSavings.js` | `0f4419ed9b0becd9` |
 | `nav.js` | `36299f48dc4a9eab` |
 | `progressReport.js` | `a2052996da973dd2` |
-| `progressReportGen.js` | `5b18c2398b717a37` |
-| `reportPhotoAnnex.js` | `118486cb831caf0f` |
-| `savingSheet.js` | `c50b99b3ea853f5c` |
-| `savingSheetGen.js` | `e25cfb6c04b83480` |
+| `progressReportGen.js` | `4406dc56082069a6` |
+| `reportPhotoAnnex.js` | `dd53dd1b114852f8` |
+| `savingSheet.js` | `a20c6c7767594a9f` |
+| `savingSheetGen.js` | `5c7e318ca50b9d91` |
 | `search.js` | `f4d469e48f2e18d6` |
 | `supabase.js` | `33b838e12ee34aca` |
-| `surveyExport.js` | `5a8816358ca31772` |
+| `surveyExport.js` | `5061f9f8db30945a` |
 | `tarshidImport.js` | `c962fc0d0cae0a42` |
 | `toast.js` | `90a51e9112ba9f18` |
 | `xlsxPatch.js` | `287b1a7a386715bb` |
@@ -1253,6 +1254,7 @@ screen label: **Settings**
 | --- | --- |
 | `bgUpdate:profiles` | 2 |
 | `io:downloadBlob` | 1 |
+| `read:ai_settings` | 1 |
 | `read:audit_log` | 1 |
 | `read:pdf_extraction_log` | 1 |
 | `read:profiles` | 1 |

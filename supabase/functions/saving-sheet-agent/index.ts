@@ -4,7 +4,8 @@
 //   job=match    : messy surveyed make/model -> old_model_registry row
 //   job=replace  : matched old unit -> best approved ac_catalog replacement
 //   job=adjust   : natural-language preference -> re-suggest affected rows
-//   job=select   : consolidate into the project's <=20-model submittal shortlist
+//   job=select   : consolidate into the project's submittal shortlist, capped at
+//                  MAX_SELECTION_ROWS (_shared/limits.js — TARSHID's B2:N21)
 //
 // 9D-4b: `select` proposes only. Every pick is re-verified by the SAME
 // deterministic lib the app uses (savingSheet.js isCompliant / proposeSelection)
@@ -42,6 +43,12 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { constsFromRows, btuPerTon, serverCompliant } from "../_shared/compliance.js";
+import { MAX_SELECTION_ROWS } from "../_shared/limits.js";
+// U5 / COMMIT B — the price table was a byte-identical copy of the one in
+// murshid-chat/core.ts, with a third, PARTIAL copy in extract-delivery-pdf.
+// One table now; core.ts's claim that "the two meters agree" is true by
+// construction rather than by maintenance.
+import { estimateCostUsd, usageOf } from "../_shared/pricing.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -54,13 +61,6 @@ const json = (body: unknown, status = 200) =>
 const WRITE_ROLES = ["admin", "pmo"];
 const CHUNK = 25;                     // unknowns per request
 const CAND_PER_ROW = 18;              // shortlisted candidates per unknown
-
-// USD per million tokens (log-only estimates)
-const PRICE: Record<string, { in: number; out: number; cacheRead: number; cacheWrite: number }> = {
-  "claude-haiku-4-5-20251001": { in: 1.0, out: 5.0, cacheRead: 0.1, cacheWrite: 1.25 },
-  "claude-sonnet-4-5-20250929": { in: 3.0, out: 15.0, cacheRead: 0.3, cacheWrite: 3.75 },
-};
-const priceOf = (m: string) => PRICE[m] || { in: 3.0, out: 15.0, cacheRead: 0.3, cacheWrite: 3.75 };
 
 export const normalizeModel = (s: string) =>
   String(s ?? "").toLowerCase()
@@ -192,7 +192,10 @@ const SELECT_SYSTEM = [
   "- catalog_item_id MUST be one of the supplied candidate ids. Never invent an id.",
   "- A model may only 'cover' a group if that model appears in that group's own candidate list.",
   "- Every group must be covered by exactly one model. Prefer one model covering many groups over several near-identical models.",
-  "- Hard ceiling: at most 20 models. If 20 cannot cover everything, cover the groups with the most units and say so in `note`.",
+  // U5 / COMMIT B — interpolated, not typed out. This sentence was the THIRD
+  // copy of TARSHID's B2:N21 ceiling, and the only one a code search for the
+  // literal would not have found meaningful: it is prose inside a prompt.
+  `- Hard ceiling: at most ${MAX_SELECTION_ROWS} models. If ${MAX_SELECTION_ROWS} cannot cover everything, cover the groups with the most units and say so in \`note\`.`,
   "- Tie-breakers, in order: covers more units, higher SEER, lower total cost.",
   "- Do NOT compute savings, payback or percentages — the platform computes those and will re-check every pick.",
   "- reason: one short sentence naming the deciding factor.",
@@ -299,14 +302,12 @@ Deno.serve(async (req) => {
         throw new Error(`anthropic_${r.status}`);
       }
       const resp = await r.json();
-      const us = resp.usage || {};
-      const p = priceOf(model);
-      usage.tokens_in += us.input_tokens || 0;
-      usage.tokens_out += us.output_tokens || 0;
-      usage.cache_read += us.cache_read_input_tokens || 0;
-      usage.cache_write += us.cache_creation_input_tokens || 0;
-      usage.cost += ((us.input_tokens || 0) / 1e6) * p.in + ((us.output_tokens || 0) / 1e6) * p.out
-        + ((us.cache_read_input_tokens || 0) / 1e6) * p.cacheRead + ((us.cache_creation_input_tokens || 0) / 1e6) * p.cacheWrite;
+      const us = usageOf(resp);
+      usage.tokens_in += us.tokens_in;
+      usage.tokens_out += us.tokens_out;
+      usage.cache_read += us.cache_read;
+      usage.cache_write += us.cache_write;
+      usage.cost += estimateCostUsd(model, us);
       const block = (resp.content || []).find((c: any) => c.type === "tool_use");
       return block?.input || null;
     };

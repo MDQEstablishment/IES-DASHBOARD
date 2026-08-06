@@ -9,6 +9,7 @@ import CocBuilder from './CocBuilder'
 import CocCoverage from './CocCoverage'
 import CocFeedbackModal from './CocFeedbackModal'
 import CocDetailDrawer from './CocDetailDrawer'
+import { BUCKETS } from '../lib/buckets'
 
 // The "COCs" home: the coverage matrix (what is left), three numbers, and a
 // pipeline grouped by whose move it is.
@@ -65,7 +66,7 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
   // ── open helpers ────────────────────────────────────────────────────────
   const openPdf = async (c) => {
     if (!c.pdf_path) { toast('No PDF yet — generate it first', 'err'); return }
-    await openSigned('coc-pdfs', c.pdf_path, 'PDF')
+    await openSigned(BUCKETS.COC_PDFS, c.pdf_path, 'PDF')
   }
   const generateOne = async (c) => {
     setBusyId(c.id)
@@ -112,8 +113,8 @@ export default function CocHome({ projectId, project, buildings, projectEsms, ca
       }
       const { error } = await supabase.from('cocs').delete().eq('id', c.id)
       if (error) { toast("Couldn't delete — " + error.message, 'err'); return }
-      if (c.pdf_path) await supabase.storage.from('coc-pdfs').remove([c.pdf_path]).catch(() => {})
-      if (c.feedback_doc_path) await supabase.storage.from('coc-responses').remove([c.feedback_doc_path]).catch(() => {})
+      if (c.pdf_path) await supabase.storage.from(BUCKETS.COC_PDFS).remove([c.pdf_path]).catch(() => {})
+      if (c.feedback_doc_path) await supabase.storage.from(BUCKETS.COC_RESPONSES).remove([c.feedback_doc_path]).catch(() => {})
       toast(`${c.code}${c.revision > 1 ? ` Rev ${c.revision}` : ''} deleted`)
       setDelCoc(null); refetchCocs(); loadPool()
     } finally { setBusyId(null) }

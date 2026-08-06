@@ -11,6 +11,7 @@
 // agree: each photo's page number is written back into the "Annex Page" column.
 import { signedUrlFor } from './db'
 import { compressImage } from './image'
+import { BUCKETS } from './buckets'
 
 const A4 = [595.28, 841.89]
 const M = 40
@@ -31,7 +32,7 @@ const clean = (s) => String(s ?? '').replace(/[^\x20-\x7E]/g, '').trim()   // He
 // object can't sink the whole report.
 async function loadPhoto(p) {
   try {
-    const url = await signedUrlFor(p.bucket || 'building-photos', p.storage_path, 600)
+    const url = await signedUrlFor(p.bucket || BUCKETS.BUILDING_PHOTOS, p.storage_path, 600)
     if (!url) return null
     const res = await fetch(url)
     if (!res.ok) return null

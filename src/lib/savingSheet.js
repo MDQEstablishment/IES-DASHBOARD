@@ -14,11 +14,12 @@ import {
   CONST_DEFAULTS, constsFromRows, collapse, foldCase,
   typeMatches, seasonalTerm, clientCompliant,
 } from '../../supabase/functions/_shared/compliance.js'
+import { MAX_SELECTION_ROWS } from '../../supabase/functions/_shared/limits.js'
 
 // Re-exported so every existing importer of savingSheet.js is untouched: this
 // file remains the engine's public face, the shared module is an implementation
 // detail of how the server is kept honest.
-export { CONST_DEFAULTS, typeMatches, seasonalTerm }
+export { CONST_DEFAULTS, typeMatches, seasonalTerm, MAX_SELECTION_ROWS }
 
 export async function loadConstants() {
   const { data, error } = await supabase.from('tarshid_constants').select('key,value')
@@ -55,9 +56,10 @@ const okNum = (v) => typeof v === 'number' && Number.isFinite(v)
 // unambiguous. Where two registry rows collapse together the fallback refuses
 // to choose, because guessing between "S242NH" and "S242NH " is exactly the
 // silent wrong answer this key change exists to remove.
-// `collapse` and `foldCase` are imported from the shared module above — the
-// registry keys and the type predicate must normalise identically or the two
-// runtimes would disagree on which rows are even the same row.
+//
+// `collapse` and `foldCase` come from the shared module imported at the top —
+// the registry keys and the type predicate must normalise identically in both
+// runtimes, or the two would disagree on which rows are even the same row.
 
 // Kept for callers that only have a model string. Collapsing + folding is the
 // LOOSE form; it is never used on its own to resolve a registry row.
@@ -362,7 +364,10 @@ export function computeProject({ entries, buildings, ohRows, acCatalog, registry
 // This is the deterministic engine; the AI's proposal is re-verified against
 // it and any non-compliant pick is dropped in favour of these results.
 // ---------------------------------------------------------------------------
-export const MAX_SELECTION_ROWS = 20   // VLOOKUP range is fixed at row 21
+// The 20-row ceiling is TARSHID's, not ours, and it is asserted in three
+// runtimes — here, in savingSheetGen's write guard, and in the sentence the
+// select-job prompt puts in front of the model. Re-exported from
+// _shared/limits.js so all three move together.
 
 // Is `cat` a compliant replacement for a surveyed row? Uses the same math as
 // computeRow — no AI claim is trusted without passing this.

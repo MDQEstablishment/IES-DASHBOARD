@@ -74,7 +74,16 @@ export default function Settings() {
   const monthIso = new Date(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1).toISOString()
   const { rows: extractRows } = useLiveQuery('pdf_extraction_log',
     (q) => q.select('id,success').gte('created_at', monthIso), [monthIso])
-  const PDF_CAP = 1000, usedThisMonth = extractRows.length, capPct = Math.min(100, Math.round((usedThisMonth / PDF_CAP) * 100))
+  // U5 / COMMIT B — the cap is `ai_settings.pdf_monthly_cap`, the SAME row the
+  // Edge Function enforces. Until this commit the ceiling was written out here
+  // as a component constant AND again in extract-delivery-pdf/index.ts:14 — two
+  // copies of one number, so raising one moved the wall and raising the other
+  // moved only the picture of it. The literal below is the fallback for a row
+  // that has not loaded yet, and matches the function's DEFAULT_MONTHLY_CAP.
+  const { rows: pdfCapRows } = useLiveQuery('ai_settings', (q) => q.select('key,value').eq('key', 'pdf_monthly_cap'))
+  const capFromDb = Number(pdfCapRows[0]?.value)
+  const PDF_CAP = Number.isFinite(capFromDb) && capFromDb > 0 ? capFromDb : 1000
+  const usedThisMonth = extractRows.length, capPct = Math.min(100, Math.round((usedThisMonth / PDF_CAP) * 100))
 
   return (
     <div data-screen-label="Settings">

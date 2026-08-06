@@ -10,6 +10,7 @@ import { CAN_INSTALL } from '../lib/constants'
 import { fmtShort, localToday as today, localDayKey as dayKey } from '../lib/format'
 import { compressImage } from '../lib/image'
 import { useBreadcrumb } from '../breadcrumbs'
+import { BUCKETS } from '../lib/buckets'
 
 const DRAFT_KEY = 'ies.draft.daily'
 
@@ -85,7 +86,7 @@ export default function DailyProgress() {
     if (!f) return
     setUploading(true)
     const small = await compressImage(f, { maxBytes: 200000 })
-    const { path } = await uploadToBucket('building-photos', small, { userId: user.id, prefix: bid || 'unscoped' })
+    const { path } = await uploadToBucket(BUCKETS.BUILDING_PHOTOS, small, { userId: user.id, prefix: bid || 'unscoped' })
     setUploading(false)
     if (path) { setPhotoPath(path); setPhotoMeta({ size: small.size, mime: small.type }) }
     if (fileRef.current) fileRef.current.value = ''

@@ -7,6 +7,7 @@ import { useLiveQuery, signedUrlFor } from '../lib/db'
 import { num } from '../lib/format'
 import { statusMeta } from '../lib/constants'
 import { ProjectFormModal, ProjectImportModal } from '../components/ProjectModals'
+import { BUCKETS } from '../lib/buckets'
 
 const SORTS = [['recent', 'Recent'], ['name', 'Name A→Z'], ['progress', 'Progress %'], ['start', 'Start date']]
 
@@ -42,7 +43,7 @@ export default function Projects() {
     let cancelled = false
     const withPhotos = projects.filter((p) => p.photo_url)
     if (!withPhotos.length) { setPhotoUrls({}); return }
-    Promise.all(withPhotos.map(async (p) => [p.id, await signedUrlFor('project-photos', p.photo_url)]))
+    Promise.all(withPhotos.map(async (p) => [p.id, await signedUrlFor(BUCKETS.PROJECT_PHOTOS, p.photo_url)]))
       .then((pairs) => { if (!cancelled) setPhotoUrls(Object.fromEntries(pairs.filter(([, u]) => u))) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
