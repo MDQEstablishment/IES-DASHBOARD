@@ -33,12 +33,20 @@ import MurshidAvatar from './MurshidAvatar'
 // the model API (line 140), and `logRun` is not called on that return, so no
 // ai_runs row is written either. The only work is one ai_settings read.
 //
-// THE SERVER'S REFUSAL TEXT IS NOT RENDERED. core.ts's DISABLED_MESSAGE is
-// Arabic and tells the reader that the Knowledge Guide, FAQ and Feedback
-// sections "work as usual" — the three things this commit deletes. So the
-// client switches on the `kind` the function already returns and writes its own
-// copy. core.ts is untouched; its strings simply stop being used, which is a
-// stale-constant cleanup for a separate decision.
+// THE CLIENT IS THE RENDERER OF REFUSAL TEXT. The function returns a `kind`;
+// this file owns the words. core.ts carries its own copy of each message as a
+// second layer for any caller that does not render its own — as of PLAN v4 D3
+// those strings are English too, but they are still not what a user sees here.
+//
+// SHAPE (PLAN v4 D1). This is a FULL-HEIGHT SIDE PANEL, not a popover. It was
+// `min(390px, 100vw-32px)` by `min(620px, 100vh-130px)`, fixed on both axes,
+// and a conversation whose history cannot be read is not a conversation. It is
+// now pinned to the right edge top to bottom, user-resizable by the drag handle
+// on its left edge with the width persisted to localStorage and clamped, and it
+// has an expand control for a wide reading mode. The thread scrolls internally;
+// the identity strip and the composer stay pinned. Below NARROW_PX the panel
+// goes full-bleed and the handle is withdrawn — there is nothing to drag when
+// the panel is already the width of the screen.
 
 // The categories murshid_feedback's CHECK accepts after 0127. This list must
 // match that constraint exactly — widening one without the other is a failed
@@ -82,10 +90,35 @@ const clock = (d) => {
 let seq = 0
 const nextKey = () => `m${++seq}`
 
-const card = {
-  background: 'var(--surface-1)', borderRadius: 'var(--radius-l)',
-  boxShadow: 'var(--shadow-2)', overflow: 'hidden',
+// ---- panel geometry (D1) ---------------------------------------------------
+// MIN_W is the narrowest width at which the composer, the identity strip and a
+// message bubble all still read; MAX_W is where a chat column stops being a
+// chat column. WIDE_W is the expand target. The stored value is clamped on
+// every read, so a hand-edited or stale localStorage entry can never produce an
+// unusable panel.
+const MIN_W = 340
+const MAX_W = 900
+const DEFAULT_W = 420
+const WIDE_W = 720
+const NARROW_PX = 640          // at or below this the panel is full-bleed
+const WIDTH_KEY = 'ies.murshid.panelWidth'
+const STEP = 24                // keyboard resize increment
+
+const viewportCap = () => (typeof window === 'undefined' ? MAX_W : Math.max(MIN_W, window.innerWidth - 24))
+const clampWidth = (w) => Math.min(Math.max(Number(w) || DEFAULT_W, MIN_W), Math.min(MAX_W, viewportCap()))
+
+const readWidth = () => {
+  try {
+    const raw = window.localStorage.getItem(WIDTH_KEY)
+    return clampWidth(raw == null ? DEFAULT_W : parseInt(raw, 10))
+  } catch {
+    return DEFAULT_W
+  }
 }
+const writeWidth = (w) => {
+  try { window.localStorage.setItem(WIDTH_KEY, String(Math.round(w))) } catch { /* private mode */ }
+}
+const isNarrow = () => typeof window !== 'undefined' && window.innerWidth <= NARROW_PX
 
 // The action row under an assistant reply. Present on REPLIES ONLY — not on the
 // user's own messages, not on the opening greeting, and not on a refusal, which
@@ -134,6 +167,75 @@ export default function MurshidPanel({ screen, onClose }) {
   const [asking, setAsking] = useState(false)
   const [openedAt] = useState(() => new Date())
   const threadRef = useRef(null)
+
+  // ---- D1: width, resize, expand -----------------------------------------
+  const [width, setWidth] = useState(readWidth)
+  const [narrow, setNarrow] = useState(isNarrow)
+  const [expanded, setExpanded] = useState(false)
+  const restoreTo = useRef(null)      // the width to come back to from wide mode
+  const drag = useRef(null)
+
+  // The viewport is a hard bound on the panel: a stored 900 on a 1024 laptop is
+  // fine, the same 900 on a 700px window is not. Re-clamp on every resize so
+  // the panel can never be wider than the screen it is drawn on.
+  useEffect(() => {
+    const onResize = () => {
+      setNarrow(isNarrow())
+      setWidth((w) => clampWidth(w))
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  const applyWidth = useCallback((next, persist = true) => {
+    const w = clampWidth(next)
+    setWidth(w)
+    if (persist) writeWidth(w)
+    return w
+  }, [])
+
+  // Drag on the LEFT edge: moving left widens, so the delta is startX - clientX.
+  // Pointer capture means the drag survives the cursor leaving the 8px handle,
+  // which is the whole difference between a resize that works and one that
+  // drops the moment you move quickly.
+  const onHandleDown = (e) => {
+    if (narrow) return
+    drag.current = { x: e.clientX, w: width }
+    setExpanded(false)
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* older browsers */ }
+    e.preventDefault()
+  }
+  const onHandleMove = (e) => {
+    if (!drag.current) return
+    applyWidth(drag.current.w + (drag.current.x - e.clientX), false)
+  }
+  const onHandleUp = (e) => {
+    if (!drag.current) return
+    drag.current = null
+    try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* no capture */ }
+    writeWidth(width)
+  }
+  // Keyboard is not a courtesy here: a drag handle that only answers a mouse is
+  // a control some people cannot use at all.
+  const onHandleKey = (e) => {
+    if (e.key === 'ArrowLeft') { applyWidth(width + STEP); setExpanded(false) }
+    else if (e.key === 'ArrowRight') { applyWidth(width - STEP); setExpanded(false) }
+    else if (e.key === 'Home') { applyWidth(MIN_W); setExpanded(false) }
+    else if (e.key === 'End') { applyWidth(MAX_W); setExpanded(false) }
+    else return
+    e.preventDefault()
+  }
+
+  const toggleExpand = () => {
+    if (expanded) {
+      applyWidth(restoreTo.current ?? DEFAULT_W)
+      setExpanded(false)
+    } else {
+      restoreTo.current = width
+      applyWidth(WIDE_W)
+      setExpanded(true)
+    }
+  }
 
   useEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight
@@ -283,10 +385,39 @@ export default function MurshidPanel({ screen, onClose }) {
   ]
 
   return (
-    <div style={{
-      ...card, width: 'min(390px, calc(100vw - 32px))', display: 'flex', flexDirection: 'column',
-      maxHeight: 'min(620px, calc(100vh - 130px))', fontSize: 13.5, lineHeight: 1.6,
-    }}>
+    <div
+      role="complementary" aria-label="Murshid"
+      style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        width: narrow ? '100vw' : width, maxWidth: '100vw',
+        display: 'flex', flexDirection: 'column',
+        background: 'var(--surface-1)', borderLeft: narrow ? 'none' : '1px solid var(--line)',
+        boxShadow: 'var(--shadow-2)', overflow: 'hidden',
+        fontSize: 13.5, lineHeight: 1.6,
+      }}>
+      {/* ---- the resize handle, on the left edge ---------------------------
+          Withdrawn below NARROW_PX, where the panel is already the full width
+          of the screen and there is nothing left to drag it to. */}
+      {!narrow && (
+        <div
+          onPointerDown={onHandleDown} onPointerMove={onHandleMove}
+          onPointerUp={onHandleUp} onPointerCancel={onHandleUp}
+          onKeyDown={onHandleKey}
+          role="separator" aria-orientation="vertical" tabIndex={0}
+          aria-label="Resize Murshid" aria-valuenow={Math.round(width)}
+          aria-valuemin={MIN_W} aria-valuemax={MAX_W}
+          title="Drag to resize — or use the arrow keys"
+          style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0, width: 8, zIndex: 2,
+            cursor: 'col-resize', touchAction: 'none', background: 'transparent',
+          }}>
+          <span style={{
+            position: 'absolute', left: 3, top: '50%', width: 2, height: 34,
+            marginTop: -17, borderRadius: 2, background: 'var(--line-ctrl)',
+          }} />
+        </div>
+      )}
+
       {/* ---- identity strip: who this is, and that it is listening --------
           Nothing navigational and nothing tabbed. Name, state, one line of
           scope, and the two actions that are not part of the conversation. */}
@@ -306,6 +437,16 @@ export default function MurshidPanel({ screen, onClose }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 2, flex: 'none' }}>
+          {!narrow && (
+            <button onClick={toggleExpand}
+              title={expanded ? 'Narrow the panel' : 'Widen the panel'}
+              aria-label={expanded ? 'Narrow the Murshid panel' : 'Widen the Murshid panel'}
+              aria-pressed={expanded}
+              className="ies-hover" style={{
+                width: 28, height: 28, borderRadius: 'var(--radius-s)', color: 'var(--text-3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}><Icon name={expanded ? 'chevronr' : 'chevronl'} size={16} /></button>
+          )}
           <button onClick={startNew} title="New conversation" aria-label="Start a new conversation"
             className="ies-hover" style={{
               width: 28, height: 28, borderRadius: 'var(--radius-s)', color: 'var(--text-3)',

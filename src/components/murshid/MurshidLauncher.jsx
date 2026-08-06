@@ -42,11 +42,11 @@ export default function MurshidLauncher({ collapsed }) {
 
   return (
     <div className={'ies-murshid-dock' + (collapsed ? ' collapsed' : '')}>
-      {open && (
-        <div style={{ marginBottom: 10 }}>
-          <MurshidPanel screen={screen} onClose={() => setOpen(false)} />
-        </div>
-      )}
+      {/* The panel is `position: fixed` to the right edge of the VIEWPORT as of
+          PLAN v4 D1, so it is deliberately not wrapped in a spacer: it takes no
+          part in this flex column's layout and a margin here would only push
+          the launcher button up by the height of an empty box. */}
+      {open && <MurshidPanel screen={screen} onClose={() => setOpen(false)} />}
       <button
         onClick={() => setOpen((o) => !o)}
         title={open ? 'Close Murshid' : 'Open Murshid — the assistant'}

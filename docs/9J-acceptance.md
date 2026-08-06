@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 536 interactive controls · 287 database touches.**
+**Totals: 57 files · 538 interactive controls · 287 database touches.**
 
 ## Per-file summary
 
@@ -54,7 +54,7 @@ that commit message.
 | `src/components/murshid/MurshidAvatar.jsx` | 0 | 0 | — | ☐ |
 | `src/components/murshid/MurshidFeedback.jsx` | 1 | 1 | — | ☐ |
 | `src/components/murshid/MurshidLauncher.jsx` | 1 | 0 | — | ☐ |
-| `src/components/murshid/MurshidPanel.jsx` | 8 | 5 | — | ☐ |
+| `src/components/murshid/MurshidPanel.jsx` | 10 | 5 | — | ☐ |
 | `src/components/murshid/MurshidSettings.jsx` | 3 | 3 | — | ☐ |
 | `src/components/survey/DailyLog.jsx` | 6 | 0 | — | ☐ |
 | `src/components/survey/EntriesTable.jsx` | 15 | 1 | — | ☐ |
@@ -880,7 +880,9 @@ shared primitives: Empty×1, Loading×1
 | `onClick:onCopy` | 1 |
 | `onClick:onReact` | 2 |
 | `onClick:startNew` | 1 |
+| `onClick:toggleExpand` | 1 |
 | `onKeyDown:ask` | 1 |
+| `onKeyDown:onHandleKey` | 1 |
 
 | database effect | count |
 | --- | --- |

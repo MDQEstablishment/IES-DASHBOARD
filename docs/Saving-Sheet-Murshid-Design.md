@@ -967,6 +967,56 @@ and the red-team suite are untouched by all four fixes. D3 and D4 rewrite prompt
 *content*, not the prefilter — and the red-team's prompt assertions must be
 updated in step, since several match on the Arabic strings being replaced.
 
+## 21A. PLAN v4, as built — D1, D2, D3
+
+Built in one commit, ahead of D4.
+
+**D1 — the panel.** `MurshidPanel.jsx` is now `position: fixed; top/bottom/right
+: 0`, default width 420px, resizable 340–900px by a drag handle on the left
+edge (pointer capture, so the drag survives the cursor leaving the 8px strip),
+with the width persisted to `localStorage` under `ies.murshid.panelWidth` and
+re-clamped against the viewport on every window resize — a stored 900 cannot
+produce an unusable panel on a 700px window. An expand control toggles a 720px
+wide mode and remembers the width to come back to. The handle answers the
+keyboard as well as the mouse (`ArrowLeft`/`ArrowRight` ±24px, `Home`, `End`)
+because a drag handle that only answers a mouse is a control some people cannot
+use at all. At or below 640px the panel is full-bleed and the handle and the
+expand control are withdrawn — there is nothing to drag when the panel is
+already the width of the screen. The thread keeps `flex: 1; overflow-y: auto`;
+the identity strip and the composer stay pinned. Existing tokens only, no new
+dependency. `MurshidLauncher` no longer wraps the panel in a spacer, because a
+fixed panel takes no part in the dock's flex column.
+
+Measured, not assumed: rendered in isolation and driven with Playwright at
+1366×768 and 390×844 — full height and right-pinned; a 200px drag produced
+exactly +200px; the clamps held at 900 and 340; the keyboard step, the expand
+toggle and the reload-restores-width path all behaved; at 390×844 the panel is
+390×844 with no handle and the body does not scroll sideways.
+
+**D2 — the length rule.** A `## LENGTH` section in the system prompt: a greeting
+gets a greeting, one line; answer the question and stop; capabilities are
+demonstrated on request, never recited on arrival.
+
+**D3 — the environment, not the rule.** The system prompt, `buildContextBlock`'s
+header, its `<data>` tags and its "(no data)" fallbacks, the question label in
+`index.ts`, all ten `SCREEN_PACKS` labels, the five refusal messages,
+`CAP_MESSAGE`, `DISABLED_MESSAGE`, the injection-neutralisation marker and every
+user-facing string in `index.ts` are English. The rule is stated as **mirror the
+user's language per message**. The Arabic user-facing constants were already
+unreachable — the client renders its own English keyed on `kind`, and it still
+does; they are translated so the second layer is truthful rather than stale.
+
+**The one place Arabic stays, deliberately**: inside the deny-list PATTERNS. A
+pattern that cannot match Arabic cannot refuse an Arabic attack. The red-team
+asserts that exemption rather than assuming it — it proves Arabic is present in
+`core.ts`, proves the Arabic probes are still refused, and proves no Arabic
+survives anywhere in `core.ts` outside a regex literal and the comment quoting
+the attack it was written against.
+
+**The red-team was updated in step**, not after the fact: every assertion in A5
+matched on an Arabic string that no longer exists, so leaving them alone would
+have scored the suite green against deleted text.
+
 ---
 
 # 22. The de-identification, as-built — and the second narrow audit

@@ -1,5 +1,5 @@
 // supabase/functions/murshid-chat/index.ts
-// Sprint 9L(3) — مُرشد's chat endpoint.
+// Sprint 9L(3) — Murshid's chat endpoint. PLAN v4 D3.
 //
 // This file is deliberately THIN. Every security decision — what may be read,
 // what must be refused, what a refusal says, what a call costs — lives in
@@ -9,7 +9,7 @@
 // THE TWO CLIENTS, AND WHY IT MATTERS:
 //   userClient  — built from the CALLER's Authorization header. EVERY question
 //                 about programme data goes through it, so RLS answers as the
-//                 asking user. This is what makes "مُرشد can only see what you
+//                 asking user. This is what makes "Murshid can only see what you
 //                 can see" true by construction rather than by promise.
 //   admin       — service role, used for exactly three things that are not
 //                 about the user's data: reading ai_settings, summing this
@@ -24,7 +24,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   SCREEN_PACKS, SYSTEM_PROMPT, MAX_QUESTION_CHARS, CAP_MESSAGE, DISABLED_MESSAGE,
-  screenQuestion, buildContextBlock, estimateCostUsd, capExceeded,
+  QUESTION_LABEL, screenQuestion, buildContextBlock, estimateCostUsd, capExceeded,
   FORBIDDEN_COLUMNS, FORBIDDEN_TABLES,
 } from "./core.ts";
 
@@ -67,14 +67,14 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: u } = await userClient.auth.getUser();
-    if (!u?.user) return json({ error: "unauthorized", message: "الرجاء تسجيل الدخول." }, 401);
+    if (!u?.user) return json({ error: "unauthorized", message: "Please sign in." }, 401);
     userId = u.user.id;
 
     const body = await req.json().catch(() => ({}));
     const screen: string | null = body.screen ? String(body.screen).slice(0, 60) : null;
     const params: Record<string, string> = body.params && typeof body.params === "object" ? body.params : {};
     const question: string = String(body.question || "").slice(0, MAX_QUESTION_CHARS).trim();
-    if (!question) return json({ error: "bad_request", message: "اكتب سؤالك أولاً." }, 400);
+    if (!question) return json({ error: "bad_request", message: "Type your question first." }, 400);
 
     // ---- settings: the flag, the models, the cap --------------------------
     const { data: settingRows } = await admin.from("ai_settings").select("key,value");
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
 
     if (!API_KEY) {
       await logRun({ success: false, error: "missing_key", rows_requested: 0 });
-      return json({ error: "unconfigured", message: "لم يُضبط مفتاح المساعد بعد." }, 503);
+      return json({ error: "unconfigured", message: "The assistant's key is not configured yet." }, 503);
     }
 
     // ---- context: the allow-list, through the CALLER's client -------------
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
         model,
         max_tokens: 900,
         system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: `${context}\n\nسؤال المستخدم:\n${question}` }],
+        messages: [{ role: "user", content: `${context}\n\n${QUESTION_LABEL}\n${question}` }],
       }),
     });
 
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       const detail = await res.text().catch(() => "");
       await logRun({ success: false, error: `api_${res.status}`, rows_requested: rowCount });
       console.error("[murshid] model error", res.status, detail.slice(0, 300));
-      return json({ error: "upstream", message: "تعذّر الحصول على إجابة الآن. حاول مرة أخرى." }, 502);
+      return json({ error: "upstream", message: "Couldn't get an answer just now. Please try again." }, 502);
     }
 
     const payload = await res.json();
@@ -171,10 +171,10 @@ Deno.serve(async (req) => {
       .map((b: { text: string }) => b.text).join("\n").trim();
 
     await logRun({ success: true, rows_requested: rowCount, rows_resolved: sections.length });
-    return json({ answer: answer || "لم أستطع صياغة إجابة. حاول إعادة صياغة السؤال." });
+    return json({ answer: answer || "I couldn't put an answer together. Try rephrasing the question." });
   } catch (e) {
     console.error("[murshid] ", e instanceof Error ? e.message : String(e));
     await logRun({ success: false, error: "exception" });
-    return json({ error: "server", message: "حدث خطأ غير متوقع." }, 500);
+    return json({ error: "server", message: "Something went wrong." }, 500);
   }
 });
