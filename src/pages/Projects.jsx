@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { PageTitle, Loading, Empty } from '../components/ui'
 import { useAuth } from '../rbac'
+import { may } from '../authority'
 import { useLiveQuery, signedUrlFor } from '../lib/db'
 import { num } from '../lib/format'
 import { statusMeta } from '../lib/constants'
@@ -49,8 +50,13 @@ export default function Projects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photoKey])
 
-  const canAdd = ['admin', 'ceo', 'pmo'].includes(role)
-  const canEdit = ['admin', 'pmo', 'projm', 'progm'].includes(role)
+  // From AUTHORITY in src/authority.js, which mirrors public.authority_roles
+  // and is held to it by tests/authorityParity. Never re-list roles here: the
+  // inline arrays these two lines held disagreed with the RLS policy in both
+  // directions — progm was refused a button he was entitled to, admin and ceo
+  // were shown one the database would refuse.
+  const canAdd = may('project.create', role)
+  const canEdit = may('project.edit', role)
   const projectsReadOnly = !canEdit
 
   // approved-installed qty per scope

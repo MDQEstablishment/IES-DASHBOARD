@@ -61,6 +61,12 @@ export function AuthProvider({ children }) {
 export const useAuth = () => useContext(AuthCtx)
 export const useRole = () => useContext(AuthCtx)?.role || null
 
+// Authority (who may do what) lives in ./authority.js — plain .js so the test
+// harness can import it without a JSX transform. Re-exported here because this
+// is where RBAC callers look. The database is the source; that file is a
+// mirror held to it by tests/authorityParity.test.mjs.
+export { AUTHORITY, may } from './authority'
+
 export function can(role, allow) {
   if (!allow || allow.length === 0) return true
   return allow.includes(role)
