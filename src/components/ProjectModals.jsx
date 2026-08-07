@@ -271,7 +271,7 @@ export function DeleteProjectModal({ project, onClose }) {
     }, { okMsg: 'Project deleted' })
     setBusy(false)
     if (error) { setErr(error.message); return }
-    if (!data || !data.length) { setErr('Delete did not persist — you may not have permission (PMO only).'); return }
+    if (!data || !data.length) { setErr('Delete did not persist — deleting a project needs Admin, CEO or PMO authority.'); return }
     onClose()
     navigate('/projects')
   }

@@ -28,9 +28,14 @@
 // projects_read admits projm only for pm_id = auth.uid(), so a projm cannot
 // see — and therefore cannot update — another manager's project. Repeating the
 // ownership rule in a second place would be the very defect this file removes.
+// project.delete is SEPARATE from project.edit on purpose. Soft-delete is an
+// UPDATE of deleted_at, so 0142 handed deletion to everyone who could edit
+// without meaning to. 0144 fences the deleted_at transition with a trigger —
+// RLS grants per command, not per column, so a policy could not express this.
 export const AUTHORITY = {
   'project.create': ['admin', 'ceo', 'pmo', 'progm'],
   'project.edit': ['admin', 'ceo', 'pmo', 'progm', 'projm'],
+  'project.delete': ['admin', 'ceo', 'pmo'],
 }
 
 /** Client-side read of AUTHORITY. Named to match public.may() in the database
