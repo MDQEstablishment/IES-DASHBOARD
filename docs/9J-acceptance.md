@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 57 files · 538 interactive controls · 288 database touches.**
+**Totals: 57 files · 538 interactive controls · 289 database touches.**
 
 ## Per-file summary
 
@@ -68,7 +68,7 @@ that commit message.
 | `src/pages/Escalations.jsx` | 16 | 8 | Escalations | ☐ |
 | `src/pages/ManageEsms.jsx` | 20 | 9 | Materials | ☐ |
 | `src/pages/ProjectDetail.jsx` | 24 | 10 | Project Detail | ☐ |
-| `src/pages/Projects.jsx` | 7 | 6 | Projects | ☐ |
+| `src/pages/Projects.jsx` | 7 | 7 | Projects | ☐ |
 | `src/pages/Reports.jsx` | 1 | 7 | Reports | ☐ |
 | `src/pages/Settings.jsx` | 11 | 8 | Settings | ☐ |
 | `src/pages/Tasks.jsx` | 27 | 13 | My Tasks | ☐ |
@@ -1211,6 +1211,7 @@ screen label: **Projects**
 | `read:buildings` | 1 |
 | `read:install_log` | 1 |
 | `read:project_esms` | 1 |
+| `read:project_members` | 1 |
 | `read:projects` | 1 |
 
 shared primitives: Empty×1, Loading×1, PageTitle×1

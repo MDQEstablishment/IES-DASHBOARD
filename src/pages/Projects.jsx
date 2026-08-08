@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { PageTitle, Loading, Empty } from '../components/ui'
 import { useAuth } from '../rbac'
-import { may } from '../authority'
+import { may, rolesFor } from '../authority'
 import { useLiveQuery, signedUrlFor } from '../lib/db'
 import { num } from '../lib/format'
 import { statusMeta } from '../lib/constants'
@@ -22,7 +22,7 @@ const FILTERS = [
 
 export default function Projects() {
   const navigate = useNavigate()
-  const { role } = useAuth()
+  const { role, user } = useAuth()
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('recent')
   const [addOpen, setAddOpen] = useState(false)
@@ -35,6 +35,11 @@ export default function Projects() {
   const { rows: scopes } = useLiveQuery('building_item_scope', (q) => q.select('id,building_id,planned_qty'))
   const { rows: install } = useLiveQuery('install_log', (q) => q.select('scope_id,qty,qa_status'))
   const { rows: projectEsms } = useLiveQuery('project_esms', (q) => q.select('id,project_id'))
+  // 0146 — 'own'-scope roles (projm) may edit only the projects opened to them,
+  // so the edit gate is per-card, not per-page. Membership is the WHERE.
+  const { rows: myMemberships } = useLiveQuery('project_members', (q) =>
+    q.select('project_id').is('removed_at', null).eq('user_id', user?.id || '00000000-0000-0000-0000-000000000000'), [user?.id])
+  const memberOf = myMemberships.map((m) => m.project_id)
 
   // Resolve a signed URL for each project that has a cover photo (private bucket).
   // Keyed on id:path so it only re-fetches when a photo is added/changed/removed.
@@ -56,8 +61,9 @@ export default function Projects() {
   // directions — progm was refused a button he was entitled to, admin and ceo
   // were shown one the database would refuse.
   const canAdd = may('project.create', role)
-  const canEdit = may('project.edit', role)
-  const projectsReadOnly = !canEdit
+  // "may this person edit ANY project?" — used only for the read-only banner.
+  // The per-project answer is computed per card below, with membership.
+  const projectsReadOnly = !rolesFor('project.edit').includes(role)
 
   // approved-installed qty per scope
   const insByScope = {}
@@ -144,7 +150,7 @@ export default function Projects() {
             return (
               <PanoramaCard key={p.id} p={p} pp={pp} remaining={Math.max(0, d.planned - d.installed)}
                 bldgs={bldgCount[p.id] || 0} esms={esmCount[p.id] || 0} photoUrl={photoUrls[p.id]}
-                canEdit={canEdit} onOpen={() => navigate(`/projects/${p.id}`)} onEdit={() => setEditProj(p)} />
+                canEdit={may('project.edit', role, p.id, memberOf)} onOpen={() => navigate(`/projects/${p.id}`)} onEdit={() => setEditProj(p)} />
             )
           })}
         </div>

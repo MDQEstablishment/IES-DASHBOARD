@@ -32,12 +32,43 @@
 // UPDATE of deleted_at, so 0142 handed deletion to everyone who could edit
 // without meaning to. 0144 fences the deleted_at transition with a trigger —
 // RLS grants per command, not per column, so a policy could not express this.
+// Each entry is role -> scope. 'all' = every project; 'own' = only projects the
+// person is a member of (public.project_members). The role says WHAT, the
+// membership says WHERE — the owner's principle, expressed in one place.
+//
+// Owner rulings 2026-08-08: plane is Programme-Manager equivalent (all); ceo
+// writes. procm/proco are project-team members with project scope, not a
+// separate class.
 export const AUTHORITY = {
-  'project.create': ['admin', 'ceo', 'pmo', 'progm'],
-  'project.edit': ['admin', 'ceo', 'pmo', 'progm', 'projm'],
-  'project.delete': ['admin', 'ceo', 'pmo'],
+  'project.create': { admin: 'all', ceo: 'all', pmo: 'all', progm: 'all', plane: 'all' },
+  'project.edit': { admin: 'all', ceo: 'all', pmo: 'all', progm: 'all', plane: 'all', projm: 'own' },
+  'project.delete': { admin: 'all', ceo: 'all', pmo: 'all' },
+  // the data-level action behind w_proj/w_bld: buildings, rooms, survey
+  // entries, photos, operating hours, scope lines.
+  'project.write': {
+    admin: 'all', ceo: 'all', pmo: 'all', progm: 'all', plane: 'all',
+    projm: 'own', proje: 'own', procm: 'own', proco: 'own',
+  },
 }
 
-/** Client-side read of AUTHORITY. Named to match public.may() in the database
- *  so the two are recognisably the same question asked in two places. */
-export const may = (action, role) => (AUTHORITY[action] || []).includes(role)
+/** Roles holding an action at any scope. */
+export const rolesFor = (action) => Object.keys(AUTHORITY[action] || {})
+
+/** Scope of a role for an action, or undefined if it does not hold it. */
+export const scopeOf = (action, role) => (AUTHORITY[action] || {})[role]
+
+/**
+ * Client-side read of AUTHORITY, named to match public.may().
+ *
+ * WITHOUT a project id this answers "on every project" — an 'own'-scope role
+ * returns false, because the honest answer to "may you edit projects?" for a
+ * project manager is "only the ones opened to you". A screen that needs the
+ * per-project answer must pass the id, exactly as the RLS policy does.
+ */
+export const may = (action, role, projectId, memberOf = null) => {
+  const scope = scopeOf(action, role)
+  if (!scope) return false
+  if (scope === 'all') return true
+  if (projectId == null || memberOf == null) return false
+  return memberOf.includes(projectId)
+}
