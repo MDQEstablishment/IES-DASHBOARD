@@ -10,8 +10,26 @@ permissions:
   pages: write
   id-token: write
 
+# KEYED BY REF, and it must stay that way.
+#
+# This was `group: pages` — one global group for every ref — with
+# cancel-in-progress. Pushing a branch immediately after main therefore
+# CANCELLED the in-flight main run: main died in 2-5 seconds having published
+# nothing, while the branch run went green in ~42s and put a tick next to the
+# commit. Because branch runs build but never deploy (the deploy job is gated
+# on main), the net effect was that NOTHING reached the live site while
+# everything looked green.
+#
+# It ran undetected from 2026-08-07T16:37 to 2026-08-08T02:00: nine consecutive
+# main runs cancelled, the site stuck on d2c2dc84 while main moved six commits
+# ahead. The owner caught it by noticing the work was finishing suspiciously
+# fast — the 42 seconds that were missing were the build that never ran.
+#
+# Per-ref grouping keeps the useful behaviour (a newer push to main supersedes
+# an older main run) and removes the harmful one (a branch can never cancel
+# main). Only main deploys, so per-ref groups cannot contend for Pages.
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
