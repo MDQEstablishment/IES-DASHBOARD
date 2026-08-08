@@ -32,12 +32,39 @@ function FullScreen({ children }) {
   return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)' }}>{children}</div>
 }
 
+// An archived account keeps a valid session until its token expires, and
+// profiles_read is `using (true)`, so the profile still loads. 0145 makes
+// auth_role() null for an archived profile, so every query returns nothing —
+// without this screen the person would see a working shell full of empty
+// pages and no reason why. The database is the fence; this is the explanation.
+function Deactivated() {
+  const { profile, signOut } = useAuth()
+  return (
+    <FullScreen>
+      <div style={{ maxWidth: 420, textAlign: 'center', padding: 24 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>This account is deactivated</div>
+        <div style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6, marginBottom: 18 }}>
+          {profile?.full_name ? `${profile.full_name}, your ` : 'Your '}
+          access has been withdrawn. Nothing you recorded has been deleted.
+          If this is wrong, ask your PMO to restore your account.
+        </div>
+        <button onClick={signOut} className="ies-hover"
+          style={{ padding: '9px 16px', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)',
+            background: 'var(--surface-1)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+          Sign out
+        </button>
+      </div>
+    </FullScreen>
+  )
+}
+
 export default function App() {
-  const { authLoading, session, profileLoading } = useAuth()
+  const { authLoading, session, profileLoading, profile } = useAuth()
 
   if (authLoading) return <FullScreen><Loading label="Starting…" /></FullScreen>
   if (!session) return <><Login /><Toaster /></>
   if (profileLoading) return <FullScreen><Loading label="Loading your profile…" /></FullScreen>
+  if (profile?.archived) return <><Deactivated /><Toaster /></>
 
   return (
     <ProjectProvider>
