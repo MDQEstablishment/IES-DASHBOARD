@@ -256,7 +256,14 @@ export default function Shell() {
 
       {/* ── main column ─────────────────────────────────────────────────── */}
       <div className={'ies-main' + (collapsed ? ' collapsed' : '')}>
-        <header style={{ height: 56, background: 'var(--surface-1)', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 12, padding: '0 18px', position: 'sticky', top: 0, zIndex: 120 }}>
+        {/* Three columns, not a flex row. The search is centred against the
+            VIEWPORT rather than against whatever the breadcrumb measures — a
+            flex row with margin:auto drifts as the breadcrumb grows, which is
+            how the field ended up right-of-centre in the first place. The side
+            columns cannot be reached by the middle one, so Live, the clock and
+            the bell cannot collide with a growing field. */}
+        <header className="ies-topbar" style={{ height: 56, background: 'var(--surface-1)', borderBottom: '1px solid var(--line)', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, padding: '0 18px', position: 'sticky', top: 0, zIndex: 120 }}>
+          <div className="ies-topbar-left" style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <button className="ies-hamburger ies-hover" onClick={() => setDrawer((d) => !d)} style={{ width: 34, height: 34, borderRadius: 'var(--radius-s)', color: 'var(--text-2)', alignItems: 'center', justifyContent: 'center' }}><Icon name="menu" size={18} /></button>
           <button className="ies-hover ies-topmeta" onClick={toggleCollapse} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             style={{ width: 34, height: 34, borderRadius: 'var(--radius-s)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)' }}><Icon name="menu" size={17} /></button>
@@ -273,11 +280,11 @@ export default function Shell() {
             ))}
           </div>
 
-          {/* 9Q(2) — global search. Sits BEFORE the marginLeft:auto group so the
-              Live indicator, the Clock and the NotifBell keep their positions
-              and their order; it takes the slack the breadcrumb leaves. */}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-            <GlobalSearch />
+          </div>
+
+          <GlobalSearch />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, justifyContent: 'flex-end' }}>
             <div className="ies-topmeta" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--live)' }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--live)', animation: 'iesBlink 1.6s infinite' }} />Live</div>
             <Clock />
             <NotifBell />

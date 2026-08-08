@@ -277,6 +277,9 @@ h1,h2,h3,p{margin:0}
    bell. A 320px field fits at 1024 and up; below that it collapses to an icon
    which expands on click, so the bar cannot be broken by the field at any
    width. .ies-topmeta already hides Live + clock under 768. */
+/* The breadcrumb truncates BEFORE the centred field gives up width — the
+   trade the three-column header makes, stated where it is enforced. */
+.ies-topbar-left .ies-crumbs,.ies-topbar-left{min-width:0}
 @media (max-width:1023px){
   .ies-search-trigger{display:inline-flex !important}
   .ies-search-field{display:none}

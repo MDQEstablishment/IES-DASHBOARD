@@ -19,7 +19,8 @@
  * Constraints #8 gate fails the build if one appears in the tree.
  */
 import ExcelJS from 'exceljs'
-import { mkdirSync } from 'node:fs'
+import { unzipSync, zipSync } from 'fflate'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -208,11 +209,29 @@ export async function buildWorkbook() {
   return wb
 }
 
+/**
+ * ExcelJS stamps every zip entry with the WALL CLOCK, so two runs a second apart
+ * produce different bytes from identical input. The determinism test caught it
+ * the honest way — as a flake, failing about one run in six, which is exactly
+ * what a second-boundary race looks like. The claim "same inputs, identical
+ * bytes" was therefore true only within a single second, which is not a claim
+ * worth making.
+ *
+ * Repacking with a fixed mtime makes it true always. The entry ORDER from
+ * unzipSync is preserved, so only the timestamps change.
+ */
+const FIXED_MTIME = Date.UTC(2020, 0, 1)
+
 export async function writeTemplate(outDir) {
   const wb = await buildWorkbook()
   mkdirSync(outDir, { recursive: true })
   const out = join(outDir, TEMPLATE_FILENAME)
-  await wb.xlsx.writeFile(out)
+
+  const raw = new Uint8Array(await wb.xlsx.writeBuffer())
+  const parts = unzipSync(raw)
+  const stamped = {}
+  for (const [name, data] of Object.entries(parts)) stamped[name] = [data, { mtime: FIXED_MTIME }]
+  writeFileSync(out, Buffer.from(zipSync(stamped, { level: 6 })))
   return out
 }
 

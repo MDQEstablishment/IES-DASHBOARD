@@ -455,11 +455,11 @@ shared primitives: Btn×8, Empty×1, Field×1, Loading×1, Modal×2
 
 | control → handler | count |
 | --- | --- |
-| `onBlur:setExpanded` | 1 |
+| `onBlur:setExpanded+setFocused` | 1 |
 | `onChange:setQ` | 1 |
 | `onClick:focus+setExpanded+setTimeout` | 1 |
 | `onClick:go` | 1 |
-| `onFocus:setOpen` | 1 |
+| `onFocus:setFocused+setOpen` | 1 |
 | `onKeyDown:onKeyDown` | 1 |
 | `onMouseEnter:setCursor` | 1 |
 

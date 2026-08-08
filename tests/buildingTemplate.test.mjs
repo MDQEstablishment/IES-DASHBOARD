@@ -150,10 +150,26 @@ test('T-BT7 — Instructions states the two things a filler must not guess', () 
   assert.equal((flat.match(/step \d/g) || []).length, 7, 'the how-to is seven steps')
 })
 
-test('T-BT8 — deterministic: same inputs, identical bytes', async () => {
+test('T-BT8 — deterministic ACROSS A SECOND BOUNDARY, not just within one', async () => {
+  // This test used to run both generations back to back and passed about five
+  // times in six. The sixth failure was real: ExcelJS stamps every zip entry
+  // with the wall clock, so identical input produced different bytes whenever
+  // the two writes straddled a second. A determinism test that races the clock
+  // proves nothing, so this one deliberately waits past the boundary that used
+  // to break it.
+  await new Promise((r) => setTimeout(r, 1100))
   const second = fs.mkdtempSync(path.join(os.tmpdir(), 'ies-tpl2-'))
   await writeTemplate(second)
   const a = fs.readFileSync(FILE)
   const b = fs.readFileSync(path.join(second, TEMPLATE_FILENAME))
   assert.ok(a.equals(b), 'two generations differ — a timestamp is leaking into the bytes')
+
+  // and prove the fix at its source: every entry carries the same fixed stamp
+  const stamps = new Set()
+  for (const [, arr] of Object.entries(unzipSync(new Uint8Array(b)))) void arr
+  const dv = new DataView(b.buffer, b.byteOffset, b.byteLength)
+  for (let i = 0; i < b.length - 4; i += 1) {
+    if (dv.getUint32(i, true) === 0x04034b50) stamps.add(dv.getUint32(i + 10, true))  // time+date
+  }
+  assert.equal(stamps.size, 1, `zip entries carry ${stamps.size} distinct timestamps — must be exactly 1`)
 })

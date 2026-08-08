@@ -28,6 +28,7 @@ export default function GlobalSearch() {
   const [expanded, setExpanded] = useState(false)  // small-screen icon -> field
   const boxRef = useRef(null)
   const inputRef = useRef(null)
+  const [focused, setFocused] = useState(false)
   const runId = useRef(0)
   const navigate = useNavigate()
 
@@ -75,14 +76,24 @@ export default function GlobalSearch() {
     else if (e.key === 'Enter') { e.preventDefault(); go(flat[cursor] || flat[0]) }
   }
 
+  // It was never literally unstyled — it used --radius-s and --line-ctrl. What
+  // made it READ as a default input is that a hairline border with no fill
+  // against a white bar has nothing to hold it: the field dissolved into the
+  // chrome. So it gets a real surface (--track), the theme's larger radius, an
+  // inset hairline for depth, and a focus state that belongs to this product
+  // rather than the browser's.
   const field = {
-    width: '100%', height: 34, borderRadius: 'var(--radius-s)', border: '1px solid var(--line-ctrl)',
-    background: 'var(--raised)', color: 'var(--text)', fontFamily: 'inherit', fontSize: 13,
-    padding: '0 10px 0 32px', outline: 'none',
+    width: '100%', height: 38, borderRadius: 'var(--radius-m)',
+    border: `1px solid ${focused ? 'var(--accent)' : 'var(--line)'}`,
+    background: focused ? 'var(--surface-1)' : 'var(--track)',
+    color: 'var(--text)', fontFamily: 'inherit', fontSize: 13,
+    padding: '0 52px 0 34px', outline: 'none',
+    boxShadow: focused ? '0 0 0 3px var(--accent-tint)' : 'inset 0 1px 2px rgba(28,28,28,.04)',
+    transition: 'background .16s, border-color .16s, box-shadow .16s',
   }
 
   return (
-    <div ref={boxRef} style={{ position: 'relative', flex: '0 1 320px', minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
+    <div ref={boxRef} style={{ position: 'relative', width: 'min(430px, 42vw)', minWidth: 0, display: 'flex', justifyContent: 'center' }}>
       {/* below 1024 the field is an icon until it is asked for */}
       <button
         className="ies-hover ies-search-trigger"
@@ -93,7 +104,7 @@ export default function GlobalSearch() {
       </button>
 
       <div className={`ies-search-field${expanded ? ' expanded' : ''}`} style={{ position: 'relative', width: '100%', minWidth: 0 }}>
-        <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none', display: 'flex' }}>
+        <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none', display: 'flex' }}>
           <Icon name="search" size={15} />
         </span>
         <input
@@ -106,11 +117,18 @@ export default function GlobalSearch() {
           placeholder="Search projects, buildings, materials…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onFocus={() => { if (groups.length) setOpen(true) }}
+          onFocus={() => { setFocused(true); if (groups.length) setOpen(true) }}
           onKeyDown={onKeyDown}
-          onBlur={() => { if (!q) setExpanded(false) }}
+          onBlur={() => { setFocused(false); if (!q) setExpanded(false) }}
           style={field}
         />
+        {!focused && !q && (
+          <span aria-hidden="true" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 3, pointerEvents: 'none' }}>
+            {['\u2318', 'K'].map((k) => (
+              <span key={k} style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', background: 'var(--surface-1)', border: '1px solid var(--line-ctrl)', borderRadius: 5, padding: '2px 5px', lineHeight: 1 }}>{k}</span>
+            ))}
+          </span>
+        )}
       </div>
 
       {open && q.trim().length >= MIN_QUERY_CHARS && (
