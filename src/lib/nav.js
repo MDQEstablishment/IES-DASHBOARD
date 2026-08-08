@@ -13,7 +13,10 @@
 
 // role -> ordered list of nav ids
 export const ROLE_NAV = {
-  ceo:   ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports'],
+  // ceo is PMO-equivalent (owner ruling 2026-08-08, migration 0147), so it
+  // carries pmo's nav including Settings. Authority equivalent, seniority not:
+  // role_rank keeps ceo above pmo so a pmo still cannot edit a ceo.
+  ceo:   ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings'],
   pmo:   ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'reports', 'settings'],
   procm: ['dashboard', 'projects', 'materials', 'tasks', 'escalation'],
   proco: ['dashboard', 'projects', 'materials', 'tasks', 'escalation'],

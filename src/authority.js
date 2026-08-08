@@ -45,6 +45,8 @@ export const AUTHORITY = {
   'project.delete': { admin: 'all', ceo: 'all', pmo: 'all' },
   // the data-level action behind w_proj/w_bld: buildings, rooms, survey
   // entries, photos, operating hours, scope lines.
+  // administering people (Settings): not per-project, so always 'all'.
+  'user.admin': { admin: 'all', ceo: 'all', pmo: 'all' },
   'project.write': {
     admin: 'all', ceo: 'all', pmo: 'all', progm: 'all', plane: 'all',
     projm: 'own', proje: 'own', procm: 'own', proco: 'own',

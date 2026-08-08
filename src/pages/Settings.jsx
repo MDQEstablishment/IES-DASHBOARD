@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Icon from '../components/Icon'
 import { Avatar, PageTitle, Loading, Empty, Btn, Modal, Field, inputStyle } from '../components/ui'
 import { useAuth } from '../rbac'
+import { may } from '../authority'
 import { useLiveQuery, downloadBlob, bgUpdate } from '../lib/db'
 import { ROLE_ORDER, ROSTER, roleTitle, roleColor, FEATURES, canManageRole } from '../lib/constants'
 import { ROLE_NAV, NAV_CATALOG } from '../lib/nav'
@@ -19,7 +20,7 @@ const NAV_IDS = ['dashboard', 'projects', 'materials', 'tasks', 'escalation', 'r
 const areaLabel = (id) => NAV_CATALOG[id]?.label || id
 const ROLE_ACCESS = Object.fromEntries(ROLE_ORDER.map((r) => [r, ROLE_NAV[r] || []]))
 const ROLE_DESC = {
-  ceo: 'Portfolio-wide read access · no settings or write actions',
+  ceo: 'Portfolio-wide · same authority as PMO, including settings and audit',
   pmo: 'Full control across the whole programme · admin & audit',
   procm: 'Materials & procurement, team tasks',
   proco: 'Own procurement tasks & material movements only',
@@ -49,7 +50,10 @@ export default function Settings() {
   const [cat, setCat] = useState('users')
   const [auditAction, setAuditAction] = useState('all')
   const [editing, setEditing] = useState(null)
-  const canAdminUsers = ['pmo', 'admin'].includes(role)
+  // from AUTHORITY (0148), not a hand-written list: ceo is PMO-equivalent
+  // since 0147 and would otherwise see the Settings tab with its people
+  // section hidden inside it.
+  const canAdminUsers = may('user.admin', role)
 
   // Plain select — the self-referential manager embed returns empty under RLS, so
   // resolve the manager's name client-side from the same roster.
@@ -70,7 +74,7 @@ export default function Settings() {
   const filteredAudit = audit.filter((a) => auditAction === 'all' || a.action === auditAction)
 
   // PDF extraction monthly cap counter (PMO/admin). RLS already restricts reads.
-  const showCap = ['admin', 'pmo'].includes(role)
+  const showCap = may('user.admin', role)
   const monthIso = new Date(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1).toISOString()
   const { rows: extractRows } = useLiveQuery('pdf_extraction_log',
     (q) => q.select('id,success').gte('created_at', monthIso), [monthIso])

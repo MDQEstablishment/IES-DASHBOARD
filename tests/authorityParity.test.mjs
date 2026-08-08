@@ -114,6 +114,16 @@ test('T-AUTH2 — the owner rulings, pinned literally', () => {
     ['proco', 'procm', 'proje', 'projm'].sort())
   assert.equal(scopeOf('project.edit', 'projm'), 'own', 'a project manager edits only his own projects')
   assert.equal(scopeOf('project.write', 'plane'), 'all', 'plane is Programme-Manager equivalent')
+  // ceo = PMO equivalent (0147/0148): every action pmo holds, ceo holds, at the
+  // same scope. Authority equivalence — NOT seniority: role_rank keeps ceo
+  // above pmo so a pmo still cannot edit a ceo.
+  for (const action of Object.keys(AUTHORITY)) {
+    const pmoScope = scopeOf(action, 'pmo')
+    if (!pmoScope) continue
+    assert.equal(scopeOf(action, 'ceo'), pmoScope,
+      `ceo must match pmo on "${action}" — ceo is PMO-equivalent`)
+  }
+  assert.deepEqual(rolesFor('user.admin').sort(), ['admin', 'ceo', 'pmo'])
 })
 
 test('T-AUTH3 — every known role is decided for every action, and no unknown role appears', () => {

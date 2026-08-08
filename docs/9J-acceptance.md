@@ -94,7 +94,7 @@ that commit message.
 ## Navigation (role → items, item → route)
 
 - `admin: settings`
-- `ceo: dashboard,projects,materials,tasks,escalation,reports`
+- `ceo: dashboard,projects,materials,tasks,escalation,reports,settings`
 - `plane: dashboard,projects,materials,tasks,escalation,reports`
 - `pmo: dashboard,projects,materials,tasks,escalation,reports,settings`
 - `procm: dashboard,projects,materials,tasks,escalation`
@@ -124,7 +124,7 @@ that commit message.
 | `image.js` | `377425ac96352664` |
 | `inspectionDocs.js` | `72f251aa078c3f79` |
 | `lightingSavings.js` | `0f4419ed9b0becd9` |
-| `nav.js` | `36299f48dc4a9eab` |
+| `nav.js` | `6e70b107f033925d` |
 | `progressReport.js` | `a2052996da973dd2` |
 | `progressReportGen.js` | `4406dc56082069a6` |
 | `reportPhotoAnnex.js` | `dd53dd1b114852f8` |
