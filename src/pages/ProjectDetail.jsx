@@ -11,7 +11,9 @@ import { useBreadcrumb } from '../breadcrumbs'
 import { ProjectFormModal, AssignEngineerModal } from '../components/ProjectModals'
 import SurveyTab from '../components/SurveyTab'
 import SavingSheetTab from '../components/SavingSheetTab'
-import { BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal, ScopeChangeModal } from '../components/BuildingModals'
+import { AddBuildingModal, BuildingFormModal, ArchiveBuildingModal, BuildingStatusModal, ScopeChangeModal } from '../components/BuildingModals'
+import BuildingImportModal from '../components/BuildingImportModal'
+import { downloadTemplate } from '../lib/buildingTemplateLink'
 import BuildingsMap from '../components/BuildingsMap'
 import ProjectDocuments, { docStatusMeta, MULTI_KINDS, TYPE_LABEL, AttachmentChip } from '../components/ProjectDocuments'
 import MaterialDeliveries from '../components/MaterialDeliveries'
@@ -53,6 +55,7 @@ export default function ProjectDetail() {
   const [editOpen, setEditOpen] = useState(false)
   const [engOpen, setEngOpen] = useState(false)
   const [addBldgOpen, setAddBldgOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [editBldg, setEditBldg] = useState(null)
   const [archiveBldg, setArchiveBldg] = useState(null)
   const [statusBldg, setStatusBldg] = useState(null)
@@ -211,6 +214,10 @@ export default function ProjectDetail() {
         {canManage && (
           <div style={{ display: 'flex', gap: 8 }}>
             <Btn icon="plus" variant="primary" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setAddBldgOpen(true)}>Add building</Btn>
+            {/* The two bulk routes sit beside Add, because they are the same job
+                at a different scale — one building or the whole TARSHID list. */}
+            <Btn icon="download" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={downloadTemplate}>Download template</Btn>
+            <Btn icon="upload" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setImportOpen(true)}>Import Excel</Btn>
             <Btn icon="edit" style={{ padding: '7px 12px', fontSize: 12.5 }} onClick={() => setEditOpen(true)}>Edit project</Btn>
           </div>
         )}
@@ -562,7 +569,8 @@ export default function ProjectDetail() {
       {editOpen && <ProjectFormModal mode="edit" project={project} onClose={() => setEditOpen(false)} />}
       {engOpen && <AssignEngineerModal project={project} onClose={() => setEngOpen(false)} />}
       {scopeBldg && <ScopeChangeModal building={scopeBldg} frozen={!!project.scope_frozen_at} onClose={() => setScopeBldg(null)} />}
-      {addBldgOpen && <BuildingFormModal mode="add" projectId={id} projectRegion={project.region || ''} onClose={() => setAddBldgOpen(false)} />}
+      {addBldgOpen && <AddBuildingModal projectId={id} onClose={() => setAddBldgOpen(false)} />}
+      {importOpen && <BuildingImportModal projectId={id} onClose={() => setImportOpen(false)} />}
       {editBldg && <BuildingFormModal mode="edit" projectId={id} building={editBldg} projectRegion={project.region || ''} onClose={() => setEditBldg(null)} />}
       {archiveBldg && <ArchiveBuildingModal building={archiveBldg} onClose={() => setArchiveBldg(null)} />}
       {statusBldg && <BuildingStatusModal building={statusBldg} onClose={() => setStatusBldg(null)} />}

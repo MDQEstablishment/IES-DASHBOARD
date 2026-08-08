@@ -15,6 +15,20 @@ These hold every sprint unless the owner explicitly amends them.
      the DIP/TDS), not as a UI string. It is shown only as a small grey,
      RTL subtitle under the English building name. Approved in Sprint 8B (#21);
      the Excel template carries it as the optional `arabic_name` column.
+   - `public.buildings.name` — **the supplied building name, in whatever script
+     it was supplied.** Owner ruling, 2026-08-08. TARSHID's handover is very
+     often Arabic-only, and this rule as written left such a name with nowhere
+     legitimate to go: `name_ar` is a secondary identifier, so an Arabic-only
+     list could not be imported without either refusing the client's real file
+     or inventing a Latin name for it. Neither is acceptable — inventing is
+     worse, because a transliteration nobody checked becomes the name the whole
+     system uses.
+
+     The distinction this rule turns on is **UI copy versus client data**. It
+     exists to stop Arabic being written into components, seeds and labels,
+     where it is *our* text. A building's name is not our text: it is a fact
+     supplied by the client, stored verbatim, and displayed as data. The ban on
+     Arabic in component source, seed data and UI strings is unchanged.
 
 2. **Zero dead buttons.** Every control does something or is visibly disabled.
 3. **Zero broken PDFs.** Visual JPG inspection before claiming a PDF change done.

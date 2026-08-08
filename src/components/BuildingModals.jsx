@@ -3,13 +3,75 @@ import { Modal, Field, inputStyle, Btn } from './ui'
 import { useLiveQuery, bgInsert, bgUpdate } from '../lib/db'
 import { useAuth } from '../rbac'
 import { toast } from '../lib/toast'
+import { supabase } from '../lib/supabase'
 
 const numOrNull = (v) => (v === '' || v == null ? null : Number(v))
 
-// ── Add / Edit a building under an existing project (complaint 1.2) ──────────
+// ── Add a building — the same four things the Excel template asks for ───────
+//
+// ADD is deliberately tiny. At this stage TARSHID has handed over a name and a
+// coordinate and nothing else; floors, area, meter, ownership, contractor and
+// engineer are survey OUTPUT, recorded in the field weeks later on the
+// building's own page. A form that asks for them here asks the user to invent
+// them, and invented data is worse than absent data.
+//
+// It writes through import_buildings() — the same function the Excel importer
+// calls — so a hand-added building and an imported one are the same row: same
+// code from the same sequence, same defaults, same audit entry. The code is NOT
+// typed any more; it is minted server-side in the frozen scheme.
+export function AddBuildingModal({ projectId, onClose }) {
+  const [f, setF] = useState({ name: '', lat: '', lng: '', notes: '' })
+  const [busy, setBusy] = useState(false)
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+
+  const save = async () => {
+    if (!f.name.trim()) { toast('Building name is required', 'err'); return }
+    setBusy(true)
+    const { data, error } = await supabase.rpc('import_buildings', {
+      p_project_id: projectId,
+      p_rows: [{ name: f.name, lat: f.lat, lng: f.lng, notes: f.notes }],
+      p_source: 'app',
+      p_file_name: null,
+    })
+    setBusy(false)
+    if (error) { toast(error.message || 'Could not add the building', 'err'); return }
+    const row = data?.[0]
+    if (row?.outcome !== 'accepted') {
+      // the held reasons are written for a person, so show the real one
+      toast(row?.reason || 'The building was not added.', 'err')
+      return
+    }
+    toast(`Building added · ${row.code}`)
+    onClose()
+  }
+
+  return (
+    <Modal open width={520} title="Add building" onClose={onClose}
+      footer={<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Adding…' : 'Add building'}</Btn></>}>
+      <Field label="Building name">
+        <input style={inputStyle} value={f.name} onChange={(e) => set('name', e.target.value)}
+          placeholder="Name exactly as supplied" />
+      </Field>
+      <Row>
+        <Field label="Latitude"><input lang="en" style={inputStyle} value={f.lat} onChange={(e) => set('lat', e.target.value)} placeholder={'24.7136 or 24°42\'49"N'} /></Field>
+        <Field label="Longitude"><input lang="en" style={inputStyle} value={f.lng} onChange={(e) => set('lng', e.target.value)} placeholder={'46.6753 or 46°40\'31"E'} /></Field>
+      </Row>
+      <Field label="Notes"><input style={inputStyle} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Anything from the handover list" /></Field>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.55 }}>
+        The building code is generated automatically. Floors, area, meter, ownership,
+        contractor and engineer are recorded later, during the survey, on the building’s page.
+      </div>
+    </Modal>
+  )
+}
+
+// ── Edit an existing building ────────────────────────────────────────────────
+// Left as it was, on purpose. Add was stripped because nobody HAS that data yet
+// at add time; edit is where a survey value already in the row gets corrected,
+// and removing the fields here would strand data with no other editor.
 // Mirrors the contractor name into both `contractor` (Buildings table) and
-// `contractor_name` (Map popup) so the new row shows everywhere immediately.
-export function BuildingFormModal({ mode = 'add', projectId, building, projectRegion = '', onClose }) {
+// `contractor_name` (Map popup) so the row shows everywhere immediately.
+export function BuildingFormModal({ mode = 'edit', projectId, building, projectRegion = '', onClose }) {
   const { rows: engineers } = useLiveQuery('profiles', (q) =>
     q.select('id,full_name,role').eq('role', 'proje').eq('archived', false).order('full_name'))
   const init = (k, d = '') => (building?.[k] ?? d)
@@ -39,12 +101,11 @@ export function BuildingFormModal({ mode = 'add', projectId, building, projectRe
       floors: numOrNull(f.floors), area_sqm: numOrNull(f.area_sqm), remarks: f.remarks || null,
       is_residential: !!f.is_residential,
     }
-    if (mode === 'edit') {
-      const { error } = await bgUpdate('buildings', building.id, payload, { okMsg: 'Building updated' })
-      setBusy(false); if (!error) onClose()
-      return
-    }
-    const { error } = await bgInsert('buildings', { ...payload, project_id: projectId, status_override: 'pending' }, { okMsg: 'Building added' })
+    // No insert branch here any more. It used to bgInsert() a building directly,
+    // which was the SECOND write path — the one that let a hand-added building
+    // differ from an imported one. Adding now goes through AddBuildingModal and
+    // import_buildings(); this component only ever updates.
+    const { error } = await bgUpdate('buildings', building.id, payload, { okMsg: 'Building updated' })
     setBusy(false); if (!error) onClose()
   }
 
