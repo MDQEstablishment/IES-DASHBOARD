@@ -14,7 +14,7 @@
  *
  * (Falls back to reading .env.production for the three VITE_* values.)
  */
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
@@ -40,7 +40,10 @@ if (aerr) { console.error('Sign-in failed:', aerr.message); process.exit(1) }
 console.log('Signed in as', auth.user.email)
 
 const path = `${projectId}/test-${Date.now()}.pdf`
-const bytes = readFileSync(join(ROOT, 'seeds/fixtures/sample-delivery-note.pdf'))
+// generated, not committed — run `node scripts/make-delivery-note-fixture.mjs` first
+const FIXTURE = join(ROOT, 'seeds/fixtures/delivery-note.generated.pdf')
+if (!existsSync(FIXTURE)) { console.error('Fixture missing. Run: node scripts/make-delivery-note-fixture.mjs'); process.exit(1) }
+const bytes = readFileSync(FIXTURE)
 const up = await sb.storage.from(BUCKETS.DELIVERY_NOTES).upload(path, bytes, { contentType: 'application/pdf', upsert: true })
 if (up.error) { console.error('Upload failed:', up.error.message); process.exit(1) }
 console.log('Uploaded', path)

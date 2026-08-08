@@ -17,3 +17,6 @@ screenshots
 
 # local dev (machine-specific)
 .claude/
+
+# generated test fixture — never committed (Constraints #8)
+seeds/fixtures/*.generated.pdf

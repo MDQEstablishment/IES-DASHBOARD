@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host",
-    "test": "node --import ./tests/harness/register.mjs --test tests/savingSheet.test.mjs tests/complianceParity.test.mjs tests/oneFactOneHome.test.mjs tests/templateDeterminism.test.mjs tests/lightingSavings.test.mjs tests/verifySheet.test.mjs tests/sCurve.test.mjs tests/authorityParity.test.mjs",
+    "test": "node --import ./tests/harness/register.mjs --test 'tests/*.test.mjs'",
     "template:generate": "node scripts/generate-project-template.js"
   },
   "dependencies": {
