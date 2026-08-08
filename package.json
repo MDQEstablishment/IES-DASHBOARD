@@ -6,10 +6,11 @@
   "description": "IES Programme Control Platform — retrofit programme control (React + Vite + Supabase)",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-building-template.js",
     "preview": "vite preview --host",
     "test": "node --import ./tests/harness/register.mjs --test 'tests/*.test.mjs'",
-    "template:generate": "node scripts/generate-project-template.js"
+    "template:generate": "node scripts/generate-project-template.js",
+    "template:building": "node scripts/generate-building-template.js"
   },
   "dependencies": {
     "@sentry/react": "^8.35.0",

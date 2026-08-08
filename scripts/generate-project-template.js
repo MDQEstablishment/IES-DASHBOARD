@@ -85,7 +85,16 @@ function requireDemoPassword() {
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
-const OUT_DIR = join(ROOT, 'public', 'templates')
+// STILL public/, and still committed — deliberately, for now. The owner approved
+// moving this to build-time generation, but it cannot be done yet: this script
+// reads its dropdowns from public.v_form_options, and the CI build has no
+// Supabase credentials at all (deploy.yml passes no env and no secrets). Making
+// the build run it would fail every main deploy. The public project-templates
+// bucket, which is the other fallback the UI tries, is empty — so deleting the
+// committed copy today leaves a button that downloads nothing, against
+// Constraints #2. The fix is a separate unit: publish to the bucket, point the
+// UI at it, then delete this file. Tracked, not forgotten.
+const OUT_DIR = process.argv[2] || join(ROOT, 'public', 'templates')
 const OUT_FILE = join(OUT_DIR, 'IES-Project-Template-v3.xlsx')
 export const TEMPLATE_OBJECT_PATH = 'IES-Project-Template-v3.xlsx'
 
