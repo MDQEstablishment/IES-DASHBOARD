@@ -164,3 +164,30 @@ decoding each one more than one way. The general form: an office document
 carries authorship infrastructure — people, hostnames, paths, tenant
 identifiers, protection labels — that nobody puts there deliberately and no
 category list written from the *expected* content will name.
+
+9. **Capitalisation has one rule, and it is executable.**
+
+   **Title Case** — page titles and kickers, tab labels, button labels, card and
+   section headers, table column headers, KPI labels, modal titles, form field
+   labels. Minor words (a, an, and, as, at, but, by, for, in, of, on, or, the,
+   to, vs) stay lowercase unless first or last.
+
+   **Sentence case** — helper text, empty states, validation messages, toasts,
+   placeholder text, tooltips. `aria-label` is not visible text and is out of
+   scope entirely.
+
+   **Never re-cased** — acronyms (ESM, COC, BOQ, TARSHID, PMO, IES, SKU, SASO,
+   SEER, BTU, TR …), SI and currency units (kWh, m², W, K, lm, SAR — `kWh`
+   never becomes `Kwh`), codes and identifiers, brand names, and the status
+   badges listed in `scripts/audit-capitalisation.mjs`.
+
+   **Why ALL-CAPS is a defect here and not a style.** It was checked before it
+   was called one. `ProjectDetail.jsx` renders `CODE` and `Settings.jsx` renders
+   `User` with *identical* styling — `fontFamily: var(--mono)`, 10px,
+   `--text-3`. Two conventions, one treatment, so a compliant rendering already
+   existed in the product and looked right. The one place caps genuinely works
+   is the micro-badge, and those are exempt by name.
+
+   Enforced by `tests/capitalisation.test.mjs`, whose rule is the same module
+   the audit script uses, so the gate and the inventory cannot disagree.
+
