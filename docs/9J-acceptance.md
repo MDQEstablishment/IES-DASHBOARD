@@ -9,19 +9,19 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 58 files · 549 interactive controls · 290 database touches.**
+**Totals: 58 files · 548 interactive controls · 289 database touches.**
 
 ## Per-file summary
 
 | file | controls | db touches | screen label | restyled & ticked |
 | --- | ---: | ---: | --- | :---: |
+| `src/components/AddBuildingsModal.jsx` | 10 | 1 | — | ☐ |
 | `src/components/AiAssistPanel.jsx` | 11 | 5 | — | ☐ |
 | `src/components/AiUsageMeter.jsx` | 1 | 4 | — | ☐ |
 | `src/components/BuildWatcher.jsx` | 1 | 0 | — | ☐ |
 | `src/components/BuildingChat.jsx` | 9 | 5 | — | ☐ |
-| `src/components/BuildingImportModal.jsx` | 3 | 1 | — | ☐ |
 | `src/components/BuildingMaterialsPlan.jsx` | 0 | 4 | — | ☐ |
-| `src/components/BuildingModals.jsx` | 30 | 6 | — | ☐ |
+| `src/components/BuildingModals.jsx` | 24 | 5 | — | ☐ |
 | `src/components/BuildingPhotos.jsx` | 3 | 4 | — | ☐ |
 | `src/components/BuildingsMap.jsx` | 0 | 0 | — | ☐ |
 | `src/components/CocBuilder.jsx` | 16 | 7 | — | ☐ |
@@ -68,7 +68,7 @@ that commit message.
 | `src/pages/DesignSystem.jsx` | 0 | 0 | Design System | ☐ |
 | `src/pages/Escalations.jsx` | 16 | 8 | Escalations | ☐ |
 | `src/pages/ManageEsms.jsx` | 20 | 9 | Materials | ☐ |
-| `src/pages/ProjectDetail.jsx` | 26 | 10 | Project Detail | ☐ |
+| `src/pages/ProjectDetail.jsx` | 24 | 10 | Project Detail | ☐ |
 | `src/pages/Projects.jsx` | 7 | 7 | Projects | ☐ |
 | `src/pages/Reports.jsx` | 1 | 7 | Reports | ☐ |
 | `src/pages/Settings.jsx` | 11 | 8 | Settings | ☐ |
@@ -142,6 +142,24 @@ that commit message.
 
 ## Detail
 
+### `src/components/AddBuildingsModal.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onChange:onPick` | 1 |
+| `onChange:set` | 4 |
+| `onClick:clearFile` | 1 |
+| `onClick:click` | 1 |
+| `onClick:downloadTemplate` | 1 |
+| `onClick:onClose` | 1 |
+| `onClick:submit` | 1 |
+
+| database effect | count |
+| --- | --- |
+| `rpc:import_buildings` | 1 |
+
+shared primitives: Btn×4, Field×4, Modal×1
+
 ### `src/components/AiAssistPanel.jsx`
 
 | control → handler | count |
@@ -204,20 +222,6 @@ shared primitives: Empty×1
 | `read:building_chat_messages` | 1 |
 | `read:profiles` | 1 |
 
-### `src/components/BuildingImportModal.jsx`
-
-| control → handler | count |
-| --- | --- |
-| `onChange:onPick` | 1 |
-| `onClick:click` | 1 |
-| `onClick:onClose` | 1 |
-
-| database effect | count |
-| --- | --- |
-| `rpc:import_buildings` | 1 |
-
-shared primitives: Btn×2, Modal×1
-
 ### `src/components/BuildingMaterialsPlan.jsx`
 
 | control → handler | count |
@@ -237,20 +241,19 @@ shared primitives: Empty×1
 
 | control → handler | count |
 | --- | --- |
-| `onChange:set` | 16 |
+| `onChange:set` | 12 |
 | `onChange:setReason` | 3 |
 | `onChange:setStatus` | 1 |
 | `onClick:archive` | 1 |
-| `onClick:onClose` | 5 |
-| `onClick:save` | 4 |
+| `onClick:onClose` | 4 |
+| `onClick:save` | 3 |
 
 | database effect | count |
 | --- | --- |
 | `bgUpdate:buildings` | 4 |
 | `read:profiles` | 1 |
-| `rpc:import_buildings` | 1 |
 
-shared primitives: Btn×10, Field×19, Modal×5
+shared primitives: Btn×8, Field×15, Modal×4
 
 ### `src/components/BuildingPhotos.jsx`
 
@@ -1177,7 +1180,6 @@ screen label: **Project Detail**
 | `onBlur:bgUpdate+trim` | 1 |
 | `onChange:setBldgQuery` | 1 |
 | `onChange:setScopeFilter` | 1 |
-| `onClick:downloadTemplate` | 1 |
 | `onClick:navigate` | 1 |
 | `onClick:now+setDrill+setUploadReq` | 1 |
 | `onClick:now+setUploadReq` | 1 |
@@ -1189,7 +1191,6 @@ screen label: **Project Detail**
 | `onClick:setEditOpen` | 1 |
 | `onClick:setEngOpen` | 1 |
 | `onClick:setEsmPanel` | 2 |
-| `onClick:setImportOpen` | 1 |
 | `onClick:setScopeBldg` | 1 |
 | `onClick:setStatusBldg` | 1 |
 | `onClick:setTab` | 2 |
@@ -1208,7 +1209,7 @@ screen label: **Project Detail**
 | `read:survey_entries` | 1 |
 | `read:v_project_doc_progress` | 1 |
 
-shared primitives: Btn×7, Chip×7, Empty×6, Loading×1
+shared primitives: Btn×5, Chip×7, Empty×6, Loading×1
 
 ### `src/pages/Projects.jsx`
 screen label: **Projects**
