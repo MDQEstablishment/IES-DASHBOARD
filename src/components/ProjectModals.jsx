@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Modal, Field, inputStyle, Btn } from './ui'
 import DateInput from './DateInput'
 import FileDropZone from './FileDropZone'
+import PhotoFocalPicker from './PhotoFocalPicker'
 import { useLiveQuery, bgInsert, bgUpdate, uploadToBucket, signedUrlFor, downloadBlob } from '../lib/db'
 import { compressImage } from '../lib/image'
 import { supabase } from '../lib/supabase'
@@ -69,7 +70,21 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     entity_poc_mobile: init('entity_poc_mobile'), entity_poc_email: init('entity_poc_email'),
     tarshid_poc_name: init('tarshid_poc_name'), tarshid_poc_position: init('tarshid_poc_position'),
     tarshid_poc_mobile: init('tarshid_poc_mobile'), tarshid_poc_email: init('tarshid_poc_email'),
+    // where the cover photo sits in the card frame. Defaults are today's
+    // behaviour, so an untouched project renders exactly as it does now.
+    photo_pos_x: init('photo_pos_x', 50), photo_pos_y: init('photo_pos_y', 50),
+    photo_zoom: init('photo_zoom', 100),
   })
+  // object URL for a freshly chosen file, so the picker previews the image the
+  // person is about to commit rather than the one already stored
+  const [pendingUrl, setPendingUrl] = useState(null)
+  const setPending = (file) => {
+    setPendingUrl((old) => { if (old) URL.revokeObjectURL(old); return file ? URL.createObjectURL(file) : null })
+  }
+  const clearPending = () => setPendingUrl((old) => { if (old) URL.revokeObjectURL(old); return null })
+  // a newly chosen file wins over the stored one, so the picker always shows
+  // the image that is about to be saved
+  const photoSrc = pendingUrl || (!replacing && mode === 'edit' && project?.photo_url ? curPhoto : null)
   const [showDelete, setShowDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   // Project cover photo (edit mode). photoFile = new selection; removePhoto = drop
@@ -108,6 +123,7 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
       entity_poc_mobile: f.entity_poc_mobile || null, entity_poc_email: f.entity_poc_email || null,
       tarshid_poc_name: f.tarshid_poc_name || null, tarshid_poc_position: f.tarshid_poc_position || null,
       tarshid_poc_mobile: f.tarshid_poc_mobile || null, tarshid_poc_email: f.tarshid_poc_email || null,
+      photo_pos_x: f.photo_pos_x, photo_pos_y: f.photo_pos_y, photo_zoom: f.photo_zoom,
     }
     if (mode === 'edit') {
       // Resolve the cover photo before the row update so photo_url lands atomically.
@@ -133,6 +149,18 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
     // scope is decided by the survey — neither is captured here any more, so
     // there are no child inserts left to fail after the row lands.
     const { data, error } = await bgInsert('projects', payload, { okMsg: 'Project created' })
+    if (!error && data?.[0] && photoFile) {
+      // The row has to exist before the photo, because the storage path is keyed
+      // on the project id. The focal point already went in with the row above,
+      // so the card is correct the first time it renders.
+      const id = data[0].id
+      let pf = photoFile
+      if (pf.size > 800 * 1024) { try { pf = await compressImage(pf, { maxBytes: 800000, maxDim: 1600 }) } catch { /* keep original */ } }
+      const ext = (pf.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '')
+      const path = `${id}/${crypto.randomUUID()}.${ext}`
+      const { error: upErr } = await uploadToBucket(BUCKETS.PROJECT_PHOTOS, pf, { key: path, maxBytes: 5 * 1024 * 1024 })
+      if (!upErr) await bgUpdate('projects', id, { photo_url: path }, { silent: true })
+    }
     setBusy(false)
     if (!error) { onClose(); if (data?.[0]) navigate(`/projects/${data[0].id}`) }
   }
@@ -145,34 +173,33 @@ export function ProjectFormModal({ mode = 'add', project, onClose }) {
         <Btn variant="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Create project'}</Btn>
         {showDelete && <DeleteProjectModal project={project} onClose={() => { setShowDelete(false); onClose() }} />}
       </>}>
-      {mode === 'edit' && (
-        <div style={{ marginBottom: 16 }}>
-          {project.photo_url && curPhoto && !removePhoto && !replacing && !photoFile ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <img src={curPhoto} alt="" style={{ width: 104, height: 66, objectFit: 'cover', borderRadius: 'var(--radius-s)', border: '1px solid var(--line)' }} />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Btn onClick={() => setReplacing(true)}>Replace</Btn>
-                <Btn variant="danger" onClick={() => { setRemovePhoto(true); setPhotoFile(null); setReplacing(false) }}>Remove</Btn>
-              </div>
+      {/* Cover photo AND where it sits. Both live here, in Add project and Edit
+          project — the card is a read surface everywhere else, so its appearance
+          is configured where the project is configured (owner's ruling). */}
+      <div style={{ marginBottom: 16 }}>
+        {photoSrc && !removePhoto ? (
+          <>
+            <PhotoFocalPicker url={photoSrc} value={f}
+              onChange={(v) => setF((p2) => ({ ...p2, ...v }))} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <Btn onClick={() => { setReplacing(true); setPhotoFile(null); clearPending() }}>Replace</Btn>
+              {mode === 'edit' && project.photo_url && (
+                <Btn variant="danger" onClick={() => { setRemovePhoto(true); setPhotoFile(null); clearPending(); setReplacing(false) }}>Remove</Btn>
+              )}
             </div>
-          ) : (
-            <>
-              <FileDropZone compact accept="image/*" maxSizeMb={5} label="Upload project photo"
-                onFiles={(file) => { setPhotoFile(file); setRemovePhoto(false) }} />
-              {removePhoto && project.photo_url && (
-                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
-                  Current photo will be removed on save. <button type="button" onClick={() => setRemovePhoto(false)} style={{ color: 'var(--accent)', fontWeight: 700 }}>Undo</button>
-                </div>
-              )}
-              {replacing && project.photo_url && !photoFile && (
-                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
-                  Choose a replacement, or <button type="button" onClick={() => setReplacing(false)} style={{ color: 'var(--accent)', fontWeight: 700 }}>keep current</button>.
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+          </>
+        ) : (
+          <>
+            <FileDropZone compact accept="image/*" maxSizeMb={5} label="Upload project photo"
+              onFiles={(file) => { setPhotoFile(file); setRemovePhoto(false); setReplacing(false); setPending(file) }} />
+            {removePhoto && project?.photo_url && (
+              <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 6 }}>
+                Current photo will be removed on save. <button type="button" onClick={() => setRemovePhoto(false)} style={{ color: 'var(--accent)', fontWeight: 700 }}>Undo</button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
       <Group first>
         <Row>
           <Field label="Project code"><input lang="en" style={inputStyle} value={f.code} onChange={(e) => set('code', e.target.value)} placeholder="ABC-REGION" /></Field>

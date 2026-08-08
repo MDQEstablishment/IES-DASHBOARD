@@ -9,7 +9,7 @@ shift it. Re-run `node scripts/ui-census.mjs --check` after every commit; the
 diff must be empty, and any genuine markup move must be whitelisted by hand in
 that commit message.
 
-**Totals: 58 files · 548 interactive controls · 289 database touches.**
+**Totals: 59 files · 551 interactive controls · 291 database touches.**
 
 ## Per-file summary
 
@@ -40,10 +40,11 @@ that commit message.
 | `src/components/Login.jsx` | 5 | 0 | Sign in | ☐ |
 | `src/components/MainWarehouse.jsx` | 2 | 2 | — | ☐ |
 | `src/components/MaterialDeliveries.jsx` | 29 | 8 | — | ☐ |
+| `src/components/PhotoFocalPicker.jsx` | 3 | 0 | — | ☐ |
 | `src/components/ProgressReportCard.jsx` | 6 | 14 | — | ☐ |
 | `src/components/ProjectDocuments.jsx` | 25 | 11 | — | ☐ |
 | `src/components/ProjectItems.jsx` | 21 | 28 | — | ☐ |
-| `src/components/ProjectModals.jsx` | 35 | 12 | — | ☐ |
+| `src/components/ProjectModals.jsx` | 35 | 14 | — | ☐ |
 | `src/components/ProjectUnitSelection.jsx` | 15 | 6 | — | ☐ |
 | `src/components/ProjectWarehouse.jsx` | 2 | 3 | — | ☐ |
 | `src/components/ReportTemplate.jsx` | 4 | 6 | — | ☐ |
@@ -572,6 +573,14 @@ shared primitives: Empty×2
 
 shared primitives: Btn×9, Empty×1, Field×7, FileDropZone×1, Modal×1
 
+### `src/components/PhotoFocalPicker.jsx`
+
+| control → handler | count |
+| --- | --- |
+| `onChange:Number+onChange+setTouched` | 1 |
+| `onClick:onChange+setTouched` | 1 |
+| `onKeyDown:onKey` | 1 |
+
 ### `src/components/ProgressReportCard.jsx`
 
 | control → handler | count |
@@ -700,24 +709,25 @@ shared primitives: Btn×2, Empty×1
 | `onChange:set` | 17 |
 | `onChange:setConfirm` | 1 |
 | `onChange:setEngineerId` | 1 |
+| `onChange:setF` | 1 |
+| `onClick:clearPending+setPhotoFile+setRemovePhoto+setReplacing` | 1 |
+| `onClick:clearPending+setPhotoFile+setReplacing` | 1 |
 | `onClick:click` | 1 |
 | `onClick:del` | 1 |
 | `onClick:doImport` | 1 |
 | `onClick:downloadTemplate` | 1 |
 | `onClick:onClose` | 4 |
 | `onClick:save` | 2 |
-| `onClick:setPhotoFile+setRemovePhoto+setReplacing` | 1 |
 | `onClick:setRemovePhoto` | 1 |
-| `onClick:setReplacing` | 2 |
 | `onClick:setShowDelete` | 1 |
 
 | database effect | count |
 | --- | --- |
 | `bgInsert:projects` | 1 |
-| `bgUpdate:projects` | 3 |
+| `bgUpdate:projects` | 4 |
 | `io:downloadBlob` | 1 |
 | `io:signedUrlFor` | 1 |
-| `io:uploadToBucket` | 1 |
+| `io:uploadToBucket` | 2 |
 | `read:profiles` | 2 |
 | `read:v_form_options` | 2 |
 | `rpc:import_project_bundle` | 1 |

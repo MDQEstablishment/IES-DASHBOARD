@@ -49,6 +49,11 @@ export const BADGE_EXEMPT = new Set([
   'RESIDENTIAL · EXCLUDED', 'ASSISTANT · VERIFIED', 'PROJECT DECISION',
   'KINGDOM OF SAUDI ARABIA', 'NO ENTRIES', 'FAILED', 'REFUSED', 'MENTION',
   'CLICK A MARKER FOR CONTRACTOR INFO', 'C&H',
+  // Added when the gate caught the focal picker's own two chips. Both are the
+  // same device as the entries above — mono, ~10px, letterspaced, one on a
+  // dark pill and one an empty-state micro-label beside 'NO ENTRIES'. Exempted
+  // on that ground, not because they were mine.
+  'DRAG · ARROW KEYS', 'NO PHOTO',
 ])
 
 const isAllCaps = (t) => {

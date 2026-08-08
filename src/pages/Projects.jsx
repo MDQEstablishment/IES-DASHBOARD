@@ -7,6 +7,7 @@ import { may, rolesFor } from '../authority'
 import { useLiveQuery, signedUrlFor } from '../lib/db'
 import { num } from '../lib/format'
 import { statusMeta } from '../lib/constants'
+import { focalStyle } from '../components/PhotoFocalPicker'
 import { ProjectFormModal, ProjectImportModal } from '../components/ProjectModals'
 import { BUCKETS } from '../lib/buckets'
 
@@ -223,7 +224,7 @@ function PanoramaCard({ p, pp, remaining, bldgs, esms, photoUrl, canEdit, onOpen
       style={{ position: 'relative', height: 420, borderRadius: 'var(--radius-m)', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 8px rgba(22,29,36,0.12)', background: 'var(--track)' }}>
       {/* photo layer */}
       {photoUrl && <img src={photoUrl} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', ...focalStyle(p) }} />}
       {/* scrim */}
       <div style={{ position: 'absolute', inset: 0, background: SCRIM, pointerEvents: 'none' }} />
       {/* content */}
