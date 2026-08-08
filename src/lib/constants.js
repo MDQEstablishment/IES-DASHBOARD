@@ -59,7 +59,10 @@ export const canManageRole = (mine, target) =>
 
 // login demo-role cards (design has 8 — admin excluded). [key, short, desc]
 export const ROLE_CARDS = [
-  ['ceo', 'CEO', 'Portfolio-wide read access, no settings'],
+  // 0147 made ceo PMO-equivalent. This card is the FIRST thing a ceo reads, on
+  // the login screen, and it told them they had read-only access with no
+  // settings — which stopped being true the moment the policies changed.
+  ['ceo', 'CEO', 'Portfolio-wide, same authority as PMO'],
   ['pmo', 'PMO', 'Full control across the programme'],
   ['procm', 'Procurement Mgr', 'Materials & procurement, team tasks'],
   ['proco', 'Procurement Officer', 'Own procurement tasks only'],

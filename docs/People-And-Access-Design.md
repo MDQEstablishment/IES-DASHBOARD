@@ -190,8 +190,15 @@ person's authored work stays attributed to them (handover is out of scope, §1).
 `ROLE_NAV[role]` in `src/lib/nav.js` (frozen) is a flat list of nav ids per
 role; `navForRole()` decides which nav items *render*. There is **no route
 guard** — a user who types `/settings` gets the component, which then self-gates
-its admin actions with an inline `['pmo','admin']` check. Real enforcement is
-per-table RLS, not per-section.
+its admin actions. Real enforcement is per-table RLS, not per-section.
+
+> **Updated 0148.** That self-gate was an inline `['pmo','admin']` array, and it
+> is now `may('user.admin', role)` reading the AUTHORITY mirror. The inline
+> version was already wrong by then: 0147 made ceo PMO-equivalent, so a ceo saw
+> the Settings nav item and found user administration hidden inside it —
+> shown-then-denied, inverted. The paragraph above is left standing because its
+> conclusion did not change: the nav map still renders, RLS still enforces, and
+> there is still no route guard.
 
 **The question:** per-person section override, or section-by-role with projects
 as the only per-person axis?

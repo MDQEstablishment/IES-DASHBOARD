@@ -91,53 +91,62 @@ These hold every sprint unless the owner explicitly amends them.
    absence. "The checker said clean" is not evidence — it is the claim awaiting
    evidence.
 
-   **8. THE UNREADABLE LIST — a sweep without one is invalid.**
-   *This is a rule, not advice. A confidentiality sweep that does not carry
-   this list is not a weak sweep; it is not a sweep, and its result may not
-   be reported, relied on, or recorded as a finding.*
+8. **THE UNREADABLE LIST — a sweep without one is invalid.**
+*This is a rule, not advice. A confidentiality sweep that does not carry
+this list is not a weak sweep; it is not a sweep, and its result may not
+be reported, relied on, or recorded as a finding.*
 
-   Every sweep must publish, alongside its result, an explicit enumeration of
-   **every member it could not read**, and for each one either the alternative
-   method that cleared it or the plain words *not cleared*. Categories that
-   must appear by name whenever present: compressed archives (`.xlsx`,
-   `.docx`, `.zip`); raster and vector images; fonts; PDFs — **especially
-   PDFs whose text is hex-encoded against subset fonts, where a literal-string
-   scan returns zero characters from a page full of text**; binary members
-   detected by NUL bytes; anything skipped by size; and anything skipped by
-   file extension.
+Every sweep must publish, alongside its result, an explicit enumeration of
+**every member it could not read**, and for each one either the alternative
+method that cleared it or the plain words *not cleared*. Categories that
+must appear by name whenever present: compressed archives (`.xlsx`,
+`.docx`, `.zip`); raster and vector images; fonts; PDFs — **especially
+PDFs whose text is hex-encoded against subset fonts, where a literal-string
+scan returns zero characters from a page full of text**; binary members
+detected by NUL bytes; anything skipped by size; and anything skipped by
+file extension.
 
-   A result reported without that list is **invalid on its face**, regardless
-   of how thorough the readable part was. "We scanned everything we could
-   read" is not a finding — it is the shape of the last three failures.
+A result reported without that list is **invalid on its face**, regardless
+of how thorough the readable part was. "We scanned everything we could
+read" is not a finding — it is the shape of the last three failures.
 
-   The count now stands at three, each the same shape, each costing a cycle:
+The count now stands at three, each the same shape, each costing a cycle:
 
-   1. A visible-grid scan of a stripped `.xlsx` reported "zero client
-      references" while 204 and 342 facility names sat in `sharedStrings`.
-   2. The de-identification scanner decoded UTF-8 as latin-1 and reported
-      **zero Arabic on the part holding hundreds of Arabic strings** — the
-      rule's own failure mode, inside the tool written to prevent it.
-   3. A whole-object-database sweep reported two `Client_*.pdf` files clean
-      because their text is hex-encoded against subset fonts and the
-      literal-string scan returned **zero characters**. Decoded through their
-      `ToUnicode` CMaps, they carry a named client engagement, asset counts
-      and the contract value — and their own footers say *Confidential*. They
-      were caught **only** because they appeared on the unreadable list and
-      the list was worked through instead of waved past.
+1. A visible-grid scan of a stripped `.xlsx` reported "zero client
+   references" while 204 and 342 facility names sat in `sharedStrings`.
+2. The de-identification scanner decoded UTF-8 as latin-1 and reported
+   **zero Arabic on the part holding hundreds of Arabic strings** — the
+   rule's own failure mode, inside the tool written to prevent it.
+3. A whole-object-database sweep reported two `Client_*.pdf` files clean
+   because their text is hex-encoded against subset fonts and the
+   literal-string scan returned **zero characters**. Decoded through their
+   `ToUnicode` CMaps, they carry a named client engagement, asset counts
+   and the contract value — and their own footers say *Confidential*. They
+   were caught **only** because they appeared on the unreadable list and
+   the list was worked through instead of waved past.
 
-   Every one of the three was a *confident negative from a method that could
-   not see the whole file*. The unreadable list is the only mechanism that
-   turns "I found nothing" into a claim a reviewer can actually judge, because
-   it states where the method's eyes were shut. Enumerate what you could not
+Every one of the three was a *confident negative from a method that could
+not see the whole file*. The unreadable list is the only mechanism that
+turns "I found nothing" into a claim a reviewer can actually judge, because
+it states where the method's eyes were shut. Enumerate what you could not
    read, or do not report a result.
 
-   **A second finding, on the breadth of what to search for.** Two identifier
-   classes were found that no inventory had listed and no spreadsheet-level
-   inspection could reach: an absolute filesystem path containing a person's
-   name inside `xl/workbook.xml`, and internal print-server hostnames plus a
-   Windows user-profile path inside the UTF-16-encoded binary
-   `printerSettings*.bin` members. Both surfaced only by enumerating members and
-   decoding each one more than one way. The general form: an office document
-   carries authorship infrastructure — people, hostnames, paths, tenant
-   identifiers, protection labels — that nobody puts there deliberately and no
-   category list written from the *expected* content will name.
+   **Enforced, since 2026-08-08, by `tests/unreadableList.test.mjs`.** The rule
+   lived here alone for weeks and was therefore enforced by whoever remembered
+   it; the gate reads the tracked tree on every CI run and fails unless every
+   member a text scan cannot read is declared in `docs/unreadable-manifest.json`
+   with its method. Its first run found `seeds/fixtures/sample-delivery-note.pdf`
+   — hex-encoded, named client engagement, read as synthetic by every prior
+   sweep because the filename said "sample". That is a fourth instance of the
+   shape above, and the first one caught by a machine instead of a cycle.
+
+**A second finding, on the breadth of what to search for.** Two identifier
+classes were found that no inventory had listed and no spreadsheet-level
+inspection could reach: an absolute filesystem path containing a person's
+name inside `xl/workbook.xml`, and internal print-server hostnames plus a
+Windows user-profile path inside the UTF-16-encoded binary
+`printerSettings*.bin` members. Both surfaced only by enumerating members and
+decoding each one more than one way. The general form: an office document
+carries authorship infrastructure — people, hostnames, paths, tenant
+identifiers, protection labels — that nobody puts there deliberately and no
+category list written from the *expected* content will name.
