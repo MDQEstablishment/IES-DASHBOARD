@@ -35,7 +35,7 @@ export const ACRONYMS = new Set([
   'ESM', 'ESMS', 'COC', 'COCS', 'BOQ', 'TARSHID', 'PMO', 'IES', 'SKU', 'SASO',
   'SEER', 'IEER', 'EER', 'BTU', 'TR', 'PO', 'AC', 'LED', 'CCT', 'DIP', 'TDS',
   'WIR', 'MIR', 'ID', 'OD', 'AI', 'PDF', 'KSA', 'SR', 'REV', 'SRC', 'CONF',
-  'ESC', 'TOK', 'VLOOKUP', 'COL', 'LUX', 'MAND', 'QTY', 'T1', 'T3', 'CEO',
+  'ESC', 'TOK', 'VLOOKUP', 'COL', 'LUX', 'MAND', 'T1', 'T3', 'CEO',
   'RFI', 'NCR', 'FAT', 'SAT', 'EPC', 'KPI', 'UI', 'URL',
 ])
 export const UNITS = new Set(['kWh', 'm²', 'W', 'K', 'lm', 'SAR', 'kW', 'Btu/h', 'm2'])
@@ -48,7 +48,7 @@ export const BADGE_EXEMPT = new Set([
   'PROPOSES · YOU DECIDE', 'FROM MEMORY', 'CACHE READ', 'VIEWING',
   'RESIDENTIAL · EXCLUDED', 'ASSISTANT · VERIFIED', 'PROJECT DECISION',
   'KINGDOM OF SAUDI ARABIA', 'NO ENTRIES', 'FAILED', 'REFUSED', 'MENTION',
-  'CLICK A MARKER FOR CONTRACTOR INFO',
+  'CLICK A MARKER FOR CONTRACTOR INFO', 'C&H',
 ])
 
 const isAllCaps = (t) => {
@@ -57,7 +57,7 @@ const isAllCaps = (t) => {
 }
 /** Every word is an acronym or a unit, so the string is exempt as a whole. */
 const allExempt = (t) => {
-  const words = t.match(/[A-Za-z²]+/g)
+  const words = t.match(/[A-Za-z0-9²]+/g)
   if (!words) return true
   return words.every((w) => ACRONYMS.has(w.toUpperCase()) || UNITS.has(w))
 }

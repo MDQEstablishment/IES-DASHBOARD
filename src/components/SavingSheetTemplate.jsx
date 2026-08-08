@@ -74,17 +74,17 @@ export default function SavingSheetTemplate({ role }) {
       {rows.length === 0 ? <Empty icon="doc">No template versions yet.</Empty> : (
         <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
           <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>VERSION</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>FILE</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>UPLOADED</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>BY</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>ACTIONS</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>Version</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>File</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>Uploaded</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>By</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
           </tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} style={{ borderTop: '1px solid var(--line)', opacity: r.active ? 1 : 0.65 }}>
                 <td lang="en" dir="ltr" style={{ padding: '8px 7px', fontFamily: 'var(--mono)', fontWeight: 700 }}>
-                  v{num(r.version)}{r.active && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#1D6A49', background: '#E9F3EE' }}>ACTIVE</span>}
+                  v{num(r.version)}{r.active && <span style={{ marginLeft: 6, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 6px', borderRadius: 5, color: '#1D6A49', background: '#E9F3EE' }}>Active</span>}
                 </td>
                 <td style={{ padding: '8px 7px', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.file_name || ''}>{r.file_name || '—'}</td>
                 <td style={{ padding: '8px 7px', fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDateTime(r.uploaded_at)}</td>

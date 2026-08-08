@@ -196,8 +196,8 @@ export default function BuildingDetail() {
               {scopes.length === 0 ? <Empty icon="materials">No material scope on this building.</Empty> : (
                 <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 600 }}>
                   <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-                    <th style={{ padding: 8, fontWeight: 600 }}>SUB-TYPE</th><th style={{ padding: 8, fontWeight: 600 }}>ESM</th>
-                    <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>USED</th><th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>PLANNED</th><th style={{ padding: 8, fontWeight: 600 }}>PROGRESS</th>
+                    <th style={{ padding: 8, fontWeight: 600 }}>Sub-Type</th><th style={{ padding: 8, fontWeight: 600 }}>ESM</th>
+                    <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>Used</th><th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>Planned</th><th style={{ padding: 8, fontWeight: 600 }}>Progress</th>
                   </tr></thead>
                   <tbody>
                     {scopes.map((s) => {
@@ -232,7 +232,7 @@ export default function BuildingDetail() {
           {/* ACTIVITY */}
           {activeTab === 'activity' && (
             <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Activity Log <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginLeft: 6 }}>THIS BUILDING</span></div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Activity Log <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', marginLeft: 6 }}>This Building</span></div>
               {buildingActivity.length === 0 ? <Empty icon="bell">No recent activity for this building.</Empty> : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {buildingActivity.map((a) => (
@@ -342,11 +342,11 @@ function RoomsTab({ buildingId, rooms, scopes, canEdit, user }) {
                 <div style={{ marginTop: 6 }}>
                   <span title={`${surveyCount(r.id)} survey entries captured in this room`}
                     style={{ fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>
-                    SURVEYED · <span lang="en" dir="ltr">{num(surveyCount(r.id))}</span>
+                    Surveyed · <span lang="en" dir="ltr">{num(surveyCount(r.id))}</span>
                   </span>
                 </div>
               )}
-              <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 6px' }}>ITEM TYPES</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 6px' }}>Item Types</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                 {itemsOf(r.id).length === 0 ? <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>None yet</span>
                   : itemsOf(r.id).map((ri) => <span key={ri.id} style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 'var(--radius-s)', background: 'var(--accent-tint)', color: 'var(--accent)' }}>{ri.scope?.sub_type || 'Item'}</span>)}

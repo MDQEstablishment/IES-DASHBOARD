@@ -66,10 +66,10 @@ export default function AiUsageMeter({ role }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div lang="en" dir="ltr" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>
-          <span>RUNS <b style={{ color: 'var(--text)' }}>{num(allRuns.length)}</b></span>
-          <span>ASKED <b style={{ color: 'var(--text)' }}>{num(asked)}</b></span>
+          <span>Runs <b style={{ color: 'var(--text)' }}>{num(allRuns.length)}</b></span>
+          <span>Asked <b style={{ color: 'var(--text)' }}>{num(asked)}</b></span>
           <span>FROM MEMORY <b style={{ color: 'var(--ok)' }}>{num(fromCache)}</b></span>
-          <span>TOKENS <b style={{ color: 'var(--text)' }}>{num(tIn)}</b> in / <b style={{ color: 'var(--text)' }}>{num(tOut)}</b> out</span>
+          <span>Tokens <b style={{ color: 'var(--text)' }}>{num(tIn)}</b> in / <b style={{ color: 'var(--text)' }}>{num(tOut)}</b> out</span>
           {cacheRead > 0 && <span>CACHE READ <b style={{ color: 'var(--ok)' }}>{num(cacheRead)}</b></span>}
         </div>
         <div lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 800, color: spent >= cap ? 'var(--bad)' : 'var(--text)' }}>
@@ -97,15 +97,15 @@ export default function AiUsageMeter({ role }) {
       {runs.length === 0 ? <Empty icon="box">No AI runs this month.</Empty> : (
         <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 720 }}>
           <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>WHEN</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>PROJECT</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>JOB</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>MODEL</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>ASKED</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>CACHED</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>TOK IN/OUT</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>COST</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>BY</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>When</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>Project</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>Job</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>Model</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Asked</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Cached</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>TOK in/Out</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Cost</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>By</th>
           </tr></thead>
           <tbody>
             {runs.map((r) => (

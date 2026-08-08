@@ -116,14 +116,14 @@ export default function ManageEsms() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
                   <thead>
                     <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-                      <th style={{ padding: 8, fontWeight: 600 }}>MATERIAL</th>
-                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>REQUESTED</th>
-                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>RECEIVED</th>
-                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>SHORTAGE</th>
-                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>CONSUMED</th>
-                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>IN STOCK</th>
-                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'center' }}>THRESHOLD</th>
-                      <th style={{ padding: 8, fontWeight: 600 }}>STATUS</th>
+                      <th style={{ padding: 8, fontWeight: 600 }}>Material</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>Requested</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>Received</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>Shortage</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>Consumed</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'right' }}>In Stock</th>
+                      <th style={{ padding: 8, fontWeight: 600, textAlign: 'center' }}>Threshold</th>
+                      <th style={{ padding: 8, fontWeight: 600 }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -147,7 +147,7 @@ export default function ManageEsms() {
       <Card pad={0} style={{ overflow: 'hidden', marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>Recent movements</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', letterSpacing: '.5px' }}>REQUEST / RECEIPT LEDGER</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-3)', letterSpacing: '.5px' }}>Request / Receipt Ledger</div>
           {canMove && <button onClick={() => setMv(materials[0] || null)} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>Record movement</button>}
         </div>
         {moves.length === 0 ? <Empty icon="box">No movements recorded.</Empty> : (

@@ -69,8 +69,8 @@ export default function MaterialDeliveries({ projectId, buildings = [] }) {
         <div className="ies-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 760 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              <th style={{ padding: 8, fontWeight: 600 }}>MATERIAL</th><th style={{ padding: 8, fontWeight: 600 }}>ACTUAL DATE</th>
-              <th style={{ padding: 8, fontWeight: 600 }}>NOTES</th>{canWrite && <th />}
+              <th style={{ padding: 8, fontWeight: 600 }}>Material</th><th style={{ padding: 8, fontWeight: 600 }}>Actual Date</th>
+              <th style={{ padding: 8, fontWeight: 600 }}>Notes</th>{canWrite && <th />}
             </tr></thead>
             <tbody>
               {rows.map((r) => {
@@ -282,7 +282,7 @@ function PdfTab({ projectId, userId, onClose, onSaved }) {
       <div className="ies-table-wrap" style={{ maxHeight: 300, overflow: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--radius-s)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)', position: 'sticky', top: 0, background: 'var(--hover)' }}>
-            <th style={{ padding: 7 }} /><th style={{ padding: 7 }}>MATERIAL</th><th style={{ padding: 7, width: 56 }}>QTY</th><th style={{ padding: 7, width: 66 }}>UNIT</th><th style={{ padding: 7, width: 36 }} />
+            <th style={{ padding: 7 }} /><th style={{ padding: 7 }}>Material</th><th style={{ padding: 7, width: 56 }}>Qty</th><th style={{ padding: 7, width: 66 }}>Unit</th><th style={{ padding: 7, width: 36 }} />
           </tr></thead>
           <tbody>
             {lines.map((l, i) => {

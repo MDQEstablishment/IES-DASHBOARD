@@ -42,9 +42,9 @@ export default function BuildingMaterialsPlan({ buildingId, projectId }) {
         <div className="ies-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 620 }}>
             <thead><tr style={{ color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              <th style={th}>CATEGORY</th>
-              <th style={{ ...th, textAlign: 'right' }}>PLANNED</th><th style={{ ...th, textAlign: 'right' }}>USED</th>
-              <th style={{ ...th, textAlign: 'right' }}>REMAINING</th><th style={{ ...th, textAlign: 'right' }}>IN WAREHOUSE</th>
+              <th style={th}>Category</th>
+              <th style={{ ...th, textAlign: 'right' }}>Planned</th><th style={{ ...th, textAlign: 'right' }}>Used</th>
+              <th style={{ ...th, textAlign: 'right' }}>Remaining</th><th style={{ ...th, textAlign: 'right' }}>In Warehouse</th>
             </tr></thead>
             <tbody>
               {rows.map((r) => {

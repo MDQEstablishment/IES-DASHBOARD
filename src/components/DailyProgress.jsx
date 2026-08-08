@@ -213,7 +213,7 @@ export default function DailyProgress({ buildingId, projectId, buildingCode, can
 
       {/* ── DAILY LOG HISTORY ─────────────────────────────────────────────── */}
       <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 20 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Daily Log <span style={{ ...mono, fontSize: 10, color: 'var(--text-3)', marginLeft: 6 }}>HISTORY</span></div>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Daily Log <span style={{ ...mono, fontSize: 10, color: 'var(--text-3)', marginLeft: 6 }}>History</span></div>
         {batches.length === 0 ? <Empty icon="daily">No work logged in this building yet.</Empty> : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {batches.map((b) => <HistoryRow key={b.id} batch={b} /> )}
@@ -247,8 +247,8 @@ function HistoryRow({ batch }) {
         <div style={{ borderTop: '1px solid var(--line)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
             <thead><tr style={{ ...mono, fontSize: 10, color: 'var(--text-3)', textAlign: 'left' }}>
-              <th style={{ padding: '7px 12px', fontWeight: 600 }}>MATERIAL</th><th style={{ padding: '7px 8px', fontWeight: 600, textAlign: 'right' }}>QTY</th>
-              <th style={{ padding: '7px 8px', fontWeight: 600 }}>ROOM</th><th style={{ padding: '7px 8px', fontWeight: 600 }}>PHOTOS</th>
+              <th style={{ padding: '7px 12px', fontWeight: 600 }}>Material</th><th style={{ padding: '7px 8px', fontWeight: 600, textAlign: 'right' }}>Qty</th>
+              <th style={{ padding: '7px 8px', fontWeight: 600 }}>Room</th><th style={{ padding: '7px 8px', fontWeight: 600 }}>Photos</th>
             </tr></thead>
             <tbody>
               {lines.map((l) => (

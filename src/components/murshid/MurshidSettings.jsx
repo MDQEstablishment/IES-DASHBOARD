@@ -77,9 +77,9 @@ export default function MurshidSettings({ role }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div lang="en" dir="ltr" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)' }}>
-          <span>QUESTIONS <b style={{ color: 'var(--text)' }}>{num(runs.length)}</b></span>
+          <span>Questions <b style={{ color: 'var(--text)' }}>{num(runs.length)}</b></span>
           <span>REFUSED <b style={{ color: 'var(--text)' }}>{num(refusals)}</b></span>
-          <span>TOKENS <b style={{ color: 'var(--text)' }}>{num(runs.reduce((a, r) => a + (r.tokens_in || 0), 0))}</b> in
+          <span>Tokens <b style={{ color: 'var(--text)' }}>{num(runs.reduce((a, r) => a + (r.tokens_in || 0), 0))}</b> in
             / <b style={{ color: 'var(--text)' }}>{num(runs.reduce((a, r) => a + (r.tokens_out || 0), 0))}</b> out</span>
         </div>
         <div lang="en" dir="ltr" style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 800, color: spent >= cap ? 'var(--bad)' : 'var(--text)' }}>

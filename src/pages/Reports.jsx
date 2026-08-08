@@ -114,12 +114,12 @@ export default function Reports() {
               <thead>
                 <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)' }}>
                   <th style={{ padding: '9px 8px', fontWeight: 600 }}>Employee</th>
-                  <th style={{ padding: '9px 8px', fontWeight: 600 }}>ROLE</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600 }}>Role</th>
                   <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Tasks</th>
-                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>ON-TIME %</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>On-Time %</th>
                   <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Avg days</th>
                   <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Bottlenecks</th>
-                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>ESC. CAUSED</th>
+                  <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>ESC. Caused</th>
                 </tr>
               </thead>
               <tbody>

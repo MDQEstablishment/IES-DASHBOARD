@@ -51,11 +51,11 @@ export default function SurveyTab({ project, buildings, initialView }) {
     <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
       {/* summary strip */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-        <Stat label="BUILDINGS SURVEYED" value={`${num(stats.surveyedB)} / ${num(buildings.length)}`} />
-        <Stat label="ENTRIES" value={num(stats.total)} />
-        <Stat label="ENTERED TODAY" value={num(stats.today)} highlight={stats.today > 0} />
+        <Stat label="Buildings Surveyed" value={`${num(stats.surveyedB)} / ${num(buildings.length)}`} />
+        <Stat label="Entries" value={num(stats.total)} />
+        <Stat label="Entered Today" value={num(stats.today)} highlight={stats.today > 0} />
         {SURVEY_CATEGORIES.map(([v, l]) => stats.cats[v] ? <Stat key={v} label={l.toUpperCase() + ' UNITS'} value={num(stats.cats[v])} /> : null)}
-        <Stat label="LAST ACTIVITY" value={stats.last ? fmtDateTime(stats.last) : '—'} mono />
+        <Stat label="Last Activity" value={stats.last ? fmtDateTime(stats.last) : '—'} mono />
       </div>
 
       {/* toolbar */}

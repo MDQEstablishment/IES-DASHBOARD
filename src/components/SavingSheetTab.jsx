@@ -270,12 +270,12 @@ export default function SavingSheetTab({ project, buildings, onGoSurvey }) {
           <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 700 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
               <th style={{ padding: '8px 7px', fontWeight: 600 }}>REV</th>
-              <th style={{ padding: '8px 7px', fontWeight: 600 }}>STATUS</th>
-              <th style={{ padding: '8px 7px', fontWeight: 600 }}>TEMPLATE</th>
+              <th style={{ padding: '8px 7px', fontWeight: 600 }}>Status</th>
+              <th style={{ padding: '8px 7px', fontWeight: 600 }}>Template</th>
               <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>SAVINGS kWh/YR</th>
-              <th style={{ padding: '8px 7px', fontWeight: 600 }}>GENERATED</th>
-              <th style={{ padding: '8px 7px', fontWeight: 600 }}>BY</th>
-              <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>ACTIONS</th>
+              <th style={{ padding: '8px 7px', fontWeight: 600 }}>Generated</th>
+              <th style={{ padding: '8px 7px', fontWeight: 600 }}>By</th>
+              <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
             </tr></thead>
             <tbody>
               {sheets.map((s) => {

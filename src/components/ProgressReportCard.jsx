@@ -141,7 +141,7 @@ export default function ProgressReportCard() {
     <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16, marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
         <div style={{ fontWeight: 700, fontSize: 15 }}>Client Progress Report</div>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>EXCEL</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>Excel</span>
       </div>
       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginBottom: 12 }}>
         The branded workbook sent to the client: completion by ESM, the daily installation log, per-building progress, documents and COCs. Installed quantities are what the project manager logged — there is no approval gate.
@@ -155,14 +155,14 @@ export default function ProgressReportCard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 12 }}>
         <label style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>PROJECT</span>
+          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>Project</span>
           <select style={{ ...ctrl, width: '100%' }} value={projectId} onChange={(e) => { setProjectId(e.target.value); setFrom(''); setEstDates({}) }}>
             <option value="">Select a project…</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
           </select>
         </label>
         <label style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>FROM</span>
+          <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', marginBottom: 4 }}>From</span>
           <DateInput value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...ctrl, width: '100%' }} />
         </label>
         <label style={{ minWidth: 0 }}>
@@ -174,7 +174,7 @@ export default function ProgressReportCard() {
       {project && esmCodes.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
-            ESTIMATED COMPLETION PER ESM
+            Estimated Completion per ESM
             <span style={{ textTransform: 'none', letterSpacing: 0, marginLeft: 8, color: 'var(--text-3)' }}>
               defaults to project start + {project.total_weeks != null ? `${num(project.total_weeks)} weeks` : 'total weeks'}{defaultEst ? ` = ${defaultEst}` : ' (not set on the project)'} — editable
             </span>

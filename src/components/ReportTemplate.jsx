@@ -70,9 +70,9 @@ export default function ReportTemplate({ role }) {
         <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
           <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
             <th style={{ padding: '8px 7px', fontWeight: 600 }}>Version</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>FILE</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>File</th>
             <th style={{ padding: '8px 7px', fontWeight: 600 }}>Uploaded</th>
-            <th style={{ padding: '8px 7px', fontWeight: 600 }}>BY</th>
+            <th style={{ padding: '8px 7px', fontWeight: 600 }}>By</th>
             <th style={{ padding: '8px 7px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
           </tr></thead>
           <tbody>

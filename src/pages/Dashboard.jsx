@@ -430,11 +430,11 @@ export default function Dashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 520 }}>
                 <thead>
                   <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 12 }}>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>TYPE</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>ITEM</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>PROJECT</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>BLOCKED ON</th>
-                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>AGE</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Type</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Item</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Project</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Blocked On</th>
+                    <th style={{ padding: '9px 8px', fontWeight: 600 }}>Age</th>
                   </tr>
                 </thead>
                 <tbody>

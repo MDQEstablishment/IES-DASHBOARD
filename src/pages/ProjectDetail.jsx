@@ -264,7 +264,7 @@ export default function ProjectDetail() {
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ fontFamily: 'var(--mono)', fontSize: 19, fontWeight: 700, color: 'var(--on-band)', lineHeight: 1 }}>{overall}%</span>
-                  <span style={{ fontSize: 8, color: 'var(--on-band-2)', letterSpacing: '.5px' }}>DONE</span>
+                  <span style={{ fontSize: 8, color: 'var(--on-band-2)', letterSpacing: '.5px' }}>Done</span>
                 </div>
               </div>
             </div>
@@ -272,11 +272,11 @@ export default function ProjectDetail() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', background: 'var(--surface-1)' }}>
           <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>TIMELINE</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Timeline</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{totalWeeks || '—'} wks</div>
           </div>
           <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }} title={project.end_date ? `Ends ${fmtDate(project.end_date)}` : 'No end date set'}>
-            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>REMAINING</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Remaining</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3, color: (daysToEnd != null && daysToEnd <= 14) ? 'var(--bad)' : 'var(--warn)' }}>
               {(() => {
                 // 8K-3 — timeline in weeks, not days
@@ -288,7 +288,7 @@ export default function ProjectDetail() {
             </div>
           </div>
           <div style={{ padding: '13px 18px', borderRight: '1px solid var(--line)' }}>
-            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>BUILDINGS</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Buildings</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginTop: 3 }}>{activeBuildings.length}{surplusCount > 0 && <span title={`${surplusCount} surplus building(s) excluded from progress and COCs`} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginLeft: 5 }}>+{surplusCount} surplus</span>}</div>
           </div>
           <div style={{ padding: '13px 18px' }}>
@@ -341,14 +341,14 @@ export default function ProjectDetail() {
           ) : (
             <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 820 }}>
               <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>CODE</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>BUILDING</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>CONTRACTOR</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>ENGINEER</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>PROGRESS</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Date the building's Certificate of Completion (COC) was approved, and by whom. Click a date to open the approval document.">COC APPROVAL</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="9C scope lifecycle: candidate / in scope / surplus. Surveyed = has at least one survey entry (derived). Surplus buildings are excluded from progress, COCs and the savings potential.">SCOPE</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>STATUS</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>Code</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>Building</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>Contractor</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>Engineer</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600, width: 130 }}>Progress</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="Date the building's Certificate of Completion (COC) was approved, and by whom. Click a date to open the approval document.">COC Approval</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }} title="9C scope lifecycle: candidate / in scope / surplus. Surveyed = has at least one survey entry (derived). Surplus buildings are excluded from progress, COCs and the savings potential.">Scope</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>Status</th>
                 {canManage && <th style={{ padding: '9px 8px', fontWeight: 600, width: 64 }} />}
               </tr></thead>
               <tbody>
@@ -382,7 +382,7 @@ export default function ProjectDetail() {
                                 ? <button title={(b.scope_reason ? `${m.label} — ${b.scope_reason}. ` : '') + (b.scope_status === 'surplus' ? 'Click to return to scope' : 'Click to exclude from scope')}
                                     onClick={() => setScopeBldg(b)} style={{ cursor: 'pointer', background: 'none' }}>{chip}</button>
                                 : <span title={b.scope_reason || ''}>{chip}</span>}
-                              {surveyedSet.has(b.id) && <span title="Surveyed — has at least one survey entry" style={{ marginLeft: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>SURV</span>}
+                              {surveyedSet.has(b.id) && <span title="Surveyed — has at least one survey entry" style={{ marginLeft: 5, fontFamily: 'var(--mono)', fontSize: 8.5, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-s)', color: 'var(--ok-deep)', background: 'var(--ok-bg)' }}>Surv</span>}
                             </>
                           )
                         })()}
@@ -422,10 +422,10 @@ export default function ProjectDetail() {
             <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
               <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10.5, fontFamily: 'var(--mono)' }}>
                 <th style={{ padding: '9px 8px', fontWeight: 600 }}>ESM</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600 }}>DESCRIPTION</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>PLANNED</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>INSTALLED</th>
-                <th style={{ padding: '9px 8px', fontWeight: 600, width: 160 }}>PROGRESS</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600 }}>Description</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Planned</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600, textAlign: 'right' }}>Installed</th>
+                <th style={{ padding: '9px 8px', fontWeight: 600, width: 160 }}>Progress</th>
               </tr></thead>
               <tbody>
                 {esmRows.map((e) => {

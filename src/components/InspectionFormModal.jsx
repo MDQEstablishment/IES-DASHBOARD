@@ -240,7 +240,7 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
           </div>
           <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              <th style={{ padding: 4 }}>DESCRIPTION</th><th style={{ padding: 4, width: 80 }}>BRAND</th><th style={{ padding: 4, width: 90 }}>MODEL</th><th style={{ padding: 4, width: 54 }}>QTY</th><th style={{ padding: 4, width: 50 }}>UNIT</th><th style={{ padding: 4, width: 80 }}>BOQ REF</th><th style={{ width: 24 }} />
+              <th style={{ padding: 4 }}>Description</th><th style={{ padding: 4, width: 80 }}>Brand</th><th style={{ padding: 4, width: 90 }}>Model</th><th style={{ padding: 4, width: 54 }}>Qty</th><th style={{ padding: 4, width: 50 }}>Unit</th><th style={{ padding: 4, width: 80 }}>BOQ Ref</th><th style={{ width: 24 }} />
             </tr></thead>
             <tbody>
               {rows.map((r, i) => (
@@ -265,9 +265,9 @@ export default function InspectionFormModal({ kind, project, esm = null, buildin
               </div>
               <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5, minWidth: 620 }}>
                 <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 9.5, fontFamily: 'var(--mono)' }}>
-                  <th style={{ padding: 4 }}>EXISTING TYPE</th><th style={{ padding: 4 }} colSpan={3}>EXISTING LUX</th>
-                  <th style={{ padding: 4 }}>AVG</th><th style={{ padding: 4 }}>PROPOSED (ITEM)</th>
-                  <th style={{ padding: 4 }} colSpan={3}>PROPOSED LUX</th><th style={{ padding: 4 }}>AVG</th>
+                  <th style={{ padding: 4 }}>Existing Type</th><th style={{ padding: 4 }} colSpan={3}>Existing LUX</th>
+                  <th style={{ padding: 4 }}>Avg</th><th style={{ padding: 4 }}>Proposed (Item)</th>
+                  <th style={{ padding: 4 }} colSpan={3}>Proposed LUX</th><th style={{ padding: 4 }}>Avg</th>
                 </tr></thead>
                 <tbody>
                   {rows.map((r, i) => r.description.trim() && (

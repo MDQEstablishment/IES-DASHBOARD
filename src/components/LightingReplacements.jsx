@@ -62,10 +62,10 @@ export default function LightingReplacements({ project, entries, onChanged }) {
       </div>
       <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 720 }}>
         <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-          <th style={{ padding: '7px 6px', fontWeight: 600 }}>SURVEYED FITTING</th>
-          <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>ROWS</th>
-          <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>UNITS</th>
-          <th style={{ padding: '7px 6px', fontWeight: 600 }}>APPROVED REPLACEMENT</th>
+          <th style={{ padding: '7px 6px', fontWeight: 600 }}>Surveyed Fitting</th>
+          <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Rows</th>
+          <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Units</th>
+          <th style={{ padding: '7px 6px', fontWeight: 600 }}>Approved Replacement</th>
         </tr></thead>
         <tbody>
           {groups.map((g) => {

@@ -158,22 +158,22 @@ export default function AiAssistPanel({ project, entries, onChanged, onGoSurvey 
       {result && (
         <>
           <div lang="en" dir="ltr" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--text-3)' }}>
-            <span>ASKED <b style={{ color: 'var(--text)' }}>{num(result.stats?.asked || 0)}</b></span>
+            <span>Asked <b style={{ color: 'var(--text)' }}>{num(result.stats?.asked || 0)}</b></span>
             <span>FROM MEMORY <b style={{ color: 'var(--ok)' }}>{num(result.stats?.from_cache || 0)}</b> (no cost)</span>
-            <span>TOKENS <b style={{ color: 'var(--text)' }}>{num(result.stats?.tokens_in || 0)}</b> in / <b style={{ color: 'var(--text)' }}>{num(result.stats?.tokens_out || 0)}</b> out</span>
+            <span>Tokens <b style={{ color: 'var(--text)' }}>{num(result.stats?.tokens_in || 0)}</b> in / <b style={{ color: 'var(--text)' }}>{num(result.stats?.tokens_out || 0)}</b> out</span>
             {result.stats?.cache_read > 0 && <span>CACHE READ <b style={{ color: 'var(--ok)' }}>{num(result.stats.cache_read)}</b></span>}
-            <span>EST. COST <b style={{ color: 'var(--text)' }}>${(result.stats?.cost || 0).toFixed(4)}</b></span>
+            <span>Est. Cost <b style={{ color: 'var(--text)' }}>${(result.stats?.cost || 0).toFixed(4)}</b></span>
           </div>
 
           {(result.cached?.length > 0 || resolvedProps.length > 0) ? (
             <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 720 }}>
               <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
                 <th style={{ padding: '7px 6px', fontWeight: 600, width: 28 }} />
-                <th style={{ padding: '7px 6px', fontWeight: 600 }}>SURVEYED / OLD UNIT</th>
+                <th style={{ padding: '7px 6px', fontWeight: 600 }}>Surveyed / Old Unit</th>
                 <th style={{ padding: '7px 6px', fontWeight: 600 }}>{result.job === 'match' ? 'REGISTRY MATCH' : 'PROPOSED REPLACEMENT'}</th>
                 <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>CONF.</th>
-                <th style={{ padding: '7px 6px', fontWeight: 600 }}>WHY</th>
-                <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>ROWS</th>
+                <th style={{ padding: '7px 6px', fontWeight: 600 }}>Why</th>
+                <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Rows</th>
               </tr></thead>
               <tbody>
                 {(result.cached || []).map((c) => (

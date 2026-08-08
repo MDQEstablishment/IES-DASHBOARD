@@ -229,7 +229,7 @@ export default function DailyProgress() {
         </div>
 
         <div style={{ background: 'var(--surface-1)', borderRadius: 'var(--radius-l)', boxShadow: 'var(--shadow-1)', padding: 16 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>PRODUCTIVITY</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Productivity</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8 }}>
             <svg viewBox="0 0 64 64" style={{ width: 68, height: 68, flex: 'none' }}>
               <circle cx="32" cy="32" r="26" fill="none" stroke="var(--track)" strokeWidth="8" />
@@ -368,11 +368,11 @@ export default function DailyProgress() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 560 }}>
               <thead>
                 <tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)', background: 'var(--raised)' }}>
-                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>TIME</th>
-                  <th style={{ padding: '10px 8px', fontWeight: 600 }}>BUILDING</th>
-                  <th style={{ padding: '10px 8px', fontWeight: 600 }}>SUB-TYPE</th>
-                  <th style={{ padding: '10px 8px', fontWeight: 600, textAlign: 'right' }}>QTY</th>
-                  <th style={{ padding: '10px 8px', fontWeight: 600 }}>LOCATION</th>
+                  <th style={{ padding: '10px 14px', fontWeight: 600 }}>Time</th>
+                  <th style={{ padding: '10px 8px', fontWeight: 600 }}>Building</th>
+                  <th style={{ padding: '10px 8px', fontWeight: 600 }}>Sub-Type</th>
+                  <th style={{ padding: '10px 8px', fontWeight: 600, textAlign: 'right' }}>Qty</th>
+                  <th style={{ padding: '10px 8px', fontWeight: 600 }}>Location</th>
                 </tr>
               </thead>
               <tbody>

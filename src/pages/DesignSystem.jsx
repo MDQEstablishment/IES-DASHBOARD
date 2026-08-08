@@ -27,7 +27,7 @@ const Sect = ({ title, children }) => (
 export default function DesignSystem() {
   return (
     <div data-screen-label="Design System">
-      <div className="ies-kicker ies-kicker-brass">DESIGN SYSTEM</div>
+      <div className="ies-kicker ies-kicker-brass">Design System</div>
       <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-.3px', color: 'var(--ink-display)', margin: '4px 0 18px' }}>IES Control — Visual Tokens</h1>
 
       <Sect title="COLOR">

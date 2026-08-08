@@ -134,11 +134,11 @@ export default function ProjectDocuments({ projectId, project = null, buildingId
         <div className="ies-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 860 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              <th style={{ padding: 8, fontWeight: 600 }}>NAME</th><th style={{ padding: 8, fontWeight: 600 }}>REFERENCE</th><th style={{ padding: 8, fontWeight: 600 }}>ESM</th><th style={{ padding: 8, fontWeight: 600 }}>TYPE</th>
-              <th style={{ padding: 8, fontWeight: 600 }}>REV</th><th style={{ padding: 8, fontWeight: 600 }}>STATUS</th><th style={{ padding: 8, fontWeight: 600 }}>SUBMITTED</th>
-              <th style={{ padding: 8, fontWeight: 600 }}>CLIENT REVIEWER</th><th style={{ padding: 8, fontWeight: 600 }}>RESPONDED</th>
-              <th style={{ padding: 8, fontWeight: 600 }} title="Days the submittal has spent with the client (response date − submitted, or days pending)">DAYS IN COURT</th>
-              <th style={{ padding: 8, fontWeight: 600 }}>NOTES</th>
+              <th style={{ padding: 8, fontWeight: 600 }}>Name</th><th style={{ padding: 8, fontWeight: 600 }}>Reference</th><th style={{ padding: 8, fontWeight: 600 }}>ESM</th><th style={{ padding: 8, fontWeight: 600 }}>Type</th>
+              <th style={{ padding: 8, fontWeight: 600 }}>REV</th><th style={{ padding: 8, fontWeight: 600 }}>Status</th><th style={{ padding: 8, fontWeight: 600 }}>Submitted</th>
+              <th style={{ padding: 8, fontWeight: 600 }}>Client Reviewer</th><th style={{ padding: 8, fontWeight: 600 }}>Responded</th>
+              <th style={{ padding: 8, fontWeight: 600 }} title="Days the submittal has spent with the client (response date − submitted, or days pending)">Days in Court</th>
+              <th style={{ padding: 8, fontWeight: 600 }}>Notes</th>
               {(canWrite || canReview) && <th style={{ padding: 8, fontWeight: 600 }} />}
             </tr></thead>
             <tbody>
@@ -264,7 +264,7 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
       <Field label="Client reviewer name (required to approve)"><input lang="en" style={inputStyle} value={reviewer} onChange={(e) => setReviewer(e.target.value)} placeholder="e.g. Reviewer name" /></Field>
       <Field label="Notes / client comments (required to reject or approve-with-comments)"><textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Client comments / rejection reason" /></Field>
       <FileDropZone label="Approved / cover-comments version file (required for an approval)" accept=".pdf,image/*" maxSizeMb={25} onFiles={(f) => setFile(f)} helperText="PDF or image · 25 MB cap" />
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>WORKFLOW</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 8px' }}>Workflow</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {doc.status === 'draft' && btn('Mark Submitted', () => decide('submitted'))}
         {(doc.status === 'submitted') && btn('Mark With Client', () => decide('under_review'))}
@@ -278,7 +278,7 @@ export function UpdateStatusModal({ doc, onClose, onDone, progressPct = null }) 
           <input lang="en" type="date" style={inputStyle} value={resubBy || ''} onChange={(e) => setResubBy(e.target.value)} />
         </Field>
       </div>
-      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '14px 0 8px' }}>RESUBMISSION</div>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', margin: '14px 0 8px' }}>Resubmission</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {btn(`Create Revision ${nextRev(doc.revision)}`, createRevision)}
         <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>Clones this as a draft (new file awaited); client review restarts.</span>

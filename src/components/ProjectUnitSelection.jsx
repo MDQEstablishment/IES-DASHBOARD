@@ -179,10 +179,10 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
           {proposal.note && <div style={{ fontSize: 11.5, color: 'var(--ok-deep)', marginBottom: 6 }}>{proposal.note}</div>}
           <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 620 }}>
             <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
-              <th style={{ padding: '6px', fontWeight: 600 }}>MODEL</th>
-              <th style={{ padding: '6px', fontWeight: 600, textAlign: 'right' }}>COVERS</th>
-              <th style={{ padding: '6px', fontWeight: 600, textAlign: 'right' }}>UNIT COST</th>
-              <th style={{ padding: '6px', fontWeight: 600 }}>WHY</th>
+              <th style={{ padding: '6px', fontWeight: 600 }}>Model</th>
+              <th style={{ padding: '6px', fontWeight: 600, textAlign: 'right' }}>Covers</th>
+              <th style={{ padding: '6px', fontWeight: 600, textAlign: 'right' }}>Unit Cost</th>
+              <th style={{ padding: '6px', fontWeight: 600 }}>Why</th>
             </tr></thead>
             <tbody>
               {proposal.chosen.map((c, i) => (
@@ -225,11 +225,11 @@ export default function ProjectUnitSelection({ project, rows, acCatalog, consts,
         <div className="ies-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 820 }}>
           <thead><tr style={{ textAlign: 'left', color: 'var(--text-3)', fontSize: 10, fontFamily: 'var(--mono)' }}>
             <th style={{ padding: '7px 6px', fontWeight: 600, width: 30 }}>#</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>DESCRIPTION (COL B — VLOOKUP KEY)</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>UNIT COST</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>LABOR COST</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>SASO REF</th>
-            <th style={{ padding: '7px 6px', fontWeight: 600 }}>DATASHEET</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>Description (COL B — VLOOKUP Key)</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Unit Cost</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }}>Labor Cost</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>SASO Ref</th>
+            <th style={{ padding: '7px 6px', fontWeight: 600 }}>Datasheet</th>
             <th style={{ padding: '7px 6px', fontWeight: 600 }}>SRC</th>
             {canManage && <th style={{ padding: '7px 6px', fontWeight: 600, textAlign: 'right' }} />}
           </tr></thead>
